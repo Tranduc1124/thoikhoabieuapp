@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../models/user_model.dart';
+import '../services/firebase_error_translator.dart';
 import '../services/firebase_service.dart';
 
 final authControllerProvider = AsyncNotifierProvider<AuthController, User?>(
@@ -33,11 +34,16 @@ class AuthController extends AsyncNotifier<User?> {
   Future<void> signInWithEmail(String email, String password) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final credential = await FirebaseService.auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-      return credential.user;
+      try {
+        final credential = await FirebaseService.auth
+            .signInWithEmailAndPassword(
+              email: email.trim(),
+              password: password,
+            );
+        return credential.user;
+      } catch (error) {
+        throw Exception(FirebaseErrorTranslator.auth(error));
+      }
     });
   }
 
@@ -48,66 +54,90 @@ class AuthController extends AsyncNotifier<User?> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final credential = await FirebaseService.auth
-          .createUserWithEmailAndPassword(
-            email: email.trim(),
-            password: password,
-          );
-      await credential.user?.updateDisplayName(name.trim());
-      await _ensureUserDoc(credential.user, overrideName: name.trim());
-      return credential.user;
+      try {
+        final credential = await FirebaseService.auth
+            .createUserWithEmailAndPassword(
+              email: email.trim(),
+              password: password,
+            );
+        await credential.user?.updateDisplayName(name.trim());
+        await _ensureUserDoc(credential.user, overrideName: name.trim());
+        return credential.user;
+      } catch (error) {
+        throw Exception(FirebaseErrorTranslator.auth(error));
+      }
     });
   }
 
   Future<void> signInWithGoogle() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return state.valueOrNull;
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      final userCredential = await FirebaseService.auth.signInWithCredential(
-        credential,
-      );
-      await _ensureUserDoc(userCredential.user);
-      return userCredential.user;
+      try {
+        final googleUser = await GoogleSignIn().signIn();
+        if (googleUser == null) return state.valueOrNull;
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        final userCredential = await FirebaseService.auth.signInWithCredential(
+          credential,
+        );
+        await _ensureUserDoc(userCredential.user);
+        return userCredential.user;
+      } catch (error) {
+        throw Exception(FirebaseErrorTranslator.auth(error));
+      }
     });
   }
 
   Future<void> signInWithApple() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final apple = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
-      final credential = OAuthProvider('apple.com').credential(
-        idToken: apple.identityToken,
-        accessToken: apple.authorizationCode,
-      );
-      final userCredential = await FirebaseService.auth.signInWithCredential(
-        credential,
-      );
-      await _ensureUserDoc(userCredential.user);
-      return userCredential.user;
+      try {
+        final apple = await SignInWithApple.getAppleIDCredential(
+          scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+          ],
+        );
+        final credential = OAuthProvider('apple.com').credential(
+          idToken: apple.identityToken,
+          accessToken: apple.authorizationCode,
+        );
+        final userCredential = await FirebaseService.auth.signInWithCredential(
+          credential,
+        );
+        await _ensureUserDoc(userCredential.user);
+        return userCredential.user;
+      } catch (error) {
+        throw Exception(FirebaseErrorTranslator.auth(error));
+      }
     });
   }
 
   Future<void> resetPassword(String email) {
-    return FirebaseService.auth.sendPasswordResetEmail(email: email.trim());
+    return FirebaseService.auth
+        .sendPasswordResetEmail(email: email.trim())
+        .catchError((Object error) {
+          throw Exception(FirebaseErrorTranslator.auth(error));
+        });
   }
 
   Future<void> updateThemeMode(String themeMode) async {
     final user = state.valueOrNull;
     if (user == null) return;
-    await FirebaseService.userDoc(
-      user.uid,
-    ).set({'themeMode': themeMode}, SetOptions(merge: true));
+    await FirebaseService.userDoc(user.uid).set({
+      'themeMode': themeMode,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'lastSyncedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    await FirebaseService.appSettings(user.uid).set({
+      'themeMode': themeMode,
+      'liquidGlassEnabled': true,
+      'animationsEnabled': true,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   Future<void> signOut() async {

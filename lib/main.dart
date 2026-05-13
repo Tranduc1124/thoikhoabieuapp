@@ -4,22 +4,37 @@ import 'package:go_router/go_router.dart';
 
 import 'models/schedule_model.dart';
 import 'providers/auth_provider.dart';
+import 'providers/pro_feature_providers.dart';
+import 'providers/schedule_provider.dart';
 import 'screens/add_edit_schedule_screen.dart';
+import 'screens/firebase_diagnostics_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/manage_shared_links_screen.dart';
+import 'screens/notification_settings_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/share_preview_screen.dart';
+import 'screens/share_schedule_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/shared_schedule_view_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/statistics_screen.dart';
 import 'screens/today_screen.dart';
 import 'screens/week_schedule_screen.dart';
+import 'screens/widget_preview_screen.dart';
+import 'models/share_schedule_model.dart';
 import 'services/firebase_service.dart';
+import 'services/firebase_diagnostics_service.dart';
 import 'services/notification_service.dart';
+import 'services/widget_sync_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseService.initialize();
+  await FirebaseDiagnosticsService.checkFirebaseStatus();
   await NotificationService.initialize();
+  await WidgetSyncService.initialize();
   runApp(const ProviderScope(child: ThoiKhoaBieuApp()));
 }
 
@@ -55,6 +70,61 @@ final _routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         pageBuilder: (context, state) => _page(state, const SettingsScreen()),
+      ),
+      GoRoute(
+        path: '/firebase-diagnostics',
+        pageBuilder: (context, state) =>
+            _page(state, const FirebaseDiagnosticsScreen()),
+      ),
+      GoRoute(
+        path: '/profile',
+        pageBuilder: (context, state) => _page(state, const ProfileScreen()),
+      ),
+      GoRoute(
+        path: '/notifications',
+        pageBuilder: (context, state) =>
+            _page(state, const NotificationSettingsScreen()),
+      ),
+      GoRoute(
+        path: '/widget-preview',
+        pageBuilder: (context, state) =>
+            _page(state, const WidgetPreviewScreen()),
+      ),
+      GoRoute(
+        path: '/share',
+        pageBuilder: (context, state) =>
+            _page(state, const ShareScheduleScreen()),
+      ),
+      GoRoute(
+        path: '/share/preview',
+        pageBuilder: (context, state) {
+          final share = state.extra is ShareScheduleModel
+              ? state.extra! as ShareScheduleModel
+              : null;
+          return _page(
+            state,
+            share == null
+                ? const ShareScheduleScreen()
+                : SharePreviewScreen(share: share),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/shared',
+        pageBuilder: (context, state) =>
+            _page(state, const SharedScheduleViewScreen()),
+      ),
+      GoRoute(
+        path: '/shared/:id',
+        pageBuilder: (context, state) => _page(
+          state,
+          SharedScheduleViewScreen(shareId: state.pathParameters['id']),
+        ),
+      ),
+      GoRoute(
+        path: '/shared-links',
+        pageBuilder: (context, state) =>
+            _page(state, const ManageSharedLinksScreen()),
       ),
       GoRoute(
         path: '/schedule/new',
@@ -108,6 +178,14 @@ class ThoiKhoaBieuApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(_routerProvider);
+    ref.listen(schedulesProvider, (previous, next) {
+      next.whenData((schedules) {
+        final theme =
+            ref.read(appUserProvider).valueOrNull?.themeMode ?? 'system';
+        WidgetSyncService.syncSchedules(schedules: schedules, themeMode: theme);
+        ref.read(liveActivityActionsProvider).refresh();
+      });
+    });
     final themeMode = ref
         .watch(appUserProvider)
         .maybeWhen(

@@ -3,7 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
 import '../services/firebase_service.dart';
+import '../services/app_settings_service.dart';
+import '../services/firebase_error_translator.dart';
+import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
+import '../services/notification_settings_service.dart';
+import '../services/widget_sync_service.dart';
 
 class ScheduleRepository {
   ScheduleRepository({required this.userId});
@@ -56,23 +61,34 @@ class ScheduleRepository {
   }
 
   Future<String> addSchedule(ScheduleModel schedule) async {
-    _validate(schedule);
-    final doc = await _schedules.add(schedule.toCreateMap());
-    await NotificationService.scheduleClassReminder(
-      schedule.copyWith(id: doc.id),
-    );
-    return doc.id;
+    try {
+      _validate(schedule);
+      final doc = await _schedules.add(schedule.toCreateMap());
+      await _afterScheduleChanged();
+      return doc.id;
+    } catch (error) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
+    }
   }
 
   Future<void> updateSchedule(ScheduleModel schedule) async {
-    _validate(schedule);
-    await _schedules.doc(schedule.id).update(schedule.toUpdateMap());
-    await NotificationService.scheduleClassReminder(schedule);
+    try {
+      _validate(schedule);
+      await _schedules.doc(schedule.id).update(schedule.toUpdateMap());
+      await _afterScheduleChanged();
+    } catch (error) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
+    }
   }
 
   Future<void> deleteSchedule(String id) async {
-    await _schedules.doc(id).delete();
-    await NotificationService.cancelSchedule(id);
+    try {
+      await _schedules.doc(id).delete();
+      await NotificationService.cancelSchedule(id);
+      await _afterScheduleChanged();
+    } catch (error) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
+    }
   }
 
   Future<void> markStarted(ScheduleModel schedule, DateTime date) {
@@ -113,7 +129,44 @@ class ScheduleRepository {
       noteAfterClass: noteAfterClass,
       completedAt: status == StudyStatus.completed ? DateTime.now() : null,
     );
-    await _logs.doc(id).set(log.toMap(), SetOptions(merge: true));
+    try {
+      await _logs.doc(id).set(log.toMap(), SetOptions(merge: true));
+      await _afterScheduleChanged();
+    } catch (error) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
+    }
+  }
+
+  Future<void> _afterScheduleChanged() async {
+    try {
+      final snapshot = await _schedules
+          .orderBy('dayOfWeek')
+          .orderBy('startTime')
+          .get();
+      final schedules = snapshot.docs.map(ScheduleModel.fromFirestore).toList();
+      final settings = await NotificationSettingsService(userId: userId).load();
+      await NotificationService.rescheduleAllClassNotifications(
+        schedules,
+        settings: settings,
+      );
+      final user = await FirebaseService.userDoc(userId).get();
+      await WidgetSyncService.syncSchedules(
+        schedules: schedules,
+        themeMode: user.data()?['themeMode'] as String? ?? 'system',
+      );
+      final appSettings = await AppSettingsService(userId: userId).load();
+      await LiveActivityService.refreshLiveActivityForToday(
+        schedules: schedules,
+        enabled:
+            appSettings.dynamicIslandEnabled &&
+            appSettings.liveActivitiesEnabled,
+      );
+      await FirebaseService.userDoc(userId).set({
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (_) {
+      // Cloud/widget/notification refresh should not make schedule CRUD fail.
+    }
   }
 
   void _validate(ScheduleModel schedule) {

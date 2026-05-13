@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
-import '../services/notification_service.dart';
+import '../providers/pro_feature_providers.dart';
 import '../widgets/app_navigation_shell.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_header.dart';
@@ -17,6 +17,14 @@ class SettingsScreen extends ConsumerWidget {
     final user = ref.watch(appUserProvider).valueOrNull;
     final themeMode = user?.themeMode ?? 'system';
     final auth = ref.watch(authControllerProvider).valueOrNull;
+    final notificationSettings = ref
+        .watch(notificationSettingsProvider)
+        .valueOrNull;
+    final appSettings = ref.watch(appSettingsProvider).valueOrNull;
+    final liveActivitySupported =
+        ref.watch(liveActivitySupportProvider).valueOrNull ?? false;
+    final liveActivitySystemEnabled =
+        ref.watch(liveActivitySystemEnabledProvider).valueOrNull ?? true;
 
     return AppNavigationShell(
       currentIndex: 4,
@@ -27,17 +35,20 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               const SectionHeader(
                 title: 'Cài đặt',
-                subtitle: 'Cá nhân hoá giao diện, thông báo và dữ liệu',
+                subtitle: 'Widget, thông báo, chia sẻ và đồng bộ cloud',
               ),
               const SizedBox(height: 16),
               GlassCard(
+                onTap: () => context.push('/profile'),
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
                     radius: 25,
-                    backgroundImage: user?.avatarUrl == null
+                    backgroundImage:
+                        user?.avatarUrl == null ||
+                            !(user!.avatarUrl!.startsWith('http'))
                         ? null
-                        : NetworkImage(user!.avatarUrl!),
+                        : NetworkImage(user.avatarUrl!),
                     child: user?.avatarUrl == null
                         ? const Icon(Icons.person_rounded)
                         : null,
@@ -46,39 +57,37 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: Text(
                     user?.email ?? auth?.email ?? 'Đã đồng bộ Firebase',
                   ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                 ),
               ),
               const SizedBox(height: 18),
               _SettingsSection(
                 title: 'Giao diện',
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 260),
-                  child: SegmentedButton<String>(
-                    key: ValueKey(themeMode),
-                    segments: const [
-                      ButtonSegment(
-                        value: 'system',
-                        icon: Icon(Icons.phone_iphone_rounded),
-                        label: Text('Hệ thống'),
-                      ),
-                      ButtonSegment(
-                        value: 'light',
-                        icon: Icon(Icons.light_mode_rounded),
-                        label: Text('Sáng'),
-                      ),
-                      ButtonSegment(
-                        value: 'dark',
-                        icon: Icon(Icons.dark_mode_rounded),
-                        label: Text('Tối'),
-                      ),
-                    ],
-                    selected: {themeMode},
-                    onSelectionChanged: (selection) {
-                      ref
-                          .read(authControllerProvider.notifier)
-                          .updateThemeMode(selection.first);
-                    },
-                  ),
+                child: SegmentedButton<String>(
+                  key: ValueKey(themeMode),
+                  segments: const [
+                    ButtonSegment(
+                      value: 'system',
+                      icon: Icon(Icons.phone_iphone_rounded),
+                      label: Text('Hệ thống'),
+                    ),
+                    ButtonSegment(
+                      value: 'light',
+                      icon: Icon(Icons.light_mode_rounded),
+                      label: Text('Sáng'),
+                    ),
+                    ButtonSegment(
+                      value: 'dark',
+                      icon: Icon(Icons.dark_mode_rounded),
+                      label: Text('Tối'),
+                    ),
+                  ],
+                  selected: {themeMode},
+                  onSelectionChanged: (selection) {
+                    ref
+                        .read(authControllerProvider.notifier)
+                        .updateThemeMode(selection.first);
+                  },
                 ),
               ),
               const SizedBox(height: 14),
@@ -88,65 +97,124 @@ class SettingsScreen extends ConsumerWidget {
                   children: [
                     _SettingTile(
                       icon: Icons.notifications_active_outlined,
-                      title: 'Bật thông báo',
-                      subtitle: 'Nhắc trước 5, 10, 15 hoặc 30 phút',
-                      trailing: Switch(
-                        value: true,
-                        onChanged: (_) =>
-                            NotificationService.requestPermissions(),
-                      ),
+                      title: 'Cài đặt thông báo',
+                      subtitle:
+                          'Nhắc trước ${notificationSettings?.reminderMinutesBefore ?? 15} phút, permission và âm báo',
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/notifications'),
+                    ),
+                  ],
+                ),
+              ),
+              if (liveActivitySupported) ...[
+                const SizedBox(height: 14),
+                _SettingsSection(
+                  title: 'Dynamic Island',
+                  child: _SettingTile(
+                    icon: Icons.dynamic_feed_rounded,
+                    title: 'Hiển thị lịch học trên Dynamic Island',
+                    subtitle: liveActivitySystemEnabled
+                        ? 'Xem môn đang học, môn tiếp theo và thời gian còn lại ngay trên Dynamic Island.'
+                        : 'Live Activities đang tắt trong iOS Settings. Bật lại trong Settings > App > Live Activities.',
+                    trailing: Switch(
+                      value: appSettings?.dynamicIslandEnabled ?? false,
+                      onChanged: liveActivitySystemEnabled
+                          ? (value) => ref
+                                .read(liveActivityActionsProvider)
+                                .setEnabled(value)
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 14),
+              _SettingsSection(
+                title: 'Widget iPhone',
+                child: Column(
+                  children: [
+                    _SettingTile(
+                      icon: Icons.widgets_rounded,
+                      title: 'Preview & sync widget',
+                      subtitle:
+                          'Small, medium, large preview cho màn hình chính',
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/widget-preview'),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
               _SettingsSection(
-                title: 'Dữ liệu',
+                title: 'Chia sẻ',
+                child: Column(
+                  children: [
+                    _SettingTile(
+                      icon: Icons.ios_share_rounded,
+                      title: 'Chia sẻ lịch học',
+                      subtitle: 'Tạo ảnh, QR và public link chỉ xem',
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/share'),
+                    ),
+                    const SizedBox(height: 10),
+                    _SettingTile(
+                      icon: Icons.link_rounded,
+                      title: 'Các link đã chia sẻ',
+                      subtitle: 'Tắt hoặc xoá public link',
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/shared-links'),
+                    ),
+                    const SizedBox(height: 10),
+                    _SettingTile(
+                      icon: Icons.qr_code_scanner_rounded,
+                      title: 'Xem lịch từ shareId',
+                      subtitle: 'Nhập link hoặc mã chia sẻ',
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/shared'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              _SettingsSection(
+                title: 'Đồng bộ & Sao lưu',
                 child: Column(
                   children: [
                     _SettingTile(
                       icon: Icons.cloud_done_outlined,
-                      title: 'Sao lưu dữ liệu',
-                      subtitle: 'Firestore tự đồng bộ và cache offline',
-                      trailing: const Icon(Icons.check_circle_rounded),
-                      onTap: () {},
+                      title: 'Profile & backup',
+                      subtitle: 'Tên, avatar, sync status và export JSON',
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/profile'),
                     ),
                     const SizedBox(height: 10),
                     _SettingTile(
-                      icon: Icons.palette_outlined,
-                      title: 'Màu chủ đề',
-                      subtitle: 'Bảng màu pastel dịu mắt',
+                      icon: Icons.sync_rounded,
+                      title: 'Sync widget ngay',
+                      subtitle: 'Cập nhật dữ liệu local cho iOS widget',
+                      trailing: const Icon(Icons.refresh_rounded),
+                      onTap: () =>
+                          ref.read(widgetSyncActionsProvider).syncNow(),
+                    ),
+                    const SizedBox(height: 10),
+                    _SettingTile(
+                      icon: Icons.bug_report_outlined,
+                      title: 'Firebase diagnostics',
+                      subtitle:
+                          'Kiểm tra initialize, Auth, Firestore, Project ID',
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () {},
+                      onTap: () => context.push('/firebase-diagnostics'),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
-              _SettingsSection(
-                title: 'Tài khoản',
-                child: Column(
-                  children: [
-                    _SettingTile(
-                      icon: Icons.manage_accounts_outlined,
-                      title: 'Quản lý tài khoản',
-                      subtitle: auth?.email ?? 'Email / Google / Apple',
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () {},
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton.tonalIcon(
-                      onPressed: () async {
-                        await ref
-                            .read(authControllerProvider.notifier)
-                            .signOut();
-                        if (context.mounted) context.go('/login');
-                      },
-                      icon: const Icon(Icons.logout_rounded),
-                      label: const Text('Đăng xuất'),
-                    ),
-                  ],
-                ),
+              FilledButton.tonalIcon(
+                onPressed: () async {
+                  await ref.read(authControllerProvider.notifier).signOut();
+                  if (context.mounted) context.go('/login');
+                },
+                icon: const Icon(Icons.logout_rounded),
+                label: const Text('Đăng xuất'),
               ),
             ],
           ),

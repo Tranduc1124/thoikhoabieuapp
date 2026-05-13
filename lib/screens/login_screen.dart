@@ -106,7 +106,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               if (!FirebaseService.isAvailable) ...[
                 const SizedBox(height: 18),
-                _FirebaseWarning(error: FirebaseService.initializationError),
+                _FirebaseWarning(
+                  error: FirebaseService.initializationError,
+                  onRetry: () async {
+                    final ok = await FirebaseService.initialize();
+                    if (!mounted) return;
+                    ref.invalidate(authControllerProvider);
+                    setState(() {});
+                    _showMessage(
+                      ok
+                          ? 'Firebase đã khởi tạo thành công.'
+                          : 'Firebase vẫn lỗi. Kiểm tra diagnostics và file cấu hình.',
+                    );
+                  },
+                ),
               ],
               const SizedBox(height: 24),
               GlassCard(
@@ -276,9 +289,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 }
 
 class _FirebaseWarning extends StatelessWidget {
-  const _FirebaseWarning({required this.error});
+  const _FirebaseWarning({required this.error, required this.onRetry});
 
   final Object? error;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -286,16 +300,36 @@ class _FirebaseWarning extends StatelessWidget {
     return GlassCard(
       padding: const EdgeInsets.all(14),
       borderColor: colorScheme.error.withValues(alpha: 0.20),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, color: colorScheme.error),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Chưa cấu hình Firebase. Thêm GoogleService-Info.plist vào ios/Runner và chạy flutterfire configure để bật đăng nhập/cloud sync.',
-              style: TextStyle(color: colorScheme.onSurfaceVariant),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline_rounded, color: colorScheme.error),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Firebase khởi tạo thất bại. Kiểm tra lib/firebase_options.dart, GoogleService-Info.plist và bundle id.',
+                  style: TextStyle(color: colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
             ),
+          ],
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Thử lại Firebase'),
           ),
         ],
       ),
