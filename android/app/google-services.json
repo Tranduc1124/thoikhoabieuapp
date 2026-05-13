@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "736207474949",
+    "project_id": "thoikhoabieuapp-9f53e",
+    "storage_bucket": "thoikhoabieuapp-9f53e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:736207474949:android:ae4c70454e3a76826ee76c",
+        "android_client_info": {
+          "package_name": "com.example.thoikhoabieuapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGY-lcRi9QHqn_0WrOxodNu3eUHXjpcTs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
