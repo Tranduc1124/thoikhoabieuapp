@@ -47,7 +47,7 @@ class ScheduleModel {
       room: '',
       teacher: '',
       note: '',
-      color: 0xFF2F80ED,
+      color: 0xFF6A8DFF,
       repeatWeekly: true,
       reminderEnabled: true,
       reminderMinutesBefore: 10,
@@ -151,7 +151,7 @@ class ScheduleModel {
       final normalized = value.replaceFirst('#', '0xFF');
       return int.tryParse(normalized) ?? 0xFF2F80ED;
     }
-    return 0xFF2F80ED;
+    return 0xFF6A8DFF;
   }
 }
 
@@ -163,13 +163,13 @@ String formatMinutes(int minutes) {
 
 String dayName(int dayOfWeek) {
   const names = {
-    1: 'Thu 2',
-    2: 'Thu 3',
-    3: 'Thu 4',
-    4: 'Thu 5',
-    5: 'Thu 6',
-    6: 'Thu 7',
-    7: 'Chu nhat',
+    1: 'Thứ 2',
+    2: 'Thứ 3',
+    3: 'Thứ 4',
+    4: 'Thứ 5',
+    5: 'Thứ 6',
+    6: 'Thứ 7',
+    7: 'CN',
   };
-  return names[dayOfWeek] ?? 'Thu 2';
+  return names[dayOfWeek] ?? 'Thứ 2';
 }

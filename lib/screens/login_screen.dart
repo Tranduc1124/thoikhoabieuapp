@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../services/firebase_service.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/soft_gradient_background.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -39,58 +41,75 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(22, 24, 22, 28),
-          children: [
-            const SizedBox(height: 22),
-            Hero(
-              tag: 'app-logo',
-              child: Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(26),
-                  gradient: LinearGradient(
-                    colors: [colorScheme.primary, colorScheme.tertiary],
+      body: SoftGradientBackground(
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(22, 28, 22, 30),
+            children: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 560),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) => Opacity(
+                  opacity: value,
+                  child: Transform.translate(
+                    offset: Offset(0, 18 * (1 - value)),
+                    child: child,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.primary.withValues(alpha: 0.28),
-                      blurRadius: 24,
-                      offset: const Offset(0, 14),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Hero(
+                      tag: 'app-logo',
+                      child: Container(
+                        width: 78,
+                        height: 78,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(28),
+                          gradient: LinearGradient(
+                            colors: [colorScheme.primary, colorScheme.tertiary],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: colorScheme.primary.withValues(
+                                alpha: 0.24,
+                              ),
+                              blurRadius: 26,
+                              offset: const Offset(0, 14),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.calendar_month_rounded,
+                          color: Colors.white,
+                          size: 40,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+                    Text(
+                      _isRegister ? 'Tạo tài khoản' : 'Chào mừng trở lại',
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Đồng bộ lịch học, ghi chú và nhắc nhở trên mọi thiết bị.',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.calendar_month_rounded,
-                  color: Colors.white,
-                  size: 40,
-                ),
               ),
-            ),
-            const SizedBox(height: 26),
-            Text(
-              _isRegister ? 'Tạo tài khoản' : 'Chào mừng trở lại',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Đồng bộ lịch học, ghi chú và nhắc nhở trên mọi thiết bị.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.4,
-              ),
-            ),
-            if (!FirebaseService.isAvailable) ...[
-              const SizedBox(height: 18),
-              _FirebaseWarning(error: FirebaseService.initializationError),
-            ],
-            const SizedBox(height: 24),
-            Card(
-              child: Padding(
+              if (!FirebaseService.isAvailable) ...[
+                const SizedBox(height: 18),
+                _FirebaseWarning(error: FirebaseService.initializationError),
+              ],
+              const SizedBox(height: 24),
+              GlassCard(
                 padding: const EdgeInsets.all(18),
                 child: Form(
                   key: _formKey,
@@ -98,6 +117,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     children: [
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 240),
+                        switchInCurve: Curves.easeOutCubic,
                         child: _isRegister
                             ? TextFormField(
                                 key: const ValueKey('name'),
@@ -170,45 +190,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: auth.isLoading ? null : _google,
-                    icon: const Icon(Icons.g_mobiledata_rounded, size: 30),
-                    label: const Text('Google'),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: auth.isLoading ? null : _google,
+                      icon: const Icon(Icons.g_mobiledata_rounded, size: 30),
+                      label: const Text('Google'),
+                    ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: auth.isLoading ? null : _apple,
+                      icon: const Icon(Icons.apple_rounded),
+                      label: const Text('Apple'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => setState(() => _isRegister = !_isRegister),
+                child: Text(
+                  _isRegister
+                      ? 'Đã có tài khoản? Đăng nhập'
+                      : 'Chưa có tài khoản? Đăng ký',
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: auth.isLoading ? null : _apple,
-                    icon: const Icon(Icons.apple_rounded),
-                    label: const Text('Apple'),
-                  ),
+              ),
+              if (auth.hasError) ...[
+                const SizedBox(height: 12),
+                Text(
+                  auth.error.toString(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: colorScheme.error),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => setState(() => _isRegister = !_isRegister),
-              child: Text(
-                _isRegister
-                    ? 'Đã có tài khoản? Đăng nhập'
-                    : 'Chưa có tài khoản? Đăng ký',
-              ),
-            ),
-            if (auth.hasError) ...[
-              const SizedBox(height: 12),
-              Text(
-                auth.error.toString(),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: colorScheme.error),
-              ),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -263,21 +283,18 @@ class _FirebaseWarning extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(18),
-      ),
+      borderColor: colorScheme.error.withValues(alpha: 0.20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, color: colorScheme.onErrorContainer),
+          Icon(Icons.info_outline_rounded, color: colorScheme.error),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               'Chưa cấu hình Firebase. Thêm GoogleService-Info.plist vào ios/Runner và chạy flutterfire configure để bật đăng nhập/cloud sync.',
-              style: TextStyle(color: colorScheme.onErrorContainer),
+              style: TextStyle(color: colorScheme.onSurfaceVariant),
             ),
           ),
         ],

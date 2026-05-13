@@ -6,7 +6,11 @@ import '../models/study_log_model.dart';
 import '../providers/schedule_provider.dart';
 import '../widgets/app_navigation_shell.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/glass_floating_button.dart';
+import '../widgets/loading_skeleton.dart';
 import '../widgets/schedule_card.dart';
+import '../widgets/section_header.dart';
+import '../widgets/soft_gradient_background.dart';
 
 class TodayScreen extends ConsumerWidget {
   const TodayScreen({super.key});
@@ -21,74 +25,77 @@ class TodayScreen extends ConsumerWidget {
 
     return AppNavigationShell(
       currentIndex: 2,
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: GlassFloatingButton(
         onPressed: () => context.push('/schedule/new'),
-        child: const Icon(Icons.add_rounded),
+        icon: Icons.add_rounded,
       ),
-      child: SafeArea(
-        child: schedules.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => EmptyState(
-            title: 'Không tải được lịch hôm nay',
-            message: error.toString(),
-          ),
-          data: (items) {
-            if (items.isEmpty) {
-              return EmptyState(
-                title: 'Hôm nay trống lịch',
-                message:
-                    'Bạn có thể thêm môn học hoặc tận dụng ngày này để ôn tập.',
-                action: FilledButton.icon(
-                  onPressed: () => context.push('/schedule/new'),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Thêm lịch học'),
-                ),
-              );
-            }
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 96),
-              children: [
-                Text(
-                  'Lịch hôm nay',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
+      child: SoftGradientBackground(
+        child: SafeArea(
+          child: schedules.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(20),
+              child: LoadingSkeleton(itemCount: 4),
+            ),
+            error: (error, _) => EmptyState(
+              title: 'Không tải được lịch hôm nay',
+              message: error.toString(),
+            ),
+            data: (items) {
+              if (items.isEmpty) {
+                return EmptyState(
+                  title: 'Hôm nay trống lịch',
+                  message:
+                      'Bạn có thể thêm môn học hoặc tận dụng ngày này để ôn tập.',
+                  action: FilledButton.icon(
+                    onPressed: () => context.push('/schedule/new'),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Thêm lịch học'),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Theo dõi tiến độ từng buổi và ghi chú nhanh sau lớp.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                );
+              }
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 112),
+                children: [
+                  const SectionHeader(
+                    title: 'Lịch hôm nay',
+                    subtitle:
+                        'Theo dõi tiến độ từng buổi và ghi chú nhanh sau lớp',
                   ),
-                ),
-                const SizedBox(height: 18),
-                for (final schedule in items)
-                  ScheduleCard(
-                    schedule: schedule,
-                    log: logBySchedule[schedule.id],
-                    onStart: () async {
-                      await ref.read(scheduleActionsProvider).start(schedule);
-                      if (context.mounted) {
-                        _showMessage(
-                          context,
-                          'Đã bắt đầu học ${schedule.subjectName}',
-                        );
-                      }
-                    },
-                    onComplete: () async {
-                      final note = await _noteDialog(context);
-                      if (note == null) return;
-                      await ref
+                  const SizedBox(height: 18),
+                  for (var index = 0; index < items.length; index++)
+                    ScheduleCard(
+                      schedule: items[index],
+                      log: logBySchedule[items[index].id],
+                      index: index,
+                      onDelete: () => ref
                           .read(scheduleActionsProvider)
-                          .complete(schedule, note);
-                      if (context.mounted) {
-                        _showMessage(context, 'Đã đánh dấu hoàn thành.');
-                      }
-                    },
-                  ),
-              ],
-            );
-          },
+                          .delete(items[index].id),
+                      onStart: () async {
+                        await ref
+                            .read(scheduleActionsProvider)
+                            .start(items[index]);
+                        if (context.mounted) {
+                          _showMessage(
+                            context,
+                            'Đã bắt đầu học ${items[index].subjectName}',
+                          );
+                        }
+                      },
+                      onComplete: () async {
+                        final note = await _noteDialog(context);
+                        if (note == null) return;
+                        await ref
+                            .read(scheduleActionsProvider)
+                            .complete(items[index], note);
+                        if (context.mounted) {
+                          _showMessage(context, 'Đã đánh dấu hoàn thành.');
+                        }
+                      },
+                    ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

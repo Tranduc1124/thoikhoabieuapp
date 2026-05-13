@@ -15,43 +15,146 @@ class DayTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (schedules.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (schedules.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final schedule in schedules)
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    final sorted = [...schedules]
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 280),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: Column(
+        key: ValueKey(sorted.map((item) => item.id).join('-')),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < sorted.length; i++)
+            _TimelineRow(
+              schedule: sorted[i],
+              index: i,
+              isLast: i == sorted.length - 1,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimelineRow extends StatelessWidget {
+  const _TimelineRow({
+    required this.schedule,
+    required this.index,
+    required this.isLast,
+  });
+
+  final ScheduleModel schedule;
+  final int index;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCurrent = _isCurrent(schedule);
+    final color = schedule.displayColor;
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 62,
+            child: Column(
               children: [
-                SizedBox(
-                  width: 58,
-                  child: Column(
-                    children: [
-                      Text(
-                        formatMinutes(schedule.startTime),
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
-                      Expanded(
-                        child: Container(
-                          width: 2,
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          color: schedule.displayColor.withValues(alpha: 0.35),
-                        ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 260),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    color: isCurrent
+                        ? color.withValues(alpha: 0.16)
+                        : Colors.transparent,
+                  ),
+                  child: Text(
+                    formatMinutes(schedule.startTime),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: isCurrent
+                          ? color
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.surface,
+                      width: 3,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.28),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                 ),
-                Expanded(
-                  child: ScheduleCard(schedule: schedule, compact: true),
-                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(999),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            color.withValues(alpha: 0.38),
+                            color.withValues(alpha: 0.08),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-      ],
+          Expanded(
+            child: Stack(
+              children: [
+                if (isCurrent)
+                  Positioned.fill(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: color.withValues(alpha: 0.20),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ScheduleCard(schedule: schedule, compact: true, index: index),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  bool _isCurrent(ScheduleModel schedule) {
+    final now = DateTime.now();
+    if (now.weekday != schedule.dayOfWeek) return false;
+    final minutes = now.hour * 60 + now.minute;
+    return minutes >= schedule.startTime && minutes <= schedule.endTime;
   }
 }

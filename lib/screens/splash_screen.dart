@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../services/firebase_service.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/soft_gradient_background.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -21,7 +23,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1100),
     )..forward();
     _route();
   }
@@ -46,54 +48,66 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              colorScheme.primary,
-              colorScheme.tertiary,
-              colorScheme.secondary,
-            ],
-          ),
-        ),
+      body: SoftGradientBackground(
         child: Center(
-          child: ScaleTransition(
-            scale: CurvedAnimation(
+          child: FadeTransition(
+            opacity: CurvedAnimation(
               parent: _controller,
-              curve: Curves.easeOutBack,
+              curve: Curves.easeOut,
             ),
-            child: FadeTransition(
-              opacity: _controller,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 104,
-                    height: 104,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.25),
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.88, end: 1).animate(
+                CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+              ),
+              child: GlassCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 32,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Hero(
+                      tag: 'app-logo',
+                      child: Container(
+                        width: 104,
+                        height: 104,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(34),
+                          gradient: LinearGradient(
+                            colors: [colorScheme.primary, colorScheme.tertiary],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: colorScheme.primary.withValues(
+                                alpha: 0.28,
+                              ),
+                              blurRadius: 30,
+                              offset: const Offset(0, 18),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.calendar_month_rounded,
+                          color: Colors.white,
+                          size: 54,
+                        ),
                       ),
                     ),
-                    child: const Icon(
-                      Icons.calendar_month_rounded,
-                      color: Colors.white,
-                      size: 54,
+                    const SizedBox(height: 24),
+                    Text(
+                      'Thời Khoá Biểu',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w900),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Thời Khoá Biểu',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Lịch học gọn gàng, đồng bộ mọi nơi',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

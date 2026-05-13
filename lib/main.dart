@@ -14,6 +14,7 @@ import 'screens/today_screen.dart';
 import 'screens/week_schedule_screen.dart';
 import 'services/firebase_service.dart';
 import 'services/notification_service.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,37 +27,80 @@ final _routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+      GoRoute(
+        path: '/',
+        pageBuilder: (context, state) => _page(state, const SplashScreen()),
+      ),
+      GoRoute(
+        path: '/login',
+        pageBuilder: (context, state) => _page(state, const LoginScreen()),
+      ),
+      GoRoute(
+        path: '/home',
+        pageBuilder: (context, state) => _page(state, const HomeScreen()),
+      ),
       GoRoute(
         path: '/week',
-        builder: (context, state) => const WeekScheduleScreen(),
+        pageBuilder: (context, state) =>
+            _page(state, const WeekScheduleScreen()),
       ),
-      GoRoute(path: '/today', builder: (context, state) => const TodayScreen()),
+      GoRoute(
+        path: '/today',
+        pageBuilder: (context, state) => _page(state, const TodayScreen()),
+      ),
       GoRoute(
         path: '/statistics',
-        builder: (context, state) => const StatisticsScreen(),
+        pageBuilder: (context, state) => _page(state, const StatisticsScreen()),
       ),
       GoRoute(
         path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
+        pageBuilder: (context, state) => _page(state, const SettingsScreen()),
       ),
       GoRoute(
         path: '/schedule/new',
-        builder: (context, state) => const AddEditScheduleScreen(),
+        pageBuilder: (context, state) =>
+            _page(state, const AddEditScheduleScreen()),
       ),
       GoRoute(
         path: '/schedule/:id',
-        builder: (context, state) => AddEditScheduleScreen(
-          schedule: state.extra is ScheduleModel
-              ? state.extra! as ScheduleModel
-              : null,
+        pageBuilder: (context, state) => _page(
+          state,
+          AddEditScheduleScreen(
+            schedule: state.extra is ScheduleModel
+                ? state.extra! as ScheduleModel
+                : null,
+          ),
         ),
       ),
     ],
   );
 });
+
+CustomTransitionPage<void> _page(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 360),
+    reverseTransitionDuration: const Duration(milliseconds: 260),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curve = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curve,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.035),
+            end: Offset.zero,
+          ).animate(curve),
+          child: child,
+        ),
+      );
+    },
+  );
+}
 
 class ThoiKhoaBieuApp extends ConsumerWidget {
   const ThoiKhoaBieuApp({super.key});
@@ -76,56 +120,8 @@ class ThoiKhoaBieuApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       themeMode: themeMode,
-      theme: _theme(Brightness.light),
-      darkTheme: _theme(Brightness.dark),
-    );
-  }
-
-  ThemeData _theme(Brightness brightness) {
-    final seed = brightness == Brightness.light
-        ? const Color(0xFF246BFE)
-        : const Color(0xFF7AA2FF);
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: brightness,
-    );
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: colorScheme,
-      scaffoldBackgroundColor: brightness == Brightness.light
-          ? const Color(0xFFF7F8FC)
-          : const Color(0xFF101218),
-      fontFamily: 'SF Pro Display',
-      pageTransitionsTheme: const PageTransitionsTheme(
-        builders: {
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
-        },
-      ),
-      appBarTheme: const AppBarTheme(centerTitle: false, elevation: 0),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        color: brightness == Brightness.light
-            ? Colors.white
-            : const Color(0xFF191C22),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide.none,
-        ),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w800),
-        ),
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
     );
   }
 
