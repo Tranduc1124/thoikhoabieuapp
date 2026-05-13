@@ -27,6 +27,11 @@ class ManageSharedLinksScreen extends ConsumerWidget {
             error: (error, _) => EmptyState(
               title: 'Không tải được link',
               message: error.toString(),
+              action: FilledButton.tonalIcon(
+                onPressed: () => ref.invalidate(mySharesProvider),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Thử lại'),
+              ),
             ),
             data: (items) {
               if (items.isEmpty) {

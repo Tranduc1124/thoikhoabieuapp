@@ -79,6 +79,12 @@ class _SharedScheduleViewScreenState
                   error: (error, _) => EmptyState(
                     title: 'Không mở được lịch',
                     message: error.toString(),
+                    action: FilledButton.tonalIcon(
+                      onPressed: () =>
+                          ref.invalidate(publicShareProvider(shareId!)),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Thử lại'),
+                    ),
                   ),
                   data: (data) {
                     if (data == null) {

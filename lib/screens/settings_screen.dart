@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/pro_feature_providers.dart';
+import '../theme/app_colors.dart';
 import '../widgets/app_navigation_shell.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_header.dart';
@@ -37,27 +38,45 @@ class SettingsScreen extends ConsumerWidget {
                 title: 'Cài đặt',
                 subtitle: 'Widget, thông báo, chia sẻ và đồng bộ cloud',
               ),
-              const SizedBox(height: 16),
               GlassCard(
                 onTap: () => context.push('/profile'),
+                padding: const EdgeInsets.all(18),
+                borderColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.22),
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
-                    radius: 25,
+                    radius: 29,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.18),
                     backgroundImage:
                         user?.avatarUrl == null ||
                             !(user!.avatarUrl!.startsWith('http'))
                         ? null
                         : NetworkImage(user.avatarUrl!),
                     child: user?.avatarUrl == null
-                        ? const Icon(Icons.person_rounded)
+                        ? Icon(
+                            Icons.person_rounded,
+                            color: Theme.of(context).colorScheme.primary,
+                          )
                         : null,
                   ),
-                  title: Text(user?.name ?? auth?.email ?? 'Tài khoản'),
+                  title: Text(
+                    user?.name ?? auth?.email ?? 'Tài khoản',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   subtitle: Text(
                     user?.email ?? auth?.email ?? 'Đã đồng bộ Firebase',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    color: Theme.of(context).colorScheme.textSecondary,
+                  ),
                 ),
               ),
               const SizedBox(height: 18),
@@ -276,7 +295,8 @@ class _SettingTile extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          color: colorScheme.surface.withValues(alpha: 0.42),
+          color: colorScheme.tileSurface,
+          border: Border.all(color: colorScheme.glassStrokeSubtle),
         ),
         child: Row(
           children: [
@@ -284,8 +304,13 @@ class _SettingTile extends StatelessWidget {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colorScheme.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.primary.withValues(alpha: 0.22),
+                    colorScheme.tertiary.withValues(alpha: 0.14),
+                  ],
+                ),
               ),
               child: Icon(icon, color: colorScheme.primary),
             ),

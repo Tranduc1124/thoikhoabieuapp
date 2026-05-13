@@ -6,6 +6,7 @@ import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/schedule_provider.dart';
+import '../theme/app_colors.dart';
 import '../widgets/app_navigation_shell.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
@@ -77,6 +78,11 @@ class HomeScreen extends ConsumerWidget {
                     child: EmptyState(
                       title: 'Không tải được lịch',
                       message: error.toString(),
+                      action: FilledButton.tonalIcon(
+                        onPressed: () => ref.invalidate(schedulesProvider),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Thử lại'),
+                      ),
                     ),
                   ),
                   data: (items) {
@@ -278,8 +284,8 @@ class _QuickStat extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: colorScheme.surface.withValues(alpha: 0.44),
-        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.10)),
+        color: colorScheme.tileSurface,
+        border: Border.all(color: colorScheme.glassStrokeSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

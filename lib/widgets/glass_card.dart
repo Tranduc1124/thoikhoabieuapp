@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
 
 class GlassCard extends StatelessWidget {
   const GlassCard({
@@ -30,12 +30,20 @@ class GlassCard extends StatelessWidget {
     final isDark = colorScheme.brightness == Brightness.dark;
     final decoration = BoxDecoration(
       borderRadius: BorderRadius.circular(radius),
-      color: colorScheme.glassSurface.withValues(alpha: opacity ?? 1),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          colorScheme.glassSurfaceStrong.withValues(alpha: opacity ?? 1),
+          colorScheme.glassSurface.withValues(alpha: opacity ?? 1),
+        ],
+      ),
       border: Border.all(color: borderColor ?? colorScheme.glassStroke),
       boxShadow: [
         BoxShadow(
           color: colorScheme.softShadow,
-          blurRadius: isDark ? 28 : 34,
+          blurRadius: isDark ? 30 : 36,
+          spreadRadius: isDark ? -12 : -14,
           offset: const Offset(0, 18),
         ),
       ],
@@ -52,6 +60,8 @@ class GlassCard extends StatelessWidget {
             child: InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(radius),
+              splashColor: colorScheme.primary.withValues(alpha: 0.08),
+              highlightColor: colorScheme.primary.withValues(alpha: 0.05),
               child: Ink(
                 decoration: decoration,
                 padding: padding,

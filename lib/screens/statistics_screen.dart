@@ -30,6 +30,14 @@ class StatisticsScreen extends ConsumerWidget {
             error: (error, _) => EmptyState(
               title: 'Không tải được thống kê',
               message: error.toString(),
+              action: FilledButton.tonalIcon(
+                onPressed: () {
+                  ref.invalidate(schedulesProvider);
+                  ref.invalidate(weekStudyLogsProvider);
+                },
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Thử lại'),
+              ),
             ),
             data: (value) {
               final entries = value.hoursBySubject.entries.toList()

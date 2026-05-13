@@ -43,6 +43,11 @@ class _NotificationSettingsScreenState
             error: (error, _) => EmptyState(
               title: 'Không tải được cài đặt',
               message: error.toString(),
+              action: FilledButton.tonalIcon(
+                onPressed: () => ref.invalidate(notificationSettingsProvider),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Thử lại'),
+              ),
             ),
             data: (value) => ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),

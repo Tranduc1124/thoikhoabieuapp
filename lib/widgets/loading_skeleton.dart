@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import 'glass_card.dart';
 
 class LoadingSkeleton extends StatefulWidget {
@@ -66,8 +67,11 @@ class _Bar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = Theme.of(context).colorScheme.surfaceContainerHighest;
-    final highlight = Theme.of(context).colorScheme.surface;
+    final colorScheme = Theme.of(context).colorScheme;
+    final base = colorScheme.tileSurface;
+    final highlight = colorScheme.isDark
+        ? Colors.white.withValues(alpha: 0.20)
+        : Colors.white.withValues(alpha: 0.95);
     return FractionallySizedBox(
       widthFactor: widthFactor,
       child: Container(

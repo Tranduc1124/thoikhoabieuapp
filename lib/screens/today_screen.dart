@@ -39,6 +39,11 @@ class TodayScreen extends ConsumerWidget {
             error: (error, _) => EmptyState(
               title: 'Không tải được lịch hôm nay',
               message: error.toString(),
+              action: FilledButton.tonalIcon(
+                onPressed: () => ref.invalidate(schedulesProvider),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Thử lại'),
+              ),
             ),
             data: (items) {
               if (items.isEmpty) {
