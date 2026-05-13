@@ -20,7 +20,7 @@ workflows:
     scripts:
       - name: Create iOS platform if missing
         script: |
-          flutter create --platforms=ios .
+          flutter create --platforms=ios --org com.minhduc .
 
       - name: Set iOS deployment target
         script: |
@@ -29,7 +29,7 @@ workflows:
             grep -q "platform :ios" ios/Podfile || sed -i '' "1s/^/platform :ios, '15.0'\n/" ios/Podfile
           fi
           /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Thời Khoá Biểu" ios/Runner/Info.plist || true
-          perl -0pi -e "s/PRODUCT_BUNDLE_IDENTIFIER = [^;]+;/PRODUCT_BUNDLE_IDENTIFIER = $ENV{BUNDLE_ID};/g" ios/Runner.xcodeproj/project.pbxproj
+          perl -0pi -e "s/PRODUCT_BUNDLE_IDENTIFIER = com\\.minhduc\\.thoikhoabieuapp;/PRODUCT_BUNDLE_IDENTIFIER = $ENV{BUNDLE_ID};/g" ios/Runner.xcodeproj/project.pbxproj
           perl -0pi -e "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/Runner.xcodeproj/project.pbxproj
 
       - name: Flutter pub get

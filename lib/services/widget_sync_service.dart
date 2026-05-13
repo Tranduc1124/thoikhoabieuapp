@@ -6,7 +6,7 @@ import '../models/widget_schedule_item.dart';
 class WidgetSyncService {
   WidgetSyncService._();
 
-  static const appGroupId = 'group.com.example.thoikhoabieuapp.widget';
+  static const appGroupId = 'group.com.minhduc.thoikhoabieuapp.widget';
   static const iOSWidgetName = 'ThoiKhoaBieuWidget';
 
   static Future<void> initialize() async {

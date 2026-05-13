@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart' show Firebase;
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../firebase_options.dart';
 import 'firebase_service.dart' as app_firebase;
@@ -15,6 +16,7 @@ class FirebaseDiagnosticsResult {
     required this.authAvailable,
     required this.firestoreAvailable,
     required this.storageBucket,
+    required this.runtimePackageName,
     this.currentUserId,
     this.firestoreMessage,
     this.error,
@@ -27,6 +29,7 @@ class FirebaseDiagnosticsResult {
   final bool authAvailable;
   final bool firestoreAvailable;
   final String storageBucket;
+  final String runtimePackageName;
   final String? currentUserId;
   final String? firestoreMessage;
   final Object? error;
@@ -40,6 +43,7 @@ class FirebaseDiagnosticsResult {
       'Auth available: $authAvailable',
       'Firestore available: $firestoreAvailable',
       'Storage bucket: $storageBucket',
+      'Runtime package/bundle id: $runtimePackageName',
       'Current user: ${currentUserId ?? "none"}',
       if (firestoreMessage != null) 'Firestore check: $firestoreMessage',
       if (error != null) 'Error: $error',
@@ -53,6 +57,7 @@ class FirebaseDiagnosticsService {
   static Future<FirebaseDiagnosticsResult> checkFirebaseStatus() async {
     try {
       final options = DefaultFirebaseOptions.currentPlatform;
+      final packageInfo = await PackageInfo.fromPlatform();
       final initialized =
           Firebase.apps.isNotEmpty && app_firebase.FirebaseService.isAvailable;
       final user = initialized ? FirebaseAuth.instance.currentUser : null;
@@ -85,6 +90,7 @@ class FirebaseDiagnosticsService {
         authAvailable: initialized,
         firestoreAvailable: firestoreAvailable,
         storageBucket: options.storageBucket ?? '',
+        runtimePackageName: packageInfo.packageName,
         currentUserId: user?.uid,
         firestoreMessage: firestoreMessage,
       );
@@ -99,6 +105,7 @@ class FirebaseDiagnosticsService {
         authAvailable: false,
         firestoreAvailable: false,
         storageBucket: '',
+        runtimePackageName: 'unknown',
         error: error,
       );
       debugPrint(result.toLogLines().join('\n'));

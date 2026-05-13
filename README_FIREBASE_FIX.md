@@ -72,13 +72,13 @@ android/app/google-services.json
 Package id hiện tại:
 
 ```text
-com.example.thoikhoabieuapp
+com.minhduc.thoikhoabieuapp
 ```
 
 Kiểm tra `android/app/build.gradle.kts`:
 
 ```kotlin
-applicationId = "com.example.thoikhoabieuapp"
+applicationId = "com.minhduc.thoikhoabieuapp"
 id("com.google.gms.google-services")
 ```
 

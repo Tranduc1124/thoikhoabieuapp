@@ -19,7 +19,7 @@ Service tự chạy khi app khởi động và khi lịch học thay đổi. Tro
 Giá trị mặc định đang dùng:
 
 ```text
-group.com.example.thoikhoabieuapp.widget
+group.com.minhduc.thoikhoabieuapp.widget
 ```
 
 Khi đổi bundle id thật, hãy đổi hằng số `WidgetSyncService.appGroupId` trong `lib/services/widget_sync_service.dart` và cấu hình cùng App Group trong Apple Developer + Codemagic signing.
@@ -32,13 +32,13 @@ Vì WidgetKit target cần Team ID, Bundle ID và App Group capability thật, k
 2. File > New > Target > Widget Extension.
 3. Đặt tên target: `ThoiKhoaBieuWidget`.
 4. Bật App Groups cho app target và widget target.
-5. Thêm cùng app group: `group.com.example.thoikhoabieuapp.widget`.
+5. Thêm cùng app group: `group.com.minhduc.thoikhoabieuapp.widget`.
 6. Trong Swift widget, đọc `UserDefaults(suiteName:)` theo app group và render small/medium/large.
 
 Ví dụ Swift đọc dữ liệu:
 
 ```swift
-let defaults = UserDefaults(suiteName: "group.com.example.thoikhoabieuapp.widget")
+let defaults = UserDefaults(suiteName: "group.com.minhduc.thoikhoabieuapp.widget")
 let nextSubjectName = defaults?.string(forKey: "nextSubjectName") ?? "Không có lịch"
 let todayClasses = defaults?.string(forKey: "todayClasses") ?? "[]"
 ```
