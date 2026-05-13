@@ -1,0 +1,287 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../providers/auth_provider.dart';
+import '../services/firebase_service.dart';
+
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isRegister = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = ref.watch(authControllerProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    ref.listen(authControllerProvider, (previous, next) {
+      if (next.hasValue && next.value != null && mounted) {
+        context.go('/home');
+      }
+    });
+
+    return Scaffold(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 28),
+          children: [
+            const SizedBox(height: 22),
+            Hero(
+              tag: 'app-logo',
+              child: Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  gradient: LinearGradient(
+                    colors: [colorScheme.primary, colorScheme.tertiary],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorScheme.primary.withValues(alpha: 0.28),
+                      blurRadius: 24,
+                      offset: const Offset(0, 14),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.calendar_month_rounded,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+            ),
+            const SizedBox(height: 26),
+            Text(
+              _isRegister ? 'Tạo tài khoản' : 'Chào mừng trở lại',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Đồng bộ lịch học, ghi chú và nhắc nhở trên mọi thiết bị.',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
+            ),
+            if (!FirebaseService.isAvailable) ...[
+              const SizedBox(height: 18),
+              _FirebaseWarning(error: FirebaseService.initializationError),
+            ],
+            const SizedBox(height: 24),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 240),
+                        child: _isRegister
+                            ? TextFormField(
+                                key: const ValueKey('name'),
+                                controller: _nameController,
+                                textInputAction: TextInputAction.next,
+                                decoration: const InputDecoration(
+                                  labelText: 'Họ tên',
+                                  prefixIcon: Icon(
+                                    Icons.person_outline_rounded,
+                                  ),
+                                ),
+                                validator: (value) =>
+                                    _isRegister &&
+                                        (value?.trim().isEmpty ?? true)
+                                    ? 'Nhập họ tên'
+                                    : null,
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      if (_isRegister) const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.mail_outline_rounded),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Nhập email';
+                          }
+                          if (!value.contains('@')) return 'Email không hợp lệ';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Mật khẩu',
+                          prefixIcon: Icon(Icons.lock_outline_rounded),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.length < 6) {
+                            return 'Mật khẩu tối thiểu 6 ký tự';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: auth.isLoading ? null : _submitEmail,
+                        child: auth.isLoading
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(_isRegister ? 'Đăng ký' : 'Đăng nhập'),
+                      ),
+                      if (!_isRegister)
+                        TextButton(
+                          onPressed: _resetPassword,
+                          child: const Text('Quên mật khẩu?'),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: auth.isLoading ? null : _google,
+                    icon: const Icon(Icons.g_mobiledata_rounded, size: 30),
+                    label: const Text('Google'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: auth.isLoading ? null : _apple,
+                    icon: const Icon(Icons.apple_rounded),
+                    label: const Text('Apple'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => setState(() => _isRegister = !_isRegister),
+              child: Text(
+                _isRegister
+                    ? 'Đã có tài khoản? Đăng nhập'
+                    : 'Chưa có tài khoản? Đăng ký',
+              ),
+            ),
+            if (auth.hasError) ...[
+              const SizedBox(height: 12),
+              Text(
+                auth.error.toString(),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitEmail() async {
+    if (!_formKey.currentState!.validate()) return;
+    final controller = ref.read(authControllerProvider.notifier);
+    if (_isRegister) {
+      await controller.registerWithEmail(
+        name: _nameController.text,
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+    } else {
+      await controller.signInWithEmail(
+        _emailController.text,
+        _passwordController.text,
+      );
+    }
+  }
+
+  Future<void> _google() =>
+      ref.read(authControllerProvider.notifier).signInWithGoogle();
+
+  Future<void> _apple() =>
+      ref.read(authControllerProvider.notifier).signInWithApple();
+
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      _showMessage('Nhập email trước khi đặt lại mật khẩu.');
+      return;
+    }
+    await ref.read(authControllerProvider.notifier).resetPassword(email);
+    _showMessage('Đã gửi email đặt lại mật khẩu.');
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _FirebaseWarning extends StatelessWidget {
+  const _FirebaseWarning({required this.error});
+
+  final Object? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, color: colorScheme.onErrorContainer),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Chưa cấu hình Firebase. Thêm GoogleService-Info.plist vào ios/Runner và chạy flutterfire configure để bật đăng nhập/cloud sync.',
+              style: TextStyle(color: colorScheme.onErrorContainer),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
