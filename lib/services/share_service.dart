@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/schedule_model.dart';
 import '../models/share_schedule_model.dart';
+import 'firebase_error_translator.dart';
 import 'firebase_service.dart';
 
 class ShareService {
@@ -16,16 +17,20 @@ class ShareService {
   final String userId;
   final String ownerName;
 
-  Stream<List<ShareScheduleModel>> watchMyShares() {
-    return FirebaseService.publicShares()
-        .where('ownerId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map(ShareScheduleModel.fromFirestore)
-              .toList(growable: false),
-        );
+  Stream<List<ShareScheduleModel>> watchMyShares() async* {
+    try {
+      yield* FirebaseService.publicShares()
+          .where('ownerId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map(ShareScheduleModel.fromFirestore)
+                .toList(growable: false),
+          );
+    } catch (error) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
+    }
   }
 
   Future<ShareScheduleModel> createShare({
@@ -44,27 +49,44 @@ class ShareService {
       isActive: true,
       viewCount: 0,
     );
-    await FirebaseService.publicShares().doc(id).set(share.toCreateMap());
-    return share;
+    try {
+      await FirebaseService.publicShares().doc(id).set(share.toCreateMap());
+      return share;
+    } catch (error) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
+    }
   }
 
   Future<ShareScheduleModel?> getPublicShare(String shareId) async {
-    final doc = await FirebaseService.publicShares().doc(shareId.trim()).get();
-    if (!doc.exists) return null;
-    final share = ShareScheduleModel.fromFirestore(doc);
-    if (!share.isActive) return share;
-    await doc.reference.update({'viewCount': FieldValue.increment(1)});
-    return share;
+    try {
+      final doc = await FirebaseService.publicShares()
+          .doc(shareId.trim())
+          .get();
+      if (!doc.exists) return null;
+      final share = ShareScheduleModel.fromFirestore(doc);
+      if (!share.isActive) return share;
+      await doc.reference.update({'viewCount': FieldValue.increment(1)});
+      return share;
+    } catch (error) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
+    }
   }
 
   Future<void> setActive(String shareId, bool active) {
-    return FirebaseService.publicShares().doc(shareId).update({
-      'isActive': active,
-    });
+    return FirebaseService.publicShares()
+        .doc(shareId)
+        .update({'isActive': active})
+        .catchError((Object error) {
+          throw Exception(FirebaseErrorTranslator.firestore(error));
+        });
   }
 
   Future<void> deleteShare(String shareId) {
-    return FirebaseService.publicShares().doc(shareId).delete();
+    return FirebaseService.publicShares().doc(shareId).delete().catchError((
+      Object error,
+    ) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
+    });
   }
 
   Future<XFile> captureShareImage({

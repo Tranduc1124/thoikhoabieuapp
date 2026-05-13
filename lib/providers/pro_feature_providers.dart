@@ -6,6 +6,7 @@ import '../models/notification_settings_model.dart';
 import '../models/share_schedule_model.dart';
 import '../services/app_settings_service.dart';
 import '../services/backup_service.dart';
+import '../services/firebase_error_translator.dart';
 import '../services/firebase_service.dart';
 import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
@@ -150,13 +151,19 @@ final publicShareProvider = FutureProvider.family<ShareScheduleModel?, String>((
   final service = ref.watch(shareServiceProvider);
   if (service != null) return service.getPublicShare(shareId);
   if (FirebaseService.isAvailable) {
-    final doc = await FirebaseService.publicShares().doc(shareId.trim()).get();
-    if (!doc.exists) return null;
-    final share = ShareScheduleModel.fromFirestore(doc);
-    if (share.isActive) {
-      await doc.reference.update({'viewCount': FieldValue.increment(1)});
+    try {
+      final doc = await FirebaseService.publicShares()
+          .doc(shareId.trim())
+          .get();
+      if (!doc.exists) return null;
+      final share = ShareScheduleModel.fromFirestore(doc);
+      if (share.isActive) {
+        await doc.reference.update({'viewCount': FieldValue.increment(1)});
+      }
+      return share;
+    } catch (error) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
     }
-    return share;
   }
   return null;
 });

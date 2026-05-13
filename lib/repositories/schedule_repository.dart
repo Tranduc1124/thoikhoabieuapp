@@ -20,44 +20,58 @@ class ScheduleRepository {
   CollectionReference<Map<String, dynamic>> get _logs =>
       FirebaseService.studyLogs(userId);
 
-  Stream<List<ScheduleModel>> watchSchedules() {
-    return _schedules
-        .orderBy('dayOfWeek')
-        .orderBy('startTime')
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map(ScheduleModel.fromFirestore)
-              .toList(growable: false),
-        );
+  Stream<List<ScheduleModel>> watchSchedules() async* {
+    try {
+      yield* _schedules
+          .orderBy('dayOfWeek')
+          .orderBy('startTime')
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map(ScheduleModel.fromFirestore)
+                .toList(growable: false),
+          );
+    } catch (error) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
+    }
   }
 
-  Stream<List<StudyLogModel>> watchStudyLogsForDate(DateTime date) {
+  Stream<List<StudyLogModel>> watchStudyLogsForDate(DateTime date) async* {
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
-    return _logs
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('date', isLessThan: Timestamp.fromDate(end))
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs.map(StudyLogModel.fromFirestore).toList(),
-        );
+    try {
+      yield* _logs
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('date', isLessThan: Timestamp.fromDate(end))
+          .snapshots()
+          .map(
+            (snapshot) =>
+                snapshot.docs.map(StudyLogModel.fromFirestore).toList(),
+          );
+    } catch (error) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
+    }
   }
 
-  Stream<List<StudyLogModel>> watchStudyLogsForWeek(DateTime date) {
+  Stream<List<StudyLogModel>> watchStudyLogsForWeek(DateTime date) async* {
     final start = DateTime(
       date.year,
       date.month,
       date.day,
     ).subtract(Duration(days: date.weekday - 1));
     final end = start.add(const Duration(days: 7));
-    return _logs
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('date', isLessThan: Timestamp.fromDate(end))
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs.map(StudyLogModel.fromFirestore).toList(),
-        );
+    try {
+      yield* _logs
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('date', isLessThan: Timestamp.fromDate(end))
+          .snapshots()
+          .map(
+            (snapshot) =>
+                snapshot.docs.map(StudyLogModel.fromFirestore).toList(),
+          );
+    } catch (error) {
+      throw Exception(FirebaseErrorTranslator.firestore(error));
+    }
   }
 
   Future<String> addSchedule(ScheduleModel schedule) async {

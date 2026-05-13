@@ -27,6 +27,8 @@ class FirebaseErrorTranslator {
   static String firestore(Object error) {
     if (error is FirebaseException) {
       return switch (error.code) {
+        'failed-precondition' =>
+          'Firestore đang thiếu composite index cho truy vấn này. Hãy deploy firestore.indexes.json bằng lệnh: firebase deploy --only firestore:indexes.',
         'permission-denied' =>
           'Firestore từ chối quyền truy cập. Kiểm tra rules: users/{userId} chỉ cho chính user đó đọc/ghi.',
         'unavailable' =>
