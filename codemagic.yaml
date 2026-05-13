@@ -29,7 +29,7 @@ workflows:
             grep -q "platform :ios" ios/Podfile || sed -i '' "1s/^/platform :ios, '15.0'\n/" ios/Podfile
           fi
           /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Thời Khoá Biểu" ios/Runner/Info.plist || true
-          perl -0pi -e "s/PRODUCT_BUNDLE_IDENTIFIER = com\\.minhduc\\.thoikhoabieuapp;/PRODUCT_BUNDLE_IDENTIFIER = $ENV{BUNDLE_ID};/g" ios/Runner.xcodeproj/project.pbxproj
+          perl -0pi -e 's/PRODUCT_BUNDLE_IDENTIFIER = \x7bBUNDLE_ID\x7d;/PRODUCT_BUNDLE_IDENTIFIER = com.minhduc.thoikhoabieuapp;/g; s/com\.example\.thoikhoabieuapp/com.minhduc.thoikhoabieuapp/g' ios/Runner.xcodeproj/project.pbxproj
           perl -0pi -e "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/Runner.xcodeproj/project.pbxproj
 
       - name: Flutter pub get
@@ -44,6 +44,15 @@ workflows:
           fi
           if [ ! -f ios/Runner/GoogleService-Info.plist ]; then
             echo "Missing ios/Runner/GoogleService-Info.plist. Commit it to the private repo or set GOOGLE_SERVICE_INFO_PLIST_BASE64 in Codemagic."
+            exit 1
+          fi
+
+      - name: Debug iOS bundle identifiers
+        script: |
+          echo "PRODUCT_BUNDLE_IDENTIFIER lines:"
+          grep -n "PRODUCT_BUNDLE_IDENTIFIER" ios/Runner.xcodeproj/project.pbxproj
+          if grep -R "$(printf '\173BUNDLE_ID\175')" ios; then
+            echo "Invalid BUNDLE_ID placeholder found in ios project files."
             exit 1
           fi
 
