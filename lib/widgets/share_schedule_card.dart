@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/schedule_model.dart';
+import '../theme/app_colors.dart';
 import 'glass_card.dart';
 import 'time_pill.dart';
 
@@ -16,55 +17,142 @@ class ShareScheduleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final color = schedule.displayColor;
+    final textTheme = Theme.of(context).textTheme;
+
     return GlassCard(
-      margin: EdgeInsets.only(bottom: compact ? 8 : 12),
-      radius: compact ? 18 : 22,
-      padding: EdgeInsets.all(compact ? 12 : 14),
-      borderColor: color.withValues(alpha: 0.20),
+      margin: EdgeInsets.only(bottom: compact ? 10 : 14),
+      radius: compact ? 24 : 30,
+      padding: EdgeInsets.all(compact ? 14 : 16),
+      borderColor: color.withValues(alpha: 0.24),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: compact ? 34 : 42,
-            height: compact ? 34 : 42,
+            width: compact ? 42 : 50,
+            height: compact ? 42 : 50,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(18),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [color, Color.lerp(color, AppColors.lavender, 0.30)!],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.32),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-            child: Icon(Icons.auto_stories_rounded, color: color, size: 20),
+            child: const Icon(Icons.auto_stories_rounded, color: Colors.white),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  schedule.subjectName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Expanded(
+                      child: Text(
+                        schedule.subjectName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: colorScheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     TimePill(
                       label:
                           '${formatMinutes(schedule.startTime)} - ${formatMinutes(schedule.endTime)}',
                       color: color,
+                      icon: Icons.schedule_rounded,
                     ),
-                    if (schedule.room.isNotEmpty)
-                      TimePill(
-                        label: schedule.room,
-                        color: color,
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _InfoChip(
+                      icon: Icons.calendar_today_rounded,
+                      label: dayName(schedule.dayOfWeek),
+                      tint: color,
+                    ),
+                    if (schedule.room.trim().isNotEmpty)
+                      _InfoChip(
                         icon: Icons.location_on_rounded,
+                        label: schedule.room.trim(),
+                        tint: color,
+                      ),
+                    if (schedule.teacher.trim().isNotEmpty)
+                      _InfoChip(
+                        icon: Icons.person_rounded,
+                        label: schedule.teacher.trim(),
+                        tint: color,
                       ),
                   ],
                 ),
+                if (schedule.note.trim().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    schedule.note.trim(),
+                    maxLines: compact ? 1 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.tint,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color tint;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: colorScheme.tileSurface,
+        border: Border.all(color: colorScheme.glassStrokeSubtle),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: tint),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: colorScheme.textPrimary,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

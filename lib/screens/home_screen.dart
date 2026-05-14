@@ -9,7 +9,6 @@ import '../providers/schedule_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_navigation_shell.dart';
 import '../widgets/empty_state.dart';
-import '../widgets/glass_card.dart';
 import '../widgets/glass_floating_button.dart';
 import '../widgets/loading_skeleton.dart';
 import '../widgets/schedule_card.dart';
@@ -64,7 +63,7 @@ class HomeScreen extends ConsumerWidget {
                 sliver: const SliverToBoxAdapter(
                   child: SectionHeader(
                     title: 'Hôm nay',
-                    subtitle: 'Lịch học và trạng thái từng buổi',
+                    subtitle: 'Lịch học, trạng thái và các lớp sắp tới',
                   ),
                 ),
               ),
@@ -92,7 +91,7 @@ class HomeScreen extends ConsumerWidget {
                         child: EmptyState(
                           title: 'Hôm nay chưa có lịch học',
                           message:
-                              'Tạo môn học đầu tiên để theo dõi giờ học, phòng học và nhắc nhở.',
+                              'Tạo môn học đầu tiên để theo dõi giờ học, phòng học, bản đồ và nhắc nhở.',
                           action: FilledButton.icon(
                             onPressed: () => context.push('/schedule/new'),
                             icon: const Icon(Icons.add_rounded),
@@ -138,110 +137,113 @@ class _Header extends StatelessWidget {
     );
     final next = _nextSchedule(schedules);
 
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 560),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) => Opacity(
-        opacity: value,
-        child: Transform.translate(
-          offset: Offset(0, 20 * (1 - value)),
-          child: child,
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(34),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colorScheme.surfaceContainer.withValues(alpha: 0.92),
+            colorScheme.surfaceContainerHigh.withValues(alpha: 0.86),
+            colorScheme.primary.withValues(alpha: 0.12),
+          ],
         ),
+        border: Border.all(color: colorScheme.glassStroke),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.14),
+            blurRadius: 28,
+            offset: const Offset(0, 18),
+          ),
+        ],
       ),
-      child: GlassCard(
-        padding: const EdgeInsets.all(22),
-        borderColor: colorScheme.primary.withValues(alpha: 0.18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _greeting(),
-                        style: TextStyle(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w900,
-                        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _greeting(),
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w900,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        name == null ? 'Thời khoá biểu của bạn' : 'Hi, $name',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w900),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      name == null ? 'Thời khóa biểu của bạn' : 'Hi, $name',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w900),
+                    ),
+                  ],
                 ),
-                Container(
-                  width: 54,
-                  height: 54,
+              ),
+              Hero(
+                tag: 'profile-avatar-home',
+                child: Container(
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
                     gradient: LinearGradient(
                       colors: [colorScheme.primary, colorScheme.tertiary],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: colorScheme.primary.withValues(alpha: 0.22),
-                        blurRadius: 22,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
                   ),
                   child: const Icon(
                     Icons.calendar_month_rounded,
                     color: Colors.white,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _QuickStat(
-                    label: 'Môn hôm nay',
-                    value: '${schedules.length}',
-                    icon: Icons.auto_stories_rounded,
-                  ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _QuickStat(
+                  label: 'Môn hôm nay',
+                  value: '${schedules.length}',
+                  icon: Icons.auto_stories_rounded,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _QuickStat(
-                    label: 'Tổng giờ',
-                    value: totalHours.toStringAsFixed(1),
-                    icon: Icons.timer_rounded,
-                  ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _QuickStat(
+                  label: 'Tổng giờ',
+                  value: totalHours.toStringAsFixed(1),
+                  icon: Icons.timer_rounded,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _QuickStat(
-                    label: 'Tiếp theo',
-                    value: next == null ? '--' : formatMinutes(next.startTime),
-                    icon: Icons.near_me_rounded,
-                  ),
-                ),
-              ],
-            ),
-            if (next != null) ...[
-              const SizedBox(height: 14),
-              Text(
-                'Môn tiếp theo: ${next.subjectName}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _QuickStat(
+                  label: 'Tiếp theo',
+                  value: next == null ? '--' : formatMinutes(next.startTime),
+                  icon: Icons.near_me_rounded,
                 ),
               ),
             ],
+          ),
+          if (next != null) ...[
+            const SizedBox(height: 14),
+            Text(
+              'Môn tiếp theo: ${next.subjectName}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -283,7 +285,7 @@ class _QuickStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         color: colorScheme.tileSurface,
         border: Border.all(color: colorScheme.glassStrokeSubtle),
       ),

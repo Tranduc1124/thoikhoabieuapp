@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/schedule_model.dart';
+import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
+import '../services/firebase_error_translator.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_popup.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
@@ -25,6 +28,9 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
   final _roomController = TextEditingController();
   final _teacherController = TextEditingController();
   final _noteController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _latitudeController = TextEditingController();
+  final _longitudeController = TextEditingController();
 
   late int _dayOfWeek;
   late int _startTime;
@@ -56,6 +62,12 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
     _roomController.text = initial.room;
     _teacherController.text = initial.teacher;
     _noteController.text = initial.note;
+    _locationController.text = initial.locationAddress;
+    _latitudeController.text = initial.latitude?.toString() ?? '';
+    _longitudeController.text = initial.longitude?.toString() ?? '';
+    _locationController.addListener(_refreshLocationPreview);
+    _latitudeController.addListener(_refreshLocationPreview);
+    _longitudeController.addListener(_refreshLocationPreview);
     _dayOfWeek = initial.dayOfWeek;
     _startTime = initial.startTime;
     _endTime = initial.endTime;
@@ -67,11 +79,21 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
 
   @override
   void dispose() {
+    _locationController.removeListener(_refreshLocationPreview);
+    _latitudeController.removeListener(_refreshLocationPreview);
+    _longitudeController.removeListener(_refreshLocationPreview);
     _subjectController.dispose();
     _roomController.dispose();
     _teacherController.dispose();
     _noteController.dispose();
+    _locationController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     super.dispose();
+  }
+
+  void _refreshLocationPreview() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -79,17 +101,17 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
     final isEditing = widget.schedule != null;
     final reminderOptions = {5, 10, 15, 30, 60, _reminderMinutesBefore}.toList()
       ..sort();
+    final previewColor = Color(_color);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(isEditing ? 'Sá»­a mÃ´n há»c' : 'ThÃªm mÃ´n há»c'),
+        title: Text(isEditing ? 'Sửa môn học' : 'Thêm môn học'),
         actions: [
           if (isEditing)
             IconButton(
               onPressed: _saving ? null : _delete,
               icon: const Icon(Icons.delete_outline_rounded),
-              tooltip: 'XoÃ¡',
             ),
         ],
       ),
@@ -100,31 +122,92 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 34),
               children: [
-                const SectionHeader(
-                  title: 'Chi tiáº¿t lá»‹ch há»c',
-                  subtitle:
-                      'Thiáº¿t láº­p mÃ´n há»c, thá»i gian vÃ  nháº¯c nhá»Ÿ',
+                Hero(
+                  tag: 'schedule-hero-${widget.schedule?.id ?? 'new'}',
+                  child: GlassCard(
+                    radius: 34,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 62,
+                          height: 62,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(22),
+                            gradient: LinearGradient(
+                              colors: [
+                                previewColor,
+                                Color.lerp(previewColor, Colors.white, 0.28)!,
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: previewColor.withValues(alpha: 0.26),
+                                blurRadius: 24,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.auto_stories_rounded,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isEditing
+                                    ? 'Cập nhật lớp học của bạn'
+                                    : 'Tạo buổi học mới với nhịp iOS premium',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w900),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Thiết lập thời gian, màu sắc, nhắc nhở và vị trí lớp học trong một flow gọn hơn.',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.textSecondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
+                const SectionHeader(
+                  title: 'Chi tiết lịch học',
+                  subtitle:
+                      'Điền thông tin quan trọng để app theo dõi môn học chính xác.',
+                ),
+                const SizedBox(height: 14),
                 _Section(
-                  title: 'ThÃ´ng tin mÃ´n há»c',
+                  title: 'Thông tin môn học',
                   children: [
                     TextFormField(
                       controller: _subjectController,
-                      textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
-                        labelText: 'TÃªn mÃ´n há»c',
+                        labelText: 'Tên môn học',
                         prefixIcon: Icon(Icons.menu_book_rounded),
                       ),
                       validator: (value) => value?.trim().isEmpty == true
-                          ? 'KhÃ´ng Ä‘á»ƒ trá»‘ng tÃªn mÃ´n'
+                          ? 'Không được để trống tên môn.'
                           : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _teacherController,
                       decoration: const InputDecoration(
-                        labelText: 'GiÃ¡o viÃªn',
+                        labelText: 'Giáo viên',
                         prefixIcon: Icon(Icons.person_outline_rounded),
                       ),
                     ),
@@ -132,7 +215,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                 ),
                 const SizedBox(height: 14),
                 _Section(
-                  title: 'Thá»i gian',
+                  title: 'Thời gian',
                   children: [
                     Wrap(
                       spacing: 8,
@@ -151,7 +234,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                       children: [
                         Expanded(
                           child: _TimeTile(
-                            label: 'Báº¯t Ä‘áº§u',
+                            label: 'Bắt đầu',
                             value: formatMinutes(_startTime),
                             onTap: () async {
                               final picked = await _pickTime(_startTime);
@@ -164,7 +247,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _TimeTile(
-                            label: 'Káº¿t thÃºc',
+                            label: 'Kết thúc',
                             value: formatMinutes(_endTime),
                             onTap: () async {
                               final picked = await _pickTime(_endTime);
@@ -180,14 +263,54 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                 ),
                 const SizedBox(height: 14),
                 _Section(
-                  title: 'Äá»‹a Ä‘iá»ƒm & ghi chÃº',
+                  title: 'Địa điểm & ghi chú',
                   children: [
                     TextFormField(
                       controller: _roomController,
                       decoration: const InputDecoration(
-                        labelText: 'PhÃ²ng há»c',
+                        labelText: 'Phòng học',
                         prefixIcon: Icon(Icons.location_on_outlined),
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _locationController,
+                      decoration: const InputDecoration(
+                        labelText: 'Địa chỉ / mô tả vị trí',
+                        prefixIcon: Icon(Icons.map_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _latitudeController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                              signed: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Latitude',
+                              prefixIcon: Icon(Icons.pin_drop_outlined),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _longitudeController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                              signed: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Longitude',
+                              prefixIcon: Icon(Icons.explore_outlined),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -195,16 +318,29 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                       minLines: 3,
                       maxLines: 5,
                       decoration: const InputDecoration(
-                        labelText: 'Ghi chÃº',
+                        labelText: 'Ghi chú',
                         alignLabelWithHint: true,
                         prefixIcon: Icon(Icons.notes_rounded),
                       ),
                     ),
+                    if (_locationController.text.trim().isNotEmpty ||
+                        _latitudeController.text.trim().isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _MapPreview(
+                        address: _locationController.text.trim(),
+                        latitude: double.tryParse(
+                          _latitudeController.text.trim(),
+                        ),
+                        longitude: double.tryParse(
+                          _longitudeController.text.trim(),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 14),
                 _Section(
-                  title: 'MÃ u sáº¯c',
+                  title: 'Màu sắc',
                   children: [
                     Wrap(
                       spacing: 10,
@@ -222,14 +358,14 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                 ),
                 const SizedBox(height: 14),
                 _Section(
-                  title: 'Nháº¯c nhá»Ÿ',
+                  title: 'Nhắc nhở',
                   children: [
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _repeatWeekly,
                       onChanged: (value) =>
                           setState(() => _repeatWeekly = value),
-                      title: const Text('Láº·p láº¡i hÃ ng tuáº§n'),
+                      title: const Text('Lặp lại hàng tuần'),
                       secondary: const Icon(Icons.repeat_rounded),
                     ),
                     SwitchListTile(
@@ -237,7 +373,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                       value: _reminderEnabled,
                       onChanged: (value) =>
                           setState(() => _reminderEnabled = value),
-                      title: const Text('Nháº¯c trÆ°á»›c giá» há»c'),
+                      title: const Text('Nhắc trước giờ học'),
                       secondary: const Icon(
                         Icons.notifications_active_outlined,
                       ),
@@ -246,7 +382,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                       DropdownButtonFormField<int>(
                         initialValue: _reminderMinutesBefore,
                         decoration: const InputDecoration(
-                          labelText: 'Nháº¯c trÆ°á»›c',
+                          labelText: 'Nhắc trước',
                           prefixIcon: Icon(Icons.timer_outlined),
                         ),
                         items: reminderOptions
@@ -274,9 +410,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.save_rounded),
-                  label: Text(
-                    isEditing ? 'LÆ°u thay Ä‘á»•i' : 'Táº¡o lá»‹ch há»c',
-                  ),
+                  label: Text(isEditing ? 'Lưu thay đổi' : 'Tạo lịch học'),
                 ),
               ],
             ),
@@ -298,10 +432,18 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_endTime <= _startTime) {
-      _showMessage('Giá» káº¿t thÃºc pháº£i sau giá» báº¯t Ä‘áº§u.');
+      await showAppPopup(
+        context,
+        title: 'Thời gian chưa hợp lệ',
+        message: 'Giờ kết thúc phải sau giờ bắt đầu.',
+        type: AppPopupType.error,
+      );
       return;
     }
     setState(() => _saving = true);
+    final latitude = double.tryParse(_latitudeController.text.trim());
+    final longitude = double.tryParse(_longitudeController.text.trim());
+    final locationService = ref.read(classroomLocationServiceProvider);
     final schedule = (widget.schedule ?? ScheduleModel.empty()).copyWith(
       subjectName: _subjectController.text.trim(),
       dayOfWeek: _dayOfWeek,
@@ -311,6 +453,29 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
       teacher: _teacherController.text.trim(),
       note: _noteController.text.trim(),
       color: _color,
+      locationAddress: _locationController.text.trim(),
+      latitude: latitude,
+      longitude: longitude,
+      appleMapsUrl:
+          _locationController.text.trim().isEmpty &&
+              latitude == null &&
+              longitude == null
+          ? null
+          : locationService?.buildAppleMapsUrl(
+              address: _locationController.text.trim(),
+              latitude: latitude,
+              longitude: longitude,
+            ),
+      googleMapsUrl:
+          _locationController.text.trim().isEmpty &&
+              latitude == null &&
+              longitude == null
+          ? null
+          : locationService?.buildGoogleMapsUrl(
+              address: _locationController.text.trim(),
+              latitude: latitude,
+              longitude: longitude,
+            ),
       repeatWeekly: _repeatWeekly,
       reminderEnabled: _reminderEnabled,
       reminderMinutesBefore: _reminderMinutesBefore,
@@ -324,7 +489,13 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
       }
       if (mounted) context.pop();
     } catch (error) {
-      _showMessage(error.toString());
+      if (!mounted) return;
+      await showAppPopup(
+        context,
+        title: 'Không thể lưu lịch học',
+        message: FirebaseErrorTranslator.readable(error),
+        type: AppPopupType.error,
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -334,18 +505,18 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('XoÃ¡ lá»‹ch há»c?'),
+        title: const Text('Xóa lịch học?'),
         content: const Text(
-          'MÃ´n há»c nÃ y sáº½ bá»‹ xoÃ¡ khá»i cloud vÃ  thiáº¿t bá»‹ Ä‘á»“ng bá»™.',
+          'Môn học này sẽ bị xóa khỏi cloud, widget và hệ thống thông báo.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Huá»·'),
+            child: const Text('Hủy'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('XoÃ¡'),
+            child: const Text('Xóa'),
           ),
         ],
       ),
@@ -356,17 +527,16 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
       await ref.read(scheduleActionsProvider).delete(widget.schedule!.id);
       if (mounted) context.pop();
     } catch (error) {
-      _showMessage(error.toString());
+      if (!mounted) return;
+      await showAppPopup(
+        context,
+        title: 'Không thể xóa lịch học',
+        message: FirebaseErrorTranslator.readable(error),
+        type: AppPopupType.error,
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
-  }
-
-  void _showMessage(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -379,7 +549,7 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -389,7 +559,7 @@ class _Section extends StatelessWidget {
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           ...children,
         ],
       ),
@@ -430,20 +600,85 @@ class _TimeTile extends StatelessWidget {
               children: [
                 Icon(Icons.access_time_rounded, color: colorScheme.primary),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+                Text(
+                  value,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MapPreview extends ConsumerWidget {
+  const _MapPreview({required this.address, this.latitude, this.longitude});
+
+  final String address;
+  final double? latitude;
+  final double? longitude;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final service = ref.watch(classroomLocationServiceProvider);
+    if (service == null) return const SizedBox.shrink();
+
+    final apple = service.buildAppleMapsUrl(
+      address: address,
+      latitude: latitude,
+      longitude: longitude,
+    );
+    final google = service.buildGoogleMapsUrl(
+      address: address,
+      latitude: latitude,
+      longitude: longitude,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: Theme.of(context).colorScheme.tileSurface,
+        border: Border.all(
+          color: Theme.of(context).colorScheme.glassStrokeSubtle,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Preview vị trí lớp học',
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            address.isEmpty ? 'Sử dụng toạ độ để mở bản đồ.' : address,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: () => service.openAppleMapsUrl(apple),
+                icon: const Icon(Icons.map_rounded),
+                label: const Text('Apple Maps'),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: () => service.openGoogleMapsUrl(google),
+                icon: const Icon(Icons.travel_explore_rounded),
+                label: const Text('Google Maps'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -499,7 +734,6 @@ class _ColorDot extends StatelessWidget {
           ],
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 28,

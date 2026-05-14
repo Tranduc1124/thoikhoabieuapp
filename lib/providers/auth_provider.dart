@@ -152,13 +152,18 @@ class AuthController extends AsyncNotifier<User?> {
     final doc = FirebaseService.userDoc(user.uid);
     final snapshot = await doc.get();
     if (snapshot.exists) return;
+    final displayName = overrideName?.isNotEmpty == true
+        ? overrideName!
+        : user.displayName ?? 'Sinh viên';
+    final username = '@${user.uid.substring(0, 6)}';
     final appUser = AppUser(
       id: user.uid,
-      name: overrideName?.isNotEmpty == true
-          ? overrideName!
-          : user.displayName ?? 'Sinh vien',
+      name: displayName,
       email: user.email ?? '',
+      username: username,
+      bio: 'Đang xây dựng nhịp học tập của riêng mình.',
       avatarUrl: user.photoURL,
+      favoriteSubject: '',
     );
     await doc.set(appUser.toMap());
   }

@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:screenshot/screenshot.dart';
 
 import '../models/share_schedule_model.dart';
 import '../providers/pro_feature_providers.dart';
+import '../services/firebase_error_translator.dart';
+import '../services/share_debug_service.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_popup.dart';
+import '../widgets/glass_card.dart';
 import '../widgets/qr_share_box.dart';
 import '../widgets/share_schedule_card.dart';
 import '../widgets/soft_gradient_background.dart';
@@ -19,48 +25,250 @@ class SharePreviewScreen extends ConsumerStatefulWidget {
 
 class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
   final _controller = ScreenshotController();
+  bool _busy = false;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final service = ref.watch(shareServiceProvider);
+    final qrValid = ShareDebugService.validateQrPayload(widget.share.qrData);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Preview chia sẻ')),
       body: SoftGradientBackground(
         child: SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             children: [
+              GlassCard(
+                radius: 32,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Mọi thứ đã sẵn sàng để gửi.',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: colorScheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Link public, QR và ảnh poster đều được tạo từ cùng một snapshot Firebase để tránh lệch dữ liệu.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.textSecondary,
+                        fontWeight: FontWeight.w600,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _PreviewPill(
+                          icon: Icons.verified_rounded,
+                          label: qrValid ? 'QR hợp lệ' : 'QR cần kiểm tra',
+                          color: qrValid
+                              ? colorScheme.primary
+                              : colorScheme.error,
+                        ),
+                        _PreviewPill(
+                          icon: Icons.visibility_rounded,
+                          label: '${widget.share.viewCount} lượt mở',
+                          color: colorScheme.primary,
+                        ),
+                        _PreviewPill(
+                          icon: Icons.folder_shared_rounded,
+                          label: widget.share.shareType.name,
+                          color: colorScheme.secondary,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
               Screenshot(
                 controller: _controller,
                 child: _SharePoster(share: widget.share),
               ),
               const SizedBox(height: 18),
-              FilledButton.icon(
-                onPressed: service == null
-                    ? null
-                    : () async {
-                        final file = await service.captureShareImage(
-                          controller: _controller,
-                          filename: 'thoikhoabieu_${widget.share.id}',
-                        );
-                        await service.shareImage(file, text: widget.share.link);
-                      },
-                icon: const Icon(Icons.ios_share_rounded),
-                label: const Text('Share ảnh'),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _busy || service == null ? null : _shareLink,
+                      icon: _busy
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.ios_share_rounded),
+                      label: const Text('Mở share sheet'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy || service == null ? null : _copyLink,
+                      icon: const Icon(Icons.copy_rounded),
+                      label: const Text('Copy link'),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: service == null
-                    ? null
-                    : () => service.shareLink(widget.share),
-                icon: const Icon(Icons.link_rounded),
-                label: const Text('Share link'),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy || service == null ? null : _shareImage,
+                      icon: const Icon(Icons.image_outlined),
+                      label: const Text('Share ảnh QR'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy || service == null ? null : _saveImage,
+                      icon: const Icon(Icons.download_rounded),
+                      label: const Text('Lưu poster'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          context.push('/shared/${widget.share.id}'),
+                      icon: const Icon(Icons.visibility_rounded),
+                      label: const Text('Xem public'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push('/shared-links'),
+                      icon: const Icon(Icons.folder_open_rounded),
+                      label: const Text('Quản lý link'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              Text(
+                'make by minhduc',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: colorScheme.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _shareImage() async {
+    final service = ref.read(shareServiceProvider);
+    if (service == null) return;
+    await _runBusyTask(() async {
+      final file = await service.captureShareImage(
+        controller: _controller,
+        filename: 'thoikhoabieu_${widget.share.id}',
+      );
+      await service.shareImage(file, text: widget.share.deepLink);
+      if (!mounted) return;
+      await showAppPopup(
+        context,
+        title: 'Đã mở share sheet',
+        message:
+            'Poster QR đã được tạo và chuyển sang hệ thống chia sẻ của thiết bị.',
+        type: AppPopupType.success,
+      );
+    });
+  }
+
+  Future<void> _shareLink() async {
+    final service = ref.read(shareServiceProvider);
+    if (service == null) return;
+    await _runBusyTask(() async {
+      await service.shareLink(widget.share);
+      if (!mounted) return;
+      await showAppPopup(
+        context,
+        title: 'Link đã sẵn sàng',
+        message:
+            'Native share sheet đã được mở với link public và deep link của thời khóa biểu.',
+        type: AppPopupType.success,
+      );
+    });
+  }
+
+  Future<void> _copyLink() async {
+    final service = ref.read(shareServiceProvider);
+    if (service == null) return;
+    try {
+      await service.copyLink(widget.share.qrData);
+      if (!mounted) return;
+      await showAppPopup(
+        context,
+        title: 'Đã copy link',
+        message: 'Link công khai đã được copy vào clipboard.',
+        type: AppPopupType.success,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      await showAppPopup(
+        context,
+        title: 'Không thể copy link',
+        message: FirebaseErrorTranslator.readable(error),
+        type: AppPopupType.error,
+      );
+    }
+  }
+
+  Future<void> _saveImage() async {
+    final service = ref.read(shareServiceProvider);
+    if (service == null) return;
+    await _runBusyTask(() async {
+      final file = await service.saveShareImage(
+        controller: _controller,
+        filename: 'thoikhoabieu_poster_${widget.share.id}',
+      );
+      if (!mounted) return;
+      await showAppPopup(
+        context,
+        title: 'Đã lưu poster',
+        message: 'Ảnh được lưu tại:\n${file.path}',
+        type: AppPopupType.success,
+      );
+    });
+  }
+
+  Future<void> _runBusyTask(Future<void> Function() task) async {
+    setState(() => _busy = true);
+    try {
+      await task();
+    } catch (error) {
+      if (!mounted) return;
+      await showAppPopup(
+        context,
+        title: 'Tác vụ chia sẻ thất bại',
+        message: FirebaseErrorTranslator.readable(error),
+        type: AppPopupType.error,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
   }
 }
 
@@ -73,65 +281,174 @@ class _SharePoster extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(36),
         gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            colorScheme.primary.withValues(alpha: 0.18),
-            colorScheme.tertiary.withValues(alpha: 0.12),
-            colorScheme.surface,
+            colorScheme.surfaceContainer.withValues(alpha: 0.96),
+            colorScheme.surfaceContainerHigh.withValues(alpha: 0.92),
           ],
         ),
+        border: Border.all(color: colorScheme.glassStroke),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.16),
+            blurRadius: 32,
+            offset: const Offset(0, 18),
+          ),
+        ],
       ),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: colorScheme.primary,
-                ),
-                child: const Icon(
-                  Icons.calendar_month_rounded,
-                  color: Colors.white,
-                ),
-              ),
+              _OwnerAvatar(photoUrl: share.profilePhoto),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Thời Khoá Biểu',
+                      share.title,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w900,
+                        color: colorScheme.textPrimary,
                       ),
                     ),
-                    Text('Từ ${share.ownerName}'),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Từ ${share.ownerName}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.textSecondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 18),
-          Text(
-            share.title,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+          QrShareBox(
+            data: share.qrData,
+            label: 'Quét để xem hoặc import',
+            subtitle: share.id,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           for (final schedule in share.schedulesSnapshot.take(8))
             ShareScheduleCard(schedule: schedule, compact: true),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: QrShareBox(data: share.link, size: 86, label: 'Quét để xem'),
+          if (share.schedulesSnapshot.length > 8)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '+${share.schedulesSnapshot.length - 8} buổi học khác',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            'make by minhduc',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: colorScheme.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OwnerAvatar extends StatelessWidget {
+  const _OwnerAvatar({this.photoUrl});
+
+  final String? photoUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final child = photoUrl != null && photoUrl!.trim().isNotEmpty
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Image.network(
+              photoUrl!,
+              width: 52,
+              height: 52,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const _AvatarFallback(),
+            ),
+          )
+        : const _AvatarFallback();
+
+    return Container(
+      width: 56,
+      height: 56,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [colorScheme.primary, colorScheme.secondary],
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _AvatarFallback extends StatelessWidget {
+  const _AvatarFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      ),
+      child: const Icon(Icons.person_rounded),
+    );
+  }
+}
+
+class _PreviewPill extends StatelessWidget {
+  const _PreviewPill({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: colorScheme.tileSurface,
+        border: Border.all(color: colorScheme.glassStrokeSubtle),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: colorScheme.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/schedule_model.dart';
+import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
+import '../services/firebase_error_translator.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_popup.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_header.dart';
@@ -21,6 +25,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _syncing = false;
+  bool _saving = false;
 
   @override
   Widget build(BuildContext context) {
@@ -28,83 +33,55 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final schedules =
         ref.watch(schedulesProvider).valueOrNull ?? const <ScheduleModel>[];
     final stats = ref.watch(weeklyStatsProvider).valueOrNull;
+
     if (user == null) {
       return const Scaffold(
         body: EmptyState(
           title: 'Chưa có profile',
-          message: 'Đăng nhập để đồng bộ hồ sơ lên cloud.',
+          message: 'Đăng nhập để đồng bộ hồ sơ và dữ liệu học tập lên cloud.',
         ),
       );
     }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        actions: [
+          IconButton(
+            onPressed: () => context.push('/friends'),
+            icon: const Icon(Icons.people_alt_rounded),
+          ),
+        ],
+      ),
       body: SoftGradientBackground(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
-              const SectionHeader(
-                title: 'Hồ sơ học tập',
-                subtitle: 'Profile, đồng bộ cloud và sao lưu dữ liệu',
+              _ProfileHeroCard(
+                user: user,
+                schedules: schedules,
+                weeklyHours: stats?.totalHours ?? 0,
+                onEdit: _editProfile,
+                onAvatarTap: _changeAvatar,
               ),
               const SizedBox(height: 16),
               GlassCard(
                 child: Column(
                   children: [
-                    GestureDetector(
-                      onTap: _changeAvatar,
-                      child: CircleAvatar(
-                        radius: 46,
-                        backgroundImage: user.avatarUrl == null
-                            ? null
-                            : (user.avatarUrl!.startsWith('http')
-                                  ? NetworkImage(user.avatarUrl!)
-                                  : null),
-                        child: user.avatarUrl == null
-                            ? const Icon(Icons.person_rounded, size: 42)
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      user.name,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(user.email),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _Metric(
-                            label: 'Môn học',
-                            value: '${schedules.length}',
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _Metric(
-                            label: 'Giờ tuần',
-                            value: stats?.totalHours.toStringAsFixed(1) ?? '0',
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _Metric(label: 'Theme', value: user.themeMode),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              GlassCard(
-                child: Column(
-                  children: [
+                    _InfoRow(label: 'Email', value: user.email),
+                    const Divider(height: 22),
+                    _InfoRow(label: 'Username', value: user.username),
+                    const Divider(height: 22),
                     _InfoRow(
-                      label: 'Ngày tạo',
+                      label: 'Yêu thích',
+                      value: user.favoriteSubject.isEmpty
+                          ? 'Chưa đặt'
+                          : user.favoriteSubject,
+                    ),
+                    const Divider(height: 22),
+                    _InfoRow(
+                      label: 'Tạo tài khoản',
                       value:
                           user.createdAt
                               ?.toLocal()
@@ -113,38 +90,61 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               .first ??
                           '--',
                     ),
-                    const Divider(height: 20),
-                    _InfoRow(
-                      label: 'Đồng bộ cuối',
-                      value:
-                          user.lastSyncedAt
-                              ?.toLocal()
-                              .toString()
-                              .split('.')
-                              .first ??
-                          'Chưa rõ',
-                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _syncing ? null : _syncNow,
-                icon: _syncing
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.cloud_sync_rounded),
-                label: const Text('Đồng bộ dữ liệu'),
+              const SectionHeader(
+                title: 'Cloud & Social',
+                subtitle:
+                    'Đồng bộ profile, tạo profile card và quản lý các tuỳ chọn riêng tư.',
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _syncing ? null : _syncNow,
+                      icon: _syncing
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.cloud_sync_rounded),
+                      label: const Text('Đồng bộ'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _createProfileCard,
+                      icon: const Icon(Icons.badge_rounded),
+                      label: const Text('Profile Card'),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: _exportBackup,
-                icon: const Icon(Icons.backup_rounded),
-                label: const Text('Sao lưu dữ liệu JSON'),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _exportBackup,
+                      icon: const Icon(Icons.backup_rounded),
+                      label: const Text('Backup JSON'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push('/friends'),
+                      icon: const Icon(Icons.people_alt_rounded),
+                      label: const Text('Friends'),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               FilledButton.tonalIcon(
                 onPressed: () =>
                     ref.read(authControllerProvider.notifier).signOut(),
@@ -164,18 +164,147 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (service == null || user == null) return;
     final avatar = await service.pickAndUploadAvatar();
     if (avatar == null) return;
-    await service.updateProfile(name: user.name, avatarUrl: avatar);
+    await service.updateProfile(
+      name: user.name,
+      username: user.username,
+      bio: user.bio,
+      favoriteSubject: user.favoriteSubject,
+      avatarUrl: avatar,
+      profileTheme: user.profileTheme,
+      isProfilePublic: user.isProfilePublic,
+      allowFriendsToViewTimetable: user.allowFriendsToViewTimetable,
+      hideStatistics: user.hideStatistics,
+      hideStreak: user.hideStreak,
+    );
+  }
+
+  Future<void> _editProfile() async {
+    final service = ref.read(profileServiceProvider);
+    final user = ref.read(appUserProvider).valueOrNull;
+    if (service == null || user == null) return;
+    final nameController = TextEditingController(text: user.name);
+    final usernameController = TextEditingController(text: user.username);
+    final bioController = TextEditingController(text: user.bio);
+    final favoriteController = TextEditingController(
+      text: user.favoriteSubject,
+    );
+    bool isPublic = user.isProfilePublic;
+    bool allowTimetable = user.allowFriendsToViewTimetable;
+    bool hideStats = user.hideStatistics;
+    bool hideStreak = user.hideStreak;
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Chỉnh sửa profile'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Tên hiển thị',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: usernameController,
+                      decoration: const InputDecoration(labelText: 'Username'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: bioController,
+                      minLines: 2,
+                      maxLines: 4,
+                      decoration: const InputDecoration(labelText: 'Bio'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: favoriteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Môn học yêu thích',
+                      ),
+                    ),
+                    SwitchListTile(
+                      value: isPublic,
+                      onChanged: (value) =>
+                          setStateDialog(() => isPublic = value),
+                      title: const Text('Profile công khai'),
+                    ),
+                    SwitchListTile(
+                      value: allowTimetable,
+                      onChanged: (value) =>
+                          setStateDialog(() => allowTimetable = value),
+                      title: const Text('Cho bạn bè xem thời khóa biểu'),
+                    ),
+                    SwitchListTile(
+                      value: hideStats,
+                      onChanged: (value) =>
+                          setStateDialog(() => hideStats = value),
+                      title: const Text('Ẩn thống kê'),
+                    ),
+                    SwitchListTile(
+                      value: hideStreak,
+                      onChanged: (value) =>
+                          setStateDialog(() => hideStreak = value),
+                      title: const Text('Ẩn streak'),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Đóng'),
+                ),
+                FilledButton(
+                  onPressed: _saving
+                      ? null
+                      : () async {
+                          setState(() => _saving = true);
+                          try {
+                            await service.updateProfile(
+                              name: nameController.text.trim(),
+                              username: usernameController.text.trim(),
+                              bio: bioController.text.trim(),
+                              favoriteSubject: favoriteController.text.trim(),
+                              profileTheme: user.profileTheme,
+                              isProfilePublic: isPublic,
+                              allowFriendsToViewTimetable: allowTimetable,
+                              hideStatistics: hideStats,
+                              hideStreak: hideStreak,
+                            );
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                          } finally {
+                            if (mounted) setState(() => _saving = false);
+                          }
+                        },
+                  child: const Text('Lưu'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _syncNow() async {
     setState(() => _syncing = true);
     try {
       await ref.read(widgetSyncActionsProvider).syncNow();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã đồng bộ cloud/widget.')),
-        );
-      }
+      if (!mounted) return;
+      await showAppPopup(
+        context,
+        title: 'Đã đồng bộ',
+        message: 'Cloud, widget và dữ liệu học tập đã được cập nhật.',
+        type: AppPopupType.success,
+      );
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
@@ -186,7 +315,132 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (service == null) return;
     final file = await service.exportUserDataToJson();
     await SharePlus.instance.share(
-      ShareParams(files: [XFile(file.path)], text: 'Backup Thời Khoá Biểu'),
+      ShareParams(files: [XFile(file.path)], text: 'Backup Thời Khóa Biểu'),
+    );
+  }
+
+  Future<void> _createProfileCard() async {
+    final service = ref.read(profileServiceProvider);
+    final user = ref.read(appUserProvider).valueOrNull;
+    final schedules =
+        ref.read(schedulesProvider).valueOrNull ?? const <ScheduleModel>[];
+    final stats = ref.read(weeklyStatsProvider).valueOrNull;
+    if (service == null || user == null) return;
+    try {
+      final card = await service.createProfileCard(
+        user: user,
+        schedules: schedules,
+        weeklyHours: stats?.totalHours ?? 0,
+      );
+      if (!mounted) return;
+      context.push('/profile-card', extra: card);
+    } catch (error) {
+      if (!mounted) return;
+      await showAppPopup(
+        context,
+        title: 'Không thể tạo profile card',
+        message: FirebaseErrorTranslator.readable(error),
+        type: AppPopupType.error,
+      );
+    }
+  }
+}
+
+class _ProfileHeroCard extends StatelessWidget {
+  const _ProfileHeroCard({
+    required this.user,
+    required this.schedules,
+    required this.weeklyHours,
+    required this.onEdit,
+    required this.onAvatarTap,
+  });
+
+  final AppUser user;
+  final List<ScheduleModel> schedules;
+  final double weeklyHours;
+  final VoidCallback onEdit;
+  final VoidCallback onAvatarTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      radius: 36,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Hero(
+                tag: 'profile-avatar-${user.id}',
+                child: GestureDetector(
+                  onTap: onAvatarTap,
+                  child: CircleAvatar(
+                    radius: 38,
+                    backgroundImage:
+                        user.avatarUrl != null &&
+                            user.avatarUrl!.startsWith('http')
+                        ? NetworkImage(user.avatarUrl!)
+                        : null,
+                    child: user.avatarUrl == null
+                        ? const Icon(Icons.person_rounded, size: 32)
+                        : null,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.name,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(user.username),
+                    if (user.bio.trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        user.bio,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: _Metric(
+                  label: 'Streak',
+                  value: user.hideStreak ? 'Ẩn' : '${user.studyStreak} ngày',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _Metric(
+                  label: 'Giờ tuần',
+                  value: user.hideStatistics
+                      ? 'Ẩn'
+                      : weeklyHours.toStringAsFixed(1),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _Metric(label: 'Buổi học', value: '${schedules.length}'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -200,12 +454,16 @@ class _Metric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
         color: Theme.of(context).colorScheme.tileSurface,
+        border: Border.all(
+          color: Theme.of(context).colorScheme.glassStrokeSubtle,
+        ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             value,

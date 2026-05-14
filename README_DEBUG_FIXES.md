@@ -2,59 +2,120 @@
 
 ## 1. Test Dark Mode
 
-1. Vao `Cai dat` trong app.
-2. Chon theme `Toi`.
-3. Kiem tra cac man: Home, Hom nay, Tuan, Thong ke, Cai dat, Profile, Thong bao, Chia se.
-4. Dam bao khong co card trang xoa, text mo, icon chim, bottom nav qua nhat.
+1. Vào `Cài đặt` trong app.
+2. Chọn theme `Tối`.
+3. Kiểm tra các màn: Home, Hôm nay, Tuần, Thống kê, Cài đặt, Profile, Thông báo, Chia sẻ.
+4. Đảm bảo không có card trắng gắt, text mờ, icon chìm hoặc nút khó đọc.
 
-## 2. Test Doi Mau Mon Hoc
+## 2. Test Đổi Màu Môn Học
 
-1. Tao hoac sua mot mon hoc.
-2. Chon mot palette trong muc `Mau sac`.
-3. Bam luu.
-4. Quay ve Home hoac Tuan va kiem tra card doi mau ngay.
-5. Dong/mo lai app de dam bao mau van duoc doc tu Firestore field `color`.
+1. Tạo hoặc sửa một môn học.
+2. Chọn một palette trong mục `Màu sắc`.
+3. Bấm lưu.
+4. Quay về Home hoặc Tuần và kiểm tra card đổi màu ngay.
+5. Đóng và mở lại app để đảm bảo màu vẫn được đọc từ Firestore field `color`.
 
-Luu y: lich cu khong co field `color` se duoc gan palette fallback theo hash ten mon hoc, khong mat du lieu cu.
+Lưu ý: lịch cũ chưa có field `color` sẽ dùng fallback palette theo hash tên môn, không mất dữ liệu cũ.
 
-## 3. Test Notification 10 Giay
+## 3. Test Notification 10 Giây
 
-1. Vao `Cai dat` > `Thong bao`.
-2. Bat `Bat thong bao toan app`.
-3. Cap quyen notification khi iOS hoi.
-4. Bam `Test 10 giay`.
-5. Khoa man hinh hoac dua app ve background va doi thong bao.
+1. Vào `Cài đặt` > `Thông báo`.
+2. Bật thông báo toàn app.
+3. Cấp quyền notification khi iOS hỏi.
+4. Bấm `Test 10 giây`.
+5. Đưa app ra background và chờ notification.
 
-## 4. Kiem Tra Pending Notifications
+## 4. Kiểm Tra Pending Notifications
 
-Trong man `Thong bao`, bam `Len lich lai`.
+Trong màn `Thông báo`, bấm `Lên lịch lại`.
 
-App se:
+App sẽ:
 
-- Reschedule tat ca notification lich hoc.
-- Log danh sach pending notifications bang `debugPrint`.
-- Hien snackbar so luong pending notification.
+- reschedule toàn bộ notification lịch học
+- log danh sách pending notifications bằng `debugPrint`
+- hiển thị popup hoặc trạng thái thành công tùy màn
 
 ## 5. Test Dynamic Island / Live Activities
 
-Dieu kien:
+Điều kiện:
 
-- iOS 16.1+.
-- iPhone ho tro Live Activities/Dynamic Island.
-- Build tren real device de kiem tra chinh xac.
+- iOS 16.1+
+- iPhone hỗ trợ Live Activities / Dynamic Island
+- build trên thiết bị thật
 
-Cach test:
+Cách test:
 
-1. Dang nhap va co lich hoc trong hom nay.
-2. Vao `Cai dat`.
-3. Neu may ho tro, section `Dynamic Island` se hien.
-4. Bat toggle.
-5. Mo app gan gio hoc hoac trong gio hoc.
-6. Kiem tra Live Activity hien mon sap hoc/dang hoc, gio hoc, phong, giao vien va mon tiep theo.
+1. Đăng nhập và có lịch học trong hôm nay.
+2. Vào `Cài đặt`.
+3. Nếu máy hỗ trợ, section `Dynamic Island` sẽ hiện.
+4. Bật toggle.
+5. Mở app gần giờ học hoặc trong giờ học.
+6. Kiểm tra Live Activity hiển thị môn sắp học hoặc đang học.
 
-May khong ho tro se khong hien section Dynamic Island va app khong goi native API.
+Máy không hỗ trợ sẽ không hiện section Dynamic Island và app không gọi native API.
 
-## 6. Deploy Firestore Indexes
+## 6. Test Share Link
+
+1. Vào màn `Chia sẻ thời khóa biểu`.
+2. Chọn phạm vi chia sẻ.
+3. Bấm `Tạo link + QR`.
+4. Kiểm tra popup thành công xuất hiện.
+5. Tại màn preview, bấm `Mở share sheet`.
+6. Xác nhận native share sheet mở ra.
+
+Debug log mong đợi:
+
+- `share started`
+- `firestore upload success`
+- `link generated`
+- `share sheet opened`
+
+## 7. Test QR Code
+
+1. Tạo một share mới.
+2. Vào màn preview.
+3. Kiểm tra QR có hiện và không rỗng.
+4. Bấm `Share ảnh QR` hoặc `Lưu poster`.
+5. Quét QR bằng camera hoặc sao chép link công khai từ app.
+6. Dán vào màn `Nhập lịch được chia sẻ` để xác nhận app mở đúng snapshot.
+
+## 8. Test Import Shared Timetable
+
+1. Mở `/shared/<shareId>` hoặc dán link vào màn import.
+2. Kiểm tra preview hiện:
+   - tên owner
+   - danh sách môn
+   - số buổi học
+3. Chọn một vài buổi học.
+4. Bấm `Import`.
+5. Kiểm tra popup thành công và Home/Week đã nhận dữ liệu mới.
+
+App tự bỏ qua các lịch bị trùng `subjectName + dayOfWeek + startTime + endTime`.
+
+## 9. Test Deep Links
+
+### Android
+
+- App có `intent-filter` cho:
+  - `thoikhoabieu://share/<id>`
+  - `https://thoikhoabieuapp.page.link/share/<id>`
+
+### iOS
+
+- App có `CFBundleURLTypes` cho scheme `thoikhoabieu`
+- Test trực tiếp với:
+
+```bash
+xcrun simctl openurl booted "thoikhoabieu://share/<shareId>"
+```
+
+Nếu chưa có universal links thật, iOS sẽ mở chắc chắn bằng custom scheme.
+
+## 10. Test NFC Support Fallback
+
+NFC quick share hiện được ẩn nếu native peer-to-peer chưa sẵn sàng trên build hiện tại. Điều này là chủ đích để tránh nút giả và tránh crash.
+
+## 11. Deploy Firestore Indexes
 
 ```bash
 firebase login
@@ -62,15 +123,15 @@ firebase use thoikhoabieuapp-9f53e
 firebase deploy --only firestore:indexes
 ```
 
-Sau khi deploy, Firebase co the can vai phut de build index.
+Sau khi deploy, Firebase có thể cần vài phút để build index.
 
-## 7. Debug Firebase Errors
+## 12. Debug Firebase Errors
 
-UI khong hien link Firebase dai. Cac loi duoc map:
+UI không hiển thị link Firebase dài. Các lỗi được map:
 
-- `failed-precondition` / requires index: Firebase dang tao chi muc.
-- `permission-denied`: Kiem tra Firestore Rules.
-- `network-request-failed` / unavailable: Kiem tra ket noi mang.
-- `internal-error`: Thu lai sau.
+- `failed-precondition` / `requires an index`: Firebase đang tạo chỉ mục
+- `permission-denied`: kiểm tra Firestore Rules
+- `network-request-failed` / `unavailable`: kiểm tra kết nối mạng
+- `internal-error`: thử lại sau
 
-Chi tiet loi duoc log bang `debugPrint`.
+Chi tiết lỗi được log bằng `debugPrint`.

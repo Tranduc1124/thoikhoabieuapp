@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class ScheduleModel {
+  static const _unset = Object();
+
   const ScheduleModel({
     required this.id,
     required this.subjectName,
@@ -15,6 +17,11 @@ class ScheduleModel {
     required this.repeatWeekly,
     required this.reminderEnabled,
     required this.reminderMinutesBefore,
+    this.locationAddress = '',
+    this.latitude,
+    this.longitude,
+    this.appleMapsUrl,
+    this.googleMapsUrl,
     this.hasCustomColor = true,
     this.createdAt,
     this.updatedAt,
@@ -29,6 +36,11 @@ class ScheduleModel {
   final String teacher;
   final String note;
   final int color;
+  final String locationAddress;
+  final double? latitude;
+  final double? longitude;
+  final String? appleMapsUrl;
+  final String? googleMapsUrl;
   final bool hasCustomColor;
   final bool repeatWeekly;
   final bool reminderEnabled;
@@ -38,6 +50,9 @@ class ScheduleModel {
 
   Color get displayColor => Color(color);
   Duration get duration => Duration(minutes: endTime - startTime);
+  bool get hasMapLocation =>
+      locationAddress.trim().isNotEmpty ||
+      (latitude != null && longitude != null);
 
   factory ScheduleModel.empty() {
     return const ScheduleModel(
@@ -71,6 +86,11 @@ class ScheduleModel {
       teacher: data['teacher'] as String? ?? '',
       note: data['note'] as String? ?? '',
       color: _readColor(data['color']),
+      locationAddress: data['locationAddress'] as String? ?? '',
+      latitude: (data['latitude'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble(),
+      appleMapsUrl: data['appleMapsUrl'] as String?,
+      googleMapsUrl: data['googleMapsUrl'] as String?,
       hasCustomColor: hasColor,
       repeatWeekly: data['repeatWeekly'] as bool? ?? true,
       reminderEnabled: data['reminderEnabled'] as bool? ?? false,
@@ -91,6 +111,11 @@ class ScheduleModel {
       'teacher': teacher,
       'note': note,
       'color': color,
+      'locationAddress': locationAddress,
+      'latitude': latitude,
+      'longitude': longitude,
+      'appleMapsUrl': appleMapsUrl,
+      'googleMapsUrl': googleMapsUrl,
       'repeatWeekly': repeatWeekly,
       'reminderEnabled': reminderEnabled,
       'reminderMinutesBefore': reminderMinutesBefore,
@@ -115,6 +140,11 @@ class ScheduleModel {
     String? teacher,
     String? note,
     int? color,
+    String? locationAddress,
+    Object? latitude = _unset,
+    Object? longitude = _unset,
+    Object? appleMapsUrl = _unset,
+    Object? googleMapsUrl = _unset,
     bool? repeatWeekly,
     bool? reminderEnabled,
     int? reminderMinutesBefore,
@@ -129,6 +159,19 @@ class ScheduleModel {
       teacher: teacher ?? this.teacher,
       note: note ?? this.note,
       color: color ?? this.color,
+      locationAddress: locationAddress ?? this.locationAddress,
+      latitude: identical(latitude, _unset)
+          ? this.latitude
+          : latitude as double?,
+      longitude: identical(longitude, _unset)
+          ? this.longitude
+          : longitude as double?,
+      appleMapsUrl: identical(appleMapsUrl, _unset)
+          ? this.appleMapsUrl
+          : appleMapsUrl as String?,
+      googleMapsUrl: identical(googleMapsUrl, _unset)
+          ? this.googleMapsUrl
+          : googleMapsUrl as String?,
       hasCustomColor: color != null ? true : hasCustomColor,
       repeatWeekly: repeatWeekly ?? this.repeatWeekly,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,

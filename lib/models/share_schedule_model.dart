@@ -9,57 +9,79 @@ class ShareScheduleModel {
     required this.id,
     required this.ownerId,
     required this.ownerName,
-    required this.type,
     required this.title,
-    required this.schedulesSnapshot,
+    required this.shareType,
+    required this.schedules,
+    required this.subjects,
+    required this.deepLink,
+    required this.qrData,
     required this.isActive,
+    required this.theme,
     required this.viewCount,
+    this.profilePhoto,
     this.createdAt,
+    this.updatedAt,
     this.expiresAt,
-    this.theme = 'liquidGlass',
   });
 
   final String id;
   final String ownerId;
   final String ownerName;
-  final ShareScheduleType type;
   final String title;
-  final List<ScheduleModel> schedulesSnapshot;
+  final ShareScheduleType shareType;
+  final List<ScheduleModel> schedules;
+  final List<String> subjects;
+  final String deepLink;
+  final String qrData;
   final bool isActive;
-  final int viewCount;
-  final DateTime? createdAt;
-  final DateTime? expiresAt;
   final String theme;
+  final int viewCount;
+  final String? profilePhoto;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final DateTime? expiresAt;
 
-  String get link => 'https://your-domain.com/share/$id';
+  List<ScheduleModel> get schedulesSnapshot => schedules;
+  String get link => deepLink;
 
   factory ShareScheduleModel.fromFirestore(
     DocumentSnapshot<Map<String, dynamic>> doc,
   ) {
-    final data = doc.data() ?? <String, dynamic>{};
-    final rawSchedules = data['schedulesSnapshot'];
+    final data = doc.data() ?? const <String, dynamic>{};
+    final rawSchedules =
+        (data['schedules'] ?? data['schedulesSnapshot']) as List?;
+    final rawSubjects = data['subjects'] as List?;
+    final deepLink =
+        data['deepLink'] as String? ?? 'thoikhoabieu://share/${doc.id}';
     return ShareScheduleModel(
       id: doc.id,
       ownerId: data['ownerId'] as String? ?? '',
       ownerName: data['ownerName'] as String? ?? 'Sinh viên',
-      type: ShareScheduleType.values.firstWhere(
-        (value) => value.name == data['type'],
+      title: data['title'] as String? ?? 'Thời khóa biểu',
+      shareType: ShareScheduleType.values.firstWhere(
+        (value) => value.name == (data['shareType'] ?? data['type']),
         orElse: () => ShareScheduleType.week,
       ),
-      title: data['title'] as String? ?? 'Thời khoá biểu',
-      schedulesSnapshot: rawSchedules is List
-          ? rawSchedules
+      schedules: rawSchedules == null
+          ? const []
+          : rawSchedules
                 .whereType<Map>()
                 .map(
                   (item) => _scheduleFromMap(Map<String, dynamic>.from(item)),
                 )
-                .toList()
-          : const [],
+                .toList(growable: false),
+      subjects: rawSubjects == null
+          ? const []
+          : rawSubjects.map((item) => item.toString()).toList(growable: false),
+      deepLink: deepLink,
+      qrData: data['qrData'] as String? ?? deepLink,
       isActive: data['isActive'] as bool? ?? true,
-      viewCount: (data['viewCount'] as num?)?.toInt() ?? 0,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      expiresAt: (data['expiresAt'] as Timestamp?)?.toDate(),
       theme: data['theme'] as String? ?? 'liquidGlass',
+      viewCount: (data['viewCount'] as num?)?.toInt() ?? 0,
+      profilePhoto: data['profilePhoto'] as String?,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      expiresAt: (data['expiresAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -67,17 +89,57 @@ class ShareScheduleModel {
     return {
       'ownerId': ownerId,
       'ownerName': ownerName,
-      'type': type.name,
       'title': title,
-      'schedulesSnapshot': schedulesSnapshot
-          .map((schedule) => _scheduleToMap(schedule))
-          .toList(),
+      'shareType': shareType.name,
       'createdAt': FieldValue.serverTimestamp(),
-      'expiresAt': expiresAt == null ? null : Timestamp.fromDate(expiresAt!),
+      'updatedAt': FieldValue.serverTimestamp(),
       'isActive': isActive,
-      'viewCount': viewCount,
       'theme': theme,
+      'subjects': subjects,
+      'schedules': schedules.map(_scheduleToMap).toList(growable: false),
+      'timetableData': {
+        'subjects': subjects,
+        'scheduleCount': schedules.length,
+      },
+      'qrData': qrData,
+      'deepLink': deepLink,
+      'profilePhoto': profilePhoto,
+      'viewCount': viewCount,
+      'expiresAt': expiresAt == null ? null : Timestamp.fromDate(expiresAt!),
     };
+  }
+
+  ShareScheduleModel copyWith({
+    String? title,
+    ShareScheduleType? shareType,
+    List<ScheduleModel>? schedules,
+    List<String>? subjects,
+    String? deepLink,
+    String? qrData,
+    bool? isActive,
+    String? theme,
+    int? viewCount,
+    String? profilePhoto,
+    DateTime? expiresAt,
+  }) {
+    return ShareScheduleModel(
+      id: id,
+      ownerId: ownerId,
+      ownerName: ownerName,
+      title: title ?? this.title,
+      shareType: shareType ?? this.shareType,
+      schedules: schedules ?? this.schedules,
+      subjects: subjects ?? this.subjects,
+      deepLink: deepLink ?? this.deepLink,
+      qrData: qrData ?? this.qrData,
+      isActive: isActive ?? this.isActive,
+      theme: theme ?? this.theme,
+      viewCount: viewCount ?? this.viewCount,
+      profilePhoto: profilePhoto ?? this.profilePhoto,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+    );
   }
 
   static Map<String, dynamic> _scheduleToMap(ScheduleModel schedule) {
@@ -91,6 +153,11 @@ class ShareScheduleModel {
       'teacher': schedule.teacher,
       'note': schedule.note,
       'color': schedule.color,
+      'locationAddress': schedule.locationAddress,
+      'latitude': schedule.latitude,
+      'longitude': schedule.longitude,
+      'appleMapsUrl': schedule.appleMapsUrl,
+      'googleMapsUrl': schedule.googleMapsUrl,
       'repeatWeekly': schedule.repeatWeekly,
       'reminderEnabled': schedule.reminderEnabled,
       'reminderMinutesBefore': schedule.reminderMinutesBefore,
@@ -108,6 +175,12 @@ class ShareScheduleModel {
       teacher: map['teacher'] as String? ?? '',
       note: map['note'] as String? ?? '',
       color: (map['color'] as num?)?.toInt() ?? 0xFF6A8DFF,
+      locationAddress: map['locationAddress'] as String? ?? '',
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
+      appleMapsUrl: map['appleMapsUrl'] as String?,
+      googleMapsUrl: map['googleMapsUrl'] as String?,
+      hasCustomColor: map.containsKey('color'),
       repeatWeekly: map['repeatWeekly'] as bool? ?? true,
       reminderEnabled: map['reminderEnabled'] as bool? ?? true,
       reminderMinutesBefore:

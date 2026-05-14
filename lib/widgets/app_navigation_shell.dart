@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import 'animated_pressable.dart';
 import 'glass_card.dart';
 
@@ -111,8 +112,8 @@ class _PremiumNavButton extends StatelessWidget {
       onTap: onTap,
       scale: 0.94,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeOutCubic,
+        duration: AppMotion.medium,
+        curve: AppMotion.liquid,
         height: 58,
         margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: const EdgeInsets.symmetric(horizontal: 4),

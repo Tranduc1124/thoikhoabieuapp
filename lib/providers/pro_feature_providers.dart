@@ -2,12 +2,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/app_settings_model.dart';
+import '../models/classroom_location_model.dart';
+import '../models/friend_model.dart';
+import '../models/friend_request_model.dart';
 import '../models/notification_settings_model.dart';
+import '../models/profile_card_model.dart';
 import '../models/share_schedule_model.dart';
+import '../models/user_model.dart';
 import '../services/app_settings_service.dart';
 import '../services/backup_service.dart';
+import '../services/classroom_location_service.dart';
+import '../services/deep_link_service.dart';
 import '../services/firebase_error_translator.dart';
 import '../services/firebase_service.dart';
+import '../services/friend_service.dart';
 import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
 import '../services/notification_settings_service.dart';
@@ -148,6 +156,20 @@ final backupServiceProvider = Provider<BackupService?>((ref) {
   return BackupService(userId: user.uid);
 });
 
+final friendServiceProvider = Provider<FriendService?>((ref) {
+  final user = ref.watch(authControllerProvider).valueOrNull;
+  if (user == null) return null;
+  return FriendService(userId: user.uid);
+});
+
+final classroomLocationServiceProvider = Provider<ClassroomLocationService?>((
+  ref,
+) {
+  final user = ref.watch(authControllerProvider).valueOrNull;
+  if (user == null) return null;
+  return ClassroomLocationService(userId: user.uid);
+});
+
 final shareServiceProvider = Provider<ShareService?>((ref) {
   final user = ref.watch(authControllerProvider).valueOrNull;
   final appUser = ref.watch(appUserProvider).valueOrNull;
@@ -155,6 +177,7 @@ final shareServiceProvider = Provider<ShareService?>((ref) {
   return ShareService(
     userId: user.uid,
     ownerName: appUser?.name ?? user.displayName ?? 'Sinh viên',
+    profilePhoto: appUser?.avatarUrl ?? user.photoURL,
   );
 });
 
@@ -164,6 +187,58 @@ final mySharesProvider = StreamProvider<List<ShareScheduleModel>>((ref) {
   return service.watchMyShares();
 });
 
+final friendsProvider = StreamProvider<List<FriendModel>>((ref) {
+  final service = ref.watch(friendServiceProvider);
+  if (service == null) return Stream.value(const []);
+  return service.watchFriends();
+});
+
+final incomingFriendRequestsProvider = StreamProvider<List<FriendRequestModel>>(
+  (ref) {
+    final service = ref.watch(friendServiceProvider);
+    if (service == null) return Stream.value(const []);
+    return service.watchIncomingRequests();
+  },
+);
+
+final friendSearchQueryProvider = StateProvider<String>((ref) => '');
+
+final friendSearchProvider = FutureProvider<List<AppUser>>((ref) async {
+  final service = ref.watch(friendServiceProvider);
+  final query = ref.watch(friendSearchQueryProvider).trim();
+  if (service == null || query.isEmpty) return const [];
+  return service.searchUsers(query);
+});
+
+final classroomLocationsProvider = StreamProvider<List<ClassroomLocationModel>>(
+  (ref) {
+    final service = ref.watch(classroomLocationServiceProvider);
+    if (service == null) return Stream.value(const []);
+    return service.watchLocations();
+  },
+);
+
+final profileCardsProvider = StreamProvider<List<ProfileCardModel>>((ref) {
+  final user = ref.watch(authControllerProvider).valueOrNull;
+  if (user == null) return Stream.value(const []);
+  return FirebaseService.profileCards()
+      .where('ownerId', isEqualTo: user.uid)
+      .orderBy('createdAt', descending: true)
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(ProfileCardModel.fromFirestore)
+            .toList(growable: false),
+      );
+});
+
+final publicProfileCardProvider =
+    FutureProvider.family<ProfileCardModel?, String>((ref, cardId) async {
+      final doc = await FirebaseService.profileCards().doc(cardId.trim()).get();
+      if (!doc.exists) return null;
+      return ProfileCardModel.fromFirestore(doc);
+    });
+
 final publicShareProvider = FutureProvider.family<ShareScheduleModel?, String>((
   ref,
   shareId,
@@ -172,9 +247,9 @@ final publicShareProvider = FutureProvider.family<ShareScheduleModel?, String>((
   if (service != null) return service.getPublicShare(shareId);
   if (FirebaseService.isAvailable) {
     try {
-      final doc = await FirebaseService.publicShares()
-          .doc(shareId.trim())
-          .get();
+      final normalized =
+          DeepLinkService.extractShareId(shareId) ?? shareId.trim();
+      final doc = await FirebaseService.publicShares().doc(normalized).get();
       if (!doc.exists) return null;
       final share = ShareScheduleModel.fromFirestore(doc);
       if (share.isActive) {

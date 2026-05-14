@@ -55,6 +55,10 @@ class FirebaseService {
     return firestore.collection('users').doc(userId);
   }
 
+  static CollectionReference<Map<String, dynamic>> users() {
+    return firestore.collection('users');
+  }
+
   static CollectionReference<Map<String, dynamic>> schedules(String userId) {
     return userDoc(userId).collection('schedules');
   }
@@ -75,6 +79,22 @@ class FirebaseService {
 
   static CollectionReference<Map<String, dynamic>> publicShares() {
     return firestore.collection('public_shares');
+  }
+
+  static CollectionReference<Map<String, dynamic>> classroomLocations() {
+    return firestore.collection('classroom_locations');
+  }
+
+  static CollectionReference<Map<String, dynamic>> friendRequests() {
+    return firestore.collection('friend_requests');
+  }
+
+  static CollectionReference<Map<String, dynamic>> friends() {
+    return firestore.collection('friends');
+  }
+
+  static CollectionReference<Map<String, dynamic>> profileCards() {
+    return firestore.collection('profile_cards');
   }
 
   static void _ensureAvailable() {

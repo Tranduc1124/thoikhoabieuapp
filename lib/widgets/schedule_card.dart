@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
@@ -84,125 +85,140 @@ class PremiumScheduleCard extends StatelessWidget {
       child: AnimatedPressable(
         scale: 0.985,
         onTap: () => context.push('/schedule/${schedule.id}', extra: schedule),
-        child: GlassCard(
-          margin: EdgeInsets.only(bottom: compact ? 12 : 18),
-          radius: compact ? 28 : 34,
-          padding: EdgeInsets.zero,
-          borderColor: palette.borderColor(isDark),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(compact ? 28 : 34),
-            child: Stack(
-              children: [
-                Positioned.fill(child: _CardAtmosphere(palette: palette)),
-                Positioned(
-                  top: -34,
-                  right: -20,
-                  child: _GradientGlow(
-                    color: palette.primary,
-                    size: compact ? 110 : 150,
-                    opacity: isDark ? 0.18 : 0.14,
+        child: Hero(
+          tag: 'schedule-hero-${schedule.id}',
+          child: GlassCard(
+            margin: EdgeInsets.only(bottom: compact ? 12 : 18),
+            radius: compact ? 28 : 34,
+            padding: EdgeInsets.zero,
+            borderColor: palette.borderColor(isDark),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(compact ? 28 : 34),
+              child: Stack(
+                children: [
+                  Positioned.fill(child: _CardAtmosphere(palette: palette)),
+                  Positioned(
+                    top: -34,
+                    right: -20,
+                    child: _GradientGlow(
+                      color: palette.primary,
+                      size: compact ? 110 : 150,
+                      opacity: isDark ? 0.18 : 0.14,
+                    ),
                   ),
-                ),
-                Positioned(
-                  left: -42,
-                  bottom: -44,
-                  child: _GradientGlow(
-                    color: palette.secondary,
-                    size: compact ? 120 : 170,
-                    opacity: isDark ? 0.12 : 0.10,
+                  Positioned(
+                    left: -42,
+                    bottom: -44,
+                    child: _GradientGlow(
+                      color: palette.secondary,
+                      size: compact ? 120 : 170,
+                      opacity: isDark ? 0.12 : 0.10,
+                    ),
                   ),
-                ),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withValues(
-                              alpha: isDark ? 0.05 : 0.20,
-                            ),
-                            Colors.transparent,
-                            palette.primary.withValues(
-                              alpha: isDark ? 0.05 : 0.07,
-                            ),
-                          ],
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.white.withValues(
+                                alpha: isDark ? 0.05 : 0.20,
+                              ),
+                              Colors.transparent,
+                              palette.primary.withValues(
+                                alpha: isDark ? 0.05 : 0.07,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: EdgeInsets.all(compact ? 16 : 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _Header(
-                        schedule: schedule,
-                        palette: palette,
-                        onDelete: onDelete,
-                        onConfirmDelete: () => _confirmDelete(context),
-                      ),
-                      SizedBox(height: compact ? 14 : 16),
-                      Wrap(
-                        spacing: 9,
-                        runSpacing: 9,
-                        children: [
-                          GlassPill(
-                            icon: Icons.access_time_rounded,
-                            label:
-                                '${formatMinutes(schedule.startTime)} - ${formatMinutes(schedule.endTime)}',
-                            palette: palette,
-                          ),
-                          ScheduleStatusPill(
-                            label: statusData.label,
-                            icon: statusData.icon,
-                            colors: statusData.colors,
-                            active: status == _ClassStatus.active,
-                            muted: status == _ClassStatus.done,
-                          ),
-                        ],
-                      ),
-                      if (!compact && _hasInfo) ...[
-                        const SizedBox(height: 16),
+                  Padding(
+                    padding: EdgeInsets.all(compact ? 16 : 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _Header(
+                          schedule: schedule,
+                          palette: palette,
+                          onDelete: onDelete,
+                          onConfirmDelete: () => _confirmDelete(context),
+                        ),
+                        SizedBox(height: compact ? 14 : 16),
                         Wrap(
                           spacing: 9,
                           runSpacing: 9,
                           children: [
-                            if (schedule.teacher.trim().isNotEmpty)
-                              ScheduleInfoChip(
-                                icon: Icons.school_rounded,
-                                label: schedule.teacher.trim(),
-                                palette: palette,
-                              ),
-                            if (schedule.room.trim().isNotEmpty)
-                              ScheduleInfoChip(
-                                icon: Icons.location_on_rounded,
-                                label: schedule.room.trim(),
-                                palette: palette,
-                              ),
-                            if (schedule.note.trim().isNotEmpty)
-                              ScheduleInfoChip(
-                                icon: Icons.sticky_note_2_rounded,
-                                label: schedule.note.trim(),
-                                palette: palette,
-                              ),
+                            GlassPill(
+                              icon: Icons.access_time_rounded,
+                              label:
+                                  '${formatMinutes(schedule.startTime)} - ${formatMinutes(schedule.endTime)}',
+                              palette: palette,
+                            ),
+                            ScheduleStatusPill(
+                              label: statusData.label,
+                              icon: statusData.icon,
+                              colors: statusData.colors,
+                              active: status == _ClassStatus.active,
+                              muted: status == _ClassStatus.done,
+                            ),
                           ],
                         ),
+                        if (!compact && _hasInfo) ...[
+                          const SizedBox(height: 16),
+                          Wrap(
+                            spacing: 9,
+                            runSpacing: 9,
+                            children: [
+                              if (schedule.teacher.trim().isNotEmpty)
+                                ScheduleInfoChip(
+                                  icon: Icons.school_rounded,
+                                  label: schedule.teacher.trim(),
+                                  palette: palette,
+                                ),
+                              if (schedule.room.trim().isNotEmpty)
+                                ScheduleInfoChip(
+                                  icon: Icons.location_on_rounded,
+                                  label: schedule.room.trim(),
+                                  palette: palette,
+                                ),
+                              if (schedule.note.trim().isNotEmpty)
+                                ScheduleInfoChip(
+                                  icon: Icons.sticky_note_2_rounded,
+                                  label: schedule.note.trim(),
+                                  palette: palette,
+                                ),
+                              if (schedule.hasMapLocation)
+                                _MapChip(
+                                  label: 'Apple Maps',
+                                  palette: palette,
+                                  onTap: () => _openMap(schedule.appleMapsUrl),
+                                ),
+                              if (schedule.hasMapLocation)
+                                _MapChip(
+                                  label: 'Google Maps',
+                                  palette: palette,
+                                  onTap: () => _openMap(schedule.googleMapsUrl),
+                                ),
+                            ],
+                          ),
+                        ],
+                        if (onStart != null || onComplete != null) ...[
+                          const SizedBox(height: 18),
+                          _Actions(
+                            palette: palette,
+                            onStart: onStart,
+                            onComplete: onComplete,
+                          ),
+                        ],
                       ],
-                      if (onStart != null || onComplete != null) ...[
-                        const SizedBox(height: 18),
-                        _Actions(
-                          palette: palette,
-                          onStart: onStart,
-                          onComplete: onComplete,
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -250,6 +266,11 @@ class PremiumScheduleCard extends StatelessWidget {
     if (confirmed == true) onDelete?.call();
   }
 
+  Future<void> _openMap(String? url) async {
+    if (url == null || url.trim().isEmpty) return;
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
+
   _StatusData _statusData(_ClassStatus status, BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return switch (status) {
@@ -274,6 +295,31 @@ class PremiumScheduleCard extends StatelessWidget {
         colors: [Color(0xFFF87171), Color(0xFFFB7185)],
       ),
     };
+  }
+}
+
+class _MapChip extends StatelessWidget {
+  const _MapChip({
+    required this.label,
+    required this.palette,
+    required this.onTap,
+  });
+
+  final String label;
+  final SubjectPalette palette;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: ScheduleInfoChip(
+        icon: Icons.map_rounded,
+        label: label,
+        palette: palette,
+      ),
+    );
   }
 }
 

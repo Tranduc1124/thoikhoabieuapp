@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
+import '../models/classroom_location_model.dart';
 import '../services/firebase_service.dart';
 import '../services/app_settings_service.dart';
+import '../services/classroom_location_service.dart';
 import '../services/firebase_error_translator.dart';
 import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
@@ -78,6 +80,7 @@ class ScheduleRepository {
     try {
       _validate(schedule);
       final doc = await _schedules.add(schedule.toCreateMap());
+      await _syncLocation(schedule.copyWith(id: doc.id));
       await _afterScheduleChanged();
       return doc.id;
     } catch (error) {
@@ -89,6 +92,7 @@ class ScheduleRepository {
     try {
       _validate(schedule);
       await _schedules.doc(schedule.id).update(schedule.toUpdateMap());
+      await _syncLocation(schedule);
       await _afterScheduleChanged();
     } catch (error) {
       throw Exception(FirebaseErrorTranslator.firestore(error));
@@ -98,6 +102,9 @@ class ScheduleRepository {
   Future<void> deleteSchedule(String id) async {
     try {
       await _schedules.doc(id).delete();
+      await FirebaseService.classroomLocations()
+          .doc(_locationDocId(id))
+          .delete();
       await NotificationService.cancelSchedule(id);
       await _afterScheduleChanged();
     } catch (error) {
@@ -182,6 +189,45 @@ class ScheduleRepository {
       // Cloud/widget/notification refresh should not make schedule CRUD fail.
     }
   }
+
+  Future<void> _syncLocation(ScheduleModel schedule) async {
+    final locationDoc = FirebaseService.classroomLocations().doc(
+      _locationDocId(schedule.id),
+    );
+    if (!schedule.hasMapLocation) {
+      try {
+        await locationDoc.delete();
+      } catch (_) {}
+      return;
+    }
+    final service = ClassroomLocationService(userId: userId);
+    final location = ClassroomLocationModel(
+      id: _locationDocId(schedule.id),
+      userId: userId,
+      scheduleId: schedule.id,
+      roomName: schedule.room,
+      address: schedule.locationAddress,
+      latitude: schedule.latitude,
+      longitude: schedule.longitude,
+      appleMapsUrl:
+          schedule.appleMapsUrl ??
+          service.buildAppleMapsUrl(
+            address: schedule.locationAddress,
+            latitude: schedule.latitude,
+            longitude: schedule.longitude,
+          ),
+      googleMapsUrl:
+          schedule.googleMapsUrl ??
+          service.buildGoogleMapsUrl(
+            address: schedule.locationAddress,
+            latitude: schedule.latitude,
+            longitude: schedule.longitude,
+          ),
+    );
+    await locationDoc.set(location.toMap());
+  }
+
+  String _locationDocId(String scheduleId) => '${userId}_$scheduleId';
 
   void _validate(ScheduleModel schedule) {
     if (schedule.subjectName.trim().isEmpty) {

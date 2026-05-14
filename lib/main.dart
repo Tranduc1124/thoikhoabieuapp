@@ -1,18 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'models/schedule_model.dart';
+import 'models/profile_card_model.dart';
+import 'models/share_schedule_model.dart';
 import 'providers/auth_provider.dart';
 import 'providers/pro_feature_providers.dart';
 import 'providers/schedule_provider.dart';
 import 'screens/add_edit_schedule_screen.dart';
 import 'screens/firebase_diagnostics_screen.dart';
+import 'screens/friends_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/manage_shared_links_screen.dart';
 import 'screens/notification_settings_screen.dart';
+import 'screens/profile_card_preview_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/public_profile_card_screen.dart';
 import 'screens/share_preview_screen.dart';
 import 'screens/share_schedule_screen.dart';
 import 'screens/settings_screen.dart';
@@ -22,11 +29,12 @@ import 'screens/statistics_screen.dart';
 import 'screens/today_screen.dart';
 import 'screens/week_schedule_screen.dart';
 import 'screens/widget_preview_screen.dart';
-import 'models/share_schedule_model.dart';
-import 'services/firebase_service.dart';
+import 'services/deep_link_service.dart';
 import 'services/firebase_diagnostics_service.dart';
+import 'services/firebase_service.dart';
 import 'services/notification_service.dart';
 import 'services/widget_sync_service.dart';
+import 'theme/app_motion.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -79,6 +87,31 @@ final _routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         pageBuilder: (context, state) => _page(state, const ProfileScreen()),
+      ),
+      GoRoute(
+        path: '/friends',
+        pageBuilder: (context, state) => _page(state, const FriendsScreen()),
+      ),
+      GoRoute(
+        path: '/profile-card',
+        pageBuilder: (context, state) {
+          final card = state.extra is ProfileCardModel
+              ? state.extra! as ProfileCardModel
+              : null;
+          return _page(
+            state,
+            card == null
+                ? const ProfileScreen()
+                : ProfileCardPreviewScreen(card: card),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/profile-card-public/:id',
+        pageBuilder: (context, state) => _page(
+          state,
+          PublicProfileCardScreen(cardId: state.pathParameters['id'] ?? ''),
+        ),
       ),
       GoRoute(
         path: '/notifications',
@@ -150,12 +183,12 @@ CustomTransitionPage<void> _page(GoRouterState state, Widget child) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
-    transitionDuration: const Duration(milliseconds: 360),
-    reverseTransitionDuration: const Duration(milliseconds: 260),
+    transitionDuration: AppMotion.slow,
+    reverseTransitionDuration: AppMotion.medium,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       final curve = CurvedAnimation(
         parent: animation,
-        curve: Curves.easeOutCubic,
+        curve: AppMotion.liquid,
         reverseCurve: Curves.easeInCubic,
       );
       return FadeTransition(
@@ -165,7 +198,10 @@ CustomTransitionPage<void> _page(GoRouterState state, Widget child) {
             begin: const Offset(0, 0.035),
             end: Offset.zero,
           ).animate(curve),
-          child: child,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.985, end: 1).animate(curve),
+            child: child,
+          ),
         ),
       );
     },
@@ -178,6 +214,8 @@ class ThoiKhoaBieuApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(_routerProvider);
+    unawaited(DeepLinkService.attach(router));
+
     ref.listen(schedulesProvider, (previous, next) {
       next.whenData((schedules) {
         final theme =
@@ -195,6 +233,7 @@ class ThoiKhoaBieuApp extends ConsumerWidget {
         }
       });
     });
+
     ref.listen(notificationSettingsProvider, (previous, next) {
       next.whenData((settings) {
         final schedules = ref.read(schedulesProvider).valueOrNull ?? const [];
@@ -206,6 +245,7 @@ class ThoiKhoaBieuApp extends ConsumerWidget {
         }
       });
     });
+
     final themeMode = ref
         .watch(appUserProvider)
         .maybeWhen(
@@ -214,7 +254,7 @@ class ThoiKhoaBieuApp extends ConsumerWidget {
         );
 
     return MaterialApp.router(
-      title: 'Thời Khoá Biểu',
+      title: 'Thời Khóa Biểu',
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       themeMode: themeMode,
