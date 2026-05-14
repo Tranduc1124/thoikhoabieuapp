@@ -12,19 +12,25 @@ class LiveActivityService {
     if (!_isIOS) return false;
     try {
       return await _channel.invokeMethod<bool>('isSupported') ?? false;
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Live Activity support check failed: $error');
       return false;
     }
   }
+
+  static Future<bool> isSupported() => isLiveActivitySupported();
 
   static Future<bool> areLiveActivitiesEnabled() async {
     if (!_isIOS) return false;
     try {
       return await _channel.invokeMethod<bool>('areEnabled') ?? false;
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Live Activity enabled check failed: $error');
       return false;
     }
   }
+
+  static Future<bool> isEnabled() => areLiveActivitiesEnabled();
 
   static Future<void> startClassActivity(ScheduleModel schedule) async {
     if (!await isLiveActivitySupported()) return;
@@ -32,7 +38,16 @@ class LiveActivityService {
       await _channel.invokeMethod<void>('start', {
         'current': _scheduleMap(schedule),
       });
-    } catch (_) {}
+    } catch (error) {
+      debugPrint('Live Activity start failed: $error');
+    }
+  }
+
+  static Future<void> startOrUpdateForSchedule(
+    ScheduleModel? currentSchedule,
+    ScheduleModel? nextSchedule,
+  ) {
+    return updateClassActivity(currentSchedule, nextSchedule);
   }
 
   static Future<void> updateClassActivity(
@@ -51,21 +66,38 @@ class LiveActivityService {
             ? 0
             : _remainingMinutes(currentSchedule),
       });
-    } catch (_) {}
+    } catch (error) {
+      debugPrint('Live Activity update failed: $error');
+    }
   }
 
   static Future<void> endClassActivity() async {
     if (!_isIOS) return;
     try {
       await _channel.invokeMethod<void>('end');
-    } catch (_) {}
+    } catch (error) {
+      debugPrint('Live Activity end failed: $error');
+    }
+  }
+
+  static Future<void> endActivity() => endClassActivity();
+  static Future<void> stopAll() => endClassActivity();
+  static Future<void> updateRemainingTime() async {
+    if (!_isIOS) return;
+    try {
+      await _channel.invokeMethod<void>('updateRemainingTime');
+    } catch (error) {
+      debugPrint('Live Activity remaining time update failed: $error');
+    }
   }
 
   static Future<void> showCompletedTodayActivity() async {
     if (!await isLiveActivitySupported()) return;
     try {
       await _channel.invokeMethod<void>('completedToday');
-    } catch (_) {}
+    } catch (error) {
+      debugPrint('Live Activity completedToday failed: $error');
+    }
   }
 
   static Future<void> refreshLiveActivityForToday({
@@ -105,6 +137,13 @@ class LiveActivityService {
       return;
     }
     await showCompletedTodayActivity();
+  }
+
+  static Future<void> refreshForToday({
+    required List<ScheduleModel> schedules,
+    required bool enabled,
+  }) {
+    return refreshLiveActivityForToday(schedules: schedules, enabled: enabled);
   }
 
   static Map<String, Object?> _scheduleMap(ScheduleModel schedule) {

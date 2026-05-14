@@ -27,7 +27,7 @@ class AppTheme {
           onTertiary: isDark
               ? const Color(0xFF061B2A)
               : const Color(0xFF4A1F12),
-          surface: isDark ? const Color(0xFF111827) : const Color(0xFFFAFCFF),
+          surface: isDark ? const Color(0xFF101827) : const Color(0xFFFFFFFF),
           onSurface: isDark ? AppColors.darkText : AppColors.lightText,
           onSurfaceVariant: isDark
               ? AppColors.darkTextSecondary
@@ -42,7 +42,7 @@ class AppTheme {
               ? Colors.white.withValues(alpha: 0.12)
               : const Color(0xFFEFF4FF),
           surfaceContainerHigh: isDark
-              ? Colors.white.withValues(alpha: 0.10)
+              ? const Color(0xFF151F32)
               : const Color(0xFFF6F8FE),
           surfaceContainer: isDark
               ? Colors.white.withValues(alpha: 0.08)

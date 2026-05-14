@@ -53,6 +53,7 @@ class NotificationSettingsService {
       homeworkReminderEnabled:
           prefs.getBool(_key('homeworkReminderEnabled')) ?? true,
       examReminderEnabled: prefs.getBool(_key('examReminderEnabled')) ?? true,
+      soundEnabled: prefs.getBool(_key('soundEnabled')) ?? true,
       defaultSound: prefs.getString(_key('defaultSound')) ?? 'default',
       permissionStatus: prefs.getString(_key('permissionStatus')) ?? 'unknown',
     );
@@ -77,6 +78,7 @@ class NotificationSettingsService {
       _key('examReminderEnabled'),
       settings.examReminderEnabled,
     );
+    await prefs.setBool(_key('soundEnabled'), settings.soundEnabled);
     await prefs.setString(_key('defaultSound'), settings.defaultSound);
     await prefs.setString(_key('permissionStatus'), settings.permissionStatus);
   }

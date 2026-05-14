@@ -15,6 +15,7 @@ class ScheduleModel {
     required this.repeatWeekly,
     required this.reminderEnabled,
     required this.reminderMinutesBefore,
+    this.hasCustomColor = true,
     this.createdAt,
     this.updatedAt,
   });
@@ -28,6 +29,7 @@ class ScheduleModel {
   final String teacher;
   final String note;
   final int color;
+  final bool hasCustomColor;
   final bool repeatWeekly;
   final bool reminderEnabled;
   final int reminderMinutesBefore;
@@ -58,6 +60,7 @@ class ScheduleModel {
     DocumentSnapshot<Map<String, dynamic>> doc,
   ) {
     final data = doc.data() ?? <String, dynamic>{};
+    final hasColor = data.containsKey('color');
     return ScheduleModel(
       id: doc.id,
       subjectName: data['subjectName'] as String? ?? '',
@@ -68,6 +71,7 @@ class ScheduleModel {
       teacher: data['teacher'] as String? ?? '',
       note: data['note'] as String? ?? '',
       color: _readColor(data['color']),
+      hasCustomColor: hasColor,
       repeatWeekly: data['repeatWeekly'] as bool? ?? true,
       reminderEnabled: data['reminderEnabled'] as bool? ?? false,
       reminderMinutesBefore:
@@ -125,6 +129,7 @@ class ScheduleModel {
       teacher: teacher ?? this.teacher,
       note: note ?? this.note,
       color: color ?? this.color,
+      hasCustomColor: color != null ? true : hasCustomColor,
       repeatWeekly: repeatWeekly ?? this.repeatWeekly,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       reminderMinutesBefore:
@@ -148,7 +153,14 @@ class ScheduleModel {
   static int _readColor(Object? value) {
     if (value is num) return value.toInt();
     if (value is String) {
-      final normalized = value.replaceFirst('#', '0xFF');
+      final trimmed = value.trim();
+      final normalized = trimmed.startsWith('#')
+          ? '0xFF${trimmed.substring(1)}'
+          : trimmed.startsWith('0x')
+          ? trimmed
+          : trimmed.length == 6
+          ? '0xFF$trimmed'
+          : trimmed;
       return int.tryParse(normalized) ?? 0xFF2F80ED;
     }
     return 0xFF6A8DFF;

@@ -63,7 +63,7 @@ class PremiumScheduleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = SubjectPalette.forSubject(schedule.subjectName);
+    final palette = SubjectPalette.fromSchedule(schedule);
     final status = _status();
     final statusData = _statusData(status, context);
     final isDark = Theme.of(context).colorScheme.isDark;
@@ -824,6 +824,31 @@ class SubjectPalette {
       (value, char) => (value * 31 + char) & 0x7fffffff,
     );
     return palettes[hash % palettes.length];
+  }
+
+  static SubjectPalette fromSchedule(ScheduleModel schedule) {
+    if (!schedule.hasCustomColor) {
+      return forSubject(schedule.subjectName);
+    }
+    return fromColor(schedule.displayColor);
+  }
+
+  static SubjectPalette fromColor(Color color) {
+    final hsl = HSLColor.fromColor(color);
+    final normalized = hsl
+        .withSaturation(hsl.saturation.clamp(0.48, 0.78))
+        .withLightness(hsl.lightness.clamp(0.48, 0.62));
+    return SubjectPalette(
+      primary: normalized.toColor(),
+      secondary: normalized
+          .withHue((normalized.hue + 10) % 360)
+          .withLightness((normalized.lightness + 0.10).clamp(0.52, 0.72))
+          .toColor(),
+      highlight: normalized
+          .withSaturation((normalized.saturation * 0.60).clamp(0.32, 0.62))
+          .withLightness(0.82)
+          .toColor(),
+    );
   }
 
   static const palettes = [

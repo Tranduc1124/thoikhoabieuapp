@@ -6,6 +6,7 @@ import '../models/schedule_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
+import '../theme/app_colors.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_header.dart';
@@ -202,7 +203,7 @@ class _Metric extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.42),
+        color: Theme.of(context).colorScheme.tileSurface,
       ),
       child: Column(
         children: [

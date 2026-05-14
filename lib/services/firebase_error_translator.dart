@@ -14,6 +14,8 @@ class FirebaseErrorTranslator {
         'weak-password' => 'Mật khẩu quá yếu. Hãy dùng tối thiểu 6 ký tự.',
         'network-request-failed' =>
           'Không có mạng hoặc kết nối Firebase bị gián đoạn.',
+        'internal-error' =>
+          'Firebase đang gặp lỗi nội bộ. Vui lòng thử lại sau.',
         'operation-not-allowed' =>
           'Hãy bật Email/Password trong Firebase Authentication.',
         'account-exists-with-different-credential' =>
@@ -33,6 +35,7 @@ class FirebaseErrorTranslator {
           'Firestore từ chối quyền truy cập. Kiểm tra rules: users/{userId} chỉ cho chính user đó đọc/ghi.',
         'unavailable' =>
           'Firestore đang không khả dụng hoặc mất mạng. Vui lòng thử lại.',
+        'network-request-failed' => 'Không có kết nối mạng.',
         'not-found' => 'Không tìm thấy dữ liệu Firestore cần đọc.',
         _ => error.message ?? 'Lỗi Firestore: ${error.code}.',
       };

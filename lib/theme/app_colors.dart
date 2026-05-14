@@ -4,10 +4,10 @@ class AppColors {
   const AppColors._();
 
   static const lightPrimary = Color(0xFF5B7CFA);
-  static const darkPrimary = Color(0xFFAFC0FF);
+  static const darkPrimary = Color(0xFF7BA7FF);
   static const mint = Color(0xFF67D7B0);
   static const peach = Color(0xFFFFB397);
-  static const lavender = Color(0xFFC9B6FF);
+  static const lavender = Color(0xFFA78BFA);
   static const sky = Color(0xFF8ED8FF);
 
   static const darkBgTop = Color(0xFF070B16);
@@ -20,7 +20,7 @@ class AppColors {
   static const lightBgTop = Color(0xFFFAFCFF);
   static const lightBgMid = Color(0xFFF2F6FF);
   static const lightBgBottom = Color(0xFFFFF7F2);
-  static const lightText = Color(0xFF111827);
+  static const lightText = Color(0xFF0F172A);
   static const lightTextSecondary = Color(0xFF475569);
   static const lightTextHint = Color(0xFF64748B);
 

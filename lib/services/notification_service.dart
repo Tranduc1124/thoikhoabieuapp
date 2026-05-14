@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -12,21 +13,40 @@ class NotificationService {
 
   static final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
+  static bool _initialized = false;
 
   static Future<void> initialize() async {
+    if (_initialized) return;
     tz_data.initializeTimeZones();
+    try {
+      // The app is targeted at Vietnamese students. This keeps scheduled class
+      // reminders aligned on iOS even when the build machine timezone is UTC.
+      tz.setLocalLocation(tz.getLocation('Asia/Ho_Chi_Minh'));
+    } catch (error) {
+      debugPrint('Notification timezone fallback failed: $error');
+    }
+
     const settings = InitializationSettings(
       iOS: DarwinInitializationSettings(
-        requestAlertPermission: true,
-        requestBadgePermission: true,
-        requestSoundPermission: true,
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
       ),
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     );
-    await _plugin.initialize(settings);
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (response) {
+        debugPrint(
+          'Notification tapped: id=${response.id}, payload=${response.payload}',
+        );
+      },
+    );
+    _initialized = true;
   }
 
   static Future<bool> requestPermissions() async {
+    await initialize();
     final iosResult = await _plugin
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
@@ -37,7 +57,9 @@ class NotificationService {
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.requestNotificationsPermission();
-    return iosResult ?? androidResult ?? true;
+    final granted = iosResult ?? androidResult ?? true;
+    if (!granted) debugPrint('Notification permission denied by user/system.');
+    return granted;
   }
 
   static Future<AppNotificationPermissionStatus> permissionStatus() async {
@@ -51,25 +73,32 @@ class NotificationService {
     ScheduleModel schedule, {
     NotificationSettingsModel settings = const NotificationSettingsModel(),
   }) async {
+    await initialize();
     await cancelSchedule(schedule.id);
     if (!settings.enabled ||
         !settings.nextClassReminderEnabled ||
         !schedule.reminderEnabled) {
+      debugPrint('Skip class notification for ${schedule.id}: disabled.');
       return;
     }
 
     final minutesBefore = schedule.reminderMinutesBefore > 0
         ? schedule.reminderMinutesBefore
         : settings.reminderMinutesBefore;
-    final notificationTime = _nextClassDate(
-      schedule,
-    ).subtract(Duration(minutes: minutesBefore));
+    final notificationTime = _nextReminderDate(schedule, minutesBefore);
+    if (notificationTime == null) {
+      debugPrint(
+        'Skip class notification in the past: ${schedule.id} ${schedule.subjectName}',
+      );
+      return;
+    }
+
     final details = NotificationDetails(
       iOS: DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
-        presentSound: true,
-        sound: settings.defaultSound == 'default'
+        presentSound: settings.soundEnabled,
+        sound: !settings.soundEnabled || settings.defaultSound == 'default'
             ? null
             : settings.defaultSound,
       ),
@@ -83,8 +112,9 @@ class NotificationService {
       ),
     );
 
+    final id = _notificationId(schedule.id);
     await _plugin.zonedSchedule(
-      _notificationId(schedule.id),
+      id,
       'Sắp đến giờ học ${schedule.subjectName}',
       _classBody(schedule),
       notificationTime,
@@ -93,6 +123,10 @@ class NotificationService {
       matchDateTimeComponents: schedule.repeatWeekly
           ? DateTimeComponents.dayOfWeekAndTime
           : null,
+      payload: schedule.id,
+    );
+    debugPrint(
+      'Scheduled class notification id=$id subject=${schedule.subjectName} at=$notificationTime',
     );
   }
 
@@ -100,6 +134,11 @@ class NotificationService {
     List<ScheduleModel> schedules, {
     NotificationSettingsModel settings = const NotificationSettingsModel(),
   }) async {
+    await initialize();
+    if (!settings.enabled || !settings.nextClassReminderEnabled) {
+      await cancelAllClassNotifications(schedules);
+      return;
+    }
     for (final schedule in schedules) {
       await scheduleClassReminder(schedule, settings: settings);
     }
@@ -111,6 +150,7 @@ class NotificationService {
     required DateTime dueAt,
     NotificationSettingsModel settings = const NotificationSettingsModel(),
   }) async {
+    await initialize();
     if (!settings.enabled || !settings.homeworkReminderEnabled) return;
     await _plugin.zonedSchedule(
       _notificationId('homework_$id'),
@@ -128,6 +168,7 @@ class NotificationService {
     required DateTime examAt,
     NotificationSettingsModel settings = const NotificationSettingsModel(),
   }) async {
+    await initialize();
     if (!settings.enabled || !settings.examReminderEnabled) return;
     await _plugin.zonedSchedule(
       _notificationId('exam_$id'),
@@ -139,11 +180,56 @@ class NotificationService {
     );
   }
 
-  static Future<void> cancelSchedule(String scheduleId) {
-    return _plugin.cancel(_notificationId(scheduleId));
+  static Future<List<PendingNotificationRequest>>
+  pendingNotificationRequests() async {
+    await initialize();
+    final pending = await _plugin.pendingNotificationRequests();
+    debugPrint('Pending notifications: ${pending.length}');
+    for (final item in pending) {
+      debugPrint('Pending notification id=${item.id} title=${item.title}');
+    }
+    return pending;
   }
 
-  static Future<void> cancelAll() => _plugin.cancelAll();
+  static Future<void> scheduleTestNotification() async {
+    await initialize();
+    final granted = await requestPermissions();
+    if (!granted) return;
+    final scheduledAt = tz.TZDateTime.now(
+      tz.local,
+    ).add(const Duration(seconds: 10));
+    await _plugin.zonedSchedule(
+      999001,
+      'Test thông báo Thời Khoá Biểu',
+      'Nếu bạn thấy thông báo này, local notification đang hoạt động.',
+      scheduledAt,
+      _basicDetails(const NotificationSettingsModel()),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: 'debug_test',
+    );
+    debugPrint('Scheduled test notification at=$scheduledAt');
+  }
+
+  static Future<void> cancelSchedule(String scheduleId) async {
+    await initialize();
+    final id = _notificationId(scheduleId);
+    await _plugin.cancel(id);
+    await _plugin.cancel(scheduleId.hashCode & 0x7fffffff);
+    debugPrint('Cancelled class notification id=$id scheduleId=$scheduleId');
+  }
+
+  static Future<void> cancelAllClassNotifications(
+    List<ScheduleModel> schedules,
+  ) async {
+    for (final schedule in schedules) {
+      await cancelSchedule(schedule.id);
+    }
+  }
+
+  static Future<void> cancelAll() async {
+    await initialize();
+    await _plugin.cancelAll();
+  }
 
   static String _classBody(ScheduleModel schedule) {
     final room = schedule.room.isEmpty ? 'chưa có phòng' : schedule.room;
@@ -160,8 +246,8 @@ class NotificationService {
       iOS: DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
-        presentSound: true,
-        sound: settings.defaultSound == 'default'
+        presentSound: settings.soundEnabled,
+        sound: !settings.soundEnabled || settings.defaultSound == 'default'
             ? null
             : settings.defaultSound,
       ),
@@ -194,5 +280,29 @@ class NotificationService {
     return candidate;
   }
 
-  static int _notificationId(String id) => id.hashCode & 0x7fffffff;
+  static tz.TZDateTime? _nextReminderDate(
+    ScheduleModel schedule,
+    int minutesBefore,
+  ) {
+    final classStart = _nextClassDate(schedule);
+    var reminder = classStart.subtract(Duration(minutes: minutesBefore));
+    final now = tz.TZDateTime.now(tz.local);
+    if (reminder.isBefore(now)) {
+      if (schedule.repeatWeekly) {
+        reminder = reminder.add(const Duration(days: 7));
+      } else {
+        return null;
+      }
+    }
+    return reminder;
+  }
+
+  static int _notificationId(String id) {
+    var hash = 2166136261;
+    for (final codeUnit in id.codeUnits) {
+      hash ^= codeUnit;
+      hash = (hash * 16777619) & 0x7fffffff;
+    }
+    return hash;
+  }
 }

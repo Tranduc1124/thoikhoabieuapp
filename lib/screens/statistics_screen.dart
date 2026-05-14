@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/schedule_provider.dart';
+import '../theme/app_colors.dart';
 import '../widgets/app_navigation_shell.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
@@ -96,9 +97,7 @@ class StatisticsScreen extends ConsumerWidget {
                         Text(
                           'Bạn đã hoàn thành ${(completion * 100).round()}% lịch học trong tuần.',
                           style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context).colorScheme.textSecondary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -144,10 +143,8 @@ class StatisticsScreen extends ConsumerWidget {
     return BarChartData(
       gridData: FlGridData(
         drawVerticalLine: false,
-        getDrawingHorizontalLine: (value) => FlLine(
-          color: colorScheme.outline.withValues(alpha: 0.08),
-          strokeWidth: 1,
-        ),
+        getDrawingHorizontalLine: (value) =>
+            FlLine(color: colorScheme.glassStrokeSubtle, strokeWidth: 1),
       ),
       borderData: FlBorderData(show: false),
       titlesData: FlTitlesData(
@@ -169,7 +166,7 @@ class StatisticsScreen extends ConsumerWidget {
                   text.length > 7 ? '${text.substring(0, 7)}.' : text,
                   style: TextStyle(
                     fontSize: 11,
-                    color: colorScheme.onSurfaceVariant,
+                    color: colorScheme.textSecondary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -244,7 +241,7 @@ class _MetricCard extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: Theme.of(context).colorScheme.textSecondary,
               fontWeight: FontWeight.w700,
             ),
           ),

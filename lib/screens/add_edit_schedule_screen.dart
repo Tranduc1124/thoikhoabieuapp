@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../models/schedule_model.dart';
 import '../providers/schedule_provider.dart';
+import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
@@ -34,14 +35,17 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
   late int _reminderMinutesBefore;
   bool _saving = false;
 
-  static const _colors = [
-    0xFF6A8DFF,
-    0xFF87DCC0,
-    0xFFFFB59D,
-    0xFFC9B6FF,
-    0xFFFF8FAB,
-    0xFF9AD7FF,
-    0xFFFFD166,
+  static const _palettes = [
+    _ColorChoice('Blue', 0xFF5B8CFF),
+    _ColorChoice('Purple', 0xFF7C5CFF),
+    _ColorChoice('Pink', 0xFFFF6FAE),
+    _ColorChoice('Orange', 0xFFFF9F5A),
+    _ColorChoice('Teal', 0xFF14B8A6),
+    _ColorChoice('Green', 0xFF22C55E),
+    _ColorChoice('Red', 0xFFF87171),
+    _ColorChoice('Indigo', 0xFF6366F1),
+    _ColorChoice('Cyan', 0xFF06B6D4),
+    _ColorChoice('Amber', 0xFFF59E0B),
   ];
 
   @override
@@ -73,17 +77,19 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.schedule != null;
+    final reminderOptions = {5, 10, 15, 30, 60, _reminderMinutesBefore}.toList()
+      ..sort();
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(isEditing ? 'Sửa môn học' : 'Thêm môn học'),
+        title: Text(isEditing ? 'Sá»­a mÃ´n há»c' : 'ThÃªm mÃ´n há»c'),
         actions: [
           if (isEditing)
             IconButton(
               onPressed: _saving ? null : _delete,
               icon: const Icon(Icons.delete_outline_rounded),
-              tooltip: 'Xoá',
+              tooltip: 'XoÃ¡',
             ),
         ],
       ),
@@ -95,29 +101,30 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 34),
               children: [
                 const SectionHeader(
-                  title: 'Chi tiết lịch học',
-                  subtitle: 'Thiết lập môn học, thời gian và nhắc nhở',
+                  title: 'Chi tiáº¿t lá»‹ch há»c',
+                  subtitle:
+                      'Thiáº¿t láº­p mÃ´n há»c, thá»i gian vÃ  nháº¯c nhá»Ÿ',
                 ),
                 const SizedBox(height: 16),
                 _Section(
-                  title: 'Thông tin môn học',
+                  title: 'ThÃ´ng tin mÃ´n há»c',
                   children: [
                     TextFormField(
                       controller: _subjectController,
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
-                        labelText: 'Tên môn học',
+                        labelText: 'TÃªn mÃ´n há»c',
                         prefixIcon: Icon(Icons.menu_book_rounded),
                       ),
                       validator: (value) => value?.trim().isEmpty == true
-                          ? 'Không để trống tên môn'
+                          ? 'KhÃ´ng Ä‘á»ƒ trá»‘ng tÃªn mÃ´n'
                           : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _teacherController,
                       decoration: const InputDecoration(
-                        labelText: 'Giáo viên',
+                        labelText: 'GiÃ¡o viÃªn',
                         prefixIcon: Icon(Icons.person_outline_rounded),
                       ),
                     ),
@@ -125,7 +132,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                 ),
                 const SizedBox(height: 14),
                 _Section(
-                  title: 'Thời gian',
+                  title: 'Thá»i gian',
                   children: [
                     Wrap(
                       spacing: 8,
@@ -144,7 +151,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                       children: [
                         Expanded(
                           child: _TimeTile(
-                            label: 'Bắt đầu',
+                            label: 'Báº¯t Ä‘áº§u',
                             value: formatMinutes(_startTime),
                             onTap: () async {
                               final picked = await _pickTime(_startTime);
@@ -157,7 +164,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _TimeTile(
-                            label: 'Kết thúc',
+                            label: 'Káº¿t thÃºc',
                             value: formatMinutes(_endTime),
                             onTap: () async {
                               final picked = await _pickTime(_endTime);
@@ -173,12 +180,12 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                 ),
                 const SizedBox(height: 14),
                 _Section(
-                  title: 'Địa điểm & ghi chú',
+                  title: 'Äá»‹a Ä‘iá»ƒm & ghi chÃº',
                   children: [
                     TextFormField(
                       controller: _roomController,
                       decoration: const InputDecoration(
-                        labelText: 'Phòng học',
+                        labelText: 'PhÃ²ng há»c',
                         prefixIcon: Icon(Icons.location_on_outlined),
                       ),
                     ),
@@ -188,7 +195,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                       minLines: 3,
                       maxLines: 5,
                       decoration: const InputDecoration(
-                        labelText: 'Ghi chú',
+                        labelText: 'Ghi chÃº',
                         alignLabelWithHint: true,
                         prefixIcon: Icon(Icons.notes_rounded),
                       ),
@@ -197,17 +204,17 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                 ),
                 const SizedBox(height: 14),
                 _Section(
-                  title: 'Màu sắc',
+                  title: 'MÃ u sáº¯c',
                   children: [
                     Wrap(
-                      spacing: 12,
+                      spacing: 10,
                       runSpacing: 12,
                       children: [
-                        for (final value in _colors)
+                        for (final choice in _palettes)
                           _ColorDot(
-                            value: value,
-                            selected: _color == value,
-                            onTap: () => setState(() => _color = value),
+                            choice: choice,
+                            selected: _color == choice.value,
+                            onTap: () => setState(() => _color = choice.value),
                           ),
                       ],
                     ),
@@ -215,14 +222,14 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                 ),
                 const SizedBox(height: 14),
                 _Section(
-                  title: 'Nhắc nhở',
+                  title: 'Nháº¯c nhá»Ÿ',
                   children: [
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _repeatWeekly,
                       onChanged: (value) =>
                           setState(() => _repeatWeekly = value),
-                      title: const Text('Lặp lại hàng tuần'),
+                      title: const Text('Láº·p láº¡i hÃ ng tuáº§n'),
                       secondary: const Icon(Icons.repeat_rounded),
                     ),
                     SwitchListTile(
@@ -230,7 +237,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                       value: _reminderEnabled,
                       onChanged: (value) =>
                           setState(() => _reminderEnabled = value),
-                      title: const Text('Nhắc trước giờ học'),
+                      title: const Text('Nháº¯c trÆ°á»›c giá» há»c'),
                       secondary: const Icon(
                         Icons.notifications_active_outlined,
                       ),
@@ -239,14 +246,16 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                       DropdownButtonFormField<int>(
                         initialValue: _reminderMinutesBefore,
                         decoration: const InputDecoration(
-                          labelText: 'Nhắc trước',
+                          labelText: 'Nháº¯c trÆ°á»›c',
                           prefixIcon: Icon(Icons.timer_outlined),
                         ),
-                        items: const [5, 10, 15, 30]
+                        items: reminderOptions
                             .map(
                               (value) => DropdownMenuItem(
                                 value: value,
-                                child: Text('$value phút'),
+                                child: Text(
+                                  value == 60 ? '1 giờ' : '$value phút',
+                                ),
                               ),
                             )
                             .toList(),
@@ -265,7 +274,9 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.save_rounded),
-                  label: Text(isEditing ? 'Lưu thay đổi' : 'Tạo lịch học'),
+                  label: Text(
+                    isEditing ? 'LÆ°u thay Ä‘á»•i' : 'Táº¡o lá»‹ch há»c',
+                  ),
                 ),
               ],
             ),
@@ -287,7 +298,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_endTime <= _startTime) {
-      _showMessage('Giờ kết thúc phải sau giờ bắt đầu.');
+      _showMessage('Giá» káº¿t thÃºc pháº£i sau giá» báº¯t Ä‘áº§u.');
       return;
     }
     setState(() => _saving = true);
@@ -323,18 +334,18 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xoá lịch học?'),
+        title: const Text('XoÃ¡ lá»‹ch há»c?'),
         content: const Text(
-          'Môn học này sẽ bị xoá khỏi cloud và thiết bị đồng bộ.',
+          'MÃ´n há»c nÃ y sáº½ bá»‹ xoÃ¡ khá»i cloud vÃ  thiáº¿t bá»‹ Ä‘á»“ng bá»™.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Huỷ'),
+            child: const Text('Huá»·'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xoá'),
+            child: const Text('XoÃ¡'),
           ),
         ],
       ),
@@ -406,11 +417,9 @@ class _TimeTile extends StatelessWidget {
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: colorScheme.surface.withValues(alpha: 0.48),
+          color: colorScheme.tileSurface,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: colorScheme.outline.withValues(alpha: 0.10),
-          ),
+          border: Border.all(color: colorScheme.glassStrokeSubtle),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,48 +449,89 @@ class _TimeTile extends StatelessWidget {
   }
 }
 
+class _ColorChoice {
+  const _ColorChoice(this.label, this.value);
+
+  final String label;
+  final int value;
+}
+
 class _ColorDot extends StatelessWidget {
   const _ColorDot({
-    required this.value,
+    required this.choice,
     required this.selected,
     required this.onTap,
   });
 
-  final int value;
+  final _ColorChoice choice;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = Color(value);
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = Color(choice.value);
     return InkWell(
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(22),
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
-        width: selected ? 50 : 44,
-        height: selected ? 50 : 44,
+        width: 104,
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
+          borderRadius: BorderRadius.circular(22),
+          color: selected
+              ? color.withValues(alpha: colorScheme.isDark ? 0.20 : 0.14)
+              : colorScheme.tileSurface,
           border: Border.all(
             color: selected
-                ? Theme.of(context).colorScheme.onSurface
-                : Colors.white.withValues(alpha: 0.72),
+                ? color.withValues(alpha: 0.76)
+                : colorScheme.glassStrokeSubtle,
             width: selected ? 3 : 2,
           ),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.26),
-              blurRadius: 16,
+              color: color.withValues(alpha: selected ? 0.22 : 0.10),
+              blurRadius: selected ? 18 : 10,
               offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: selected
-            ? const Icon(Icons.check_rounded, color: Colors.white)
-            : null,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [color, Color.lerp(color, Colors.white, 0.32)!],
+                ),
+              ),
+              child: selected
+                  ? const Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                choice.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: colorScheme.textPrimary,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -7,6 +7,7 @@ class NotificationSettingsModel {
     this.reminderMinutesBefore = 15,
     this.homeworkReminderEnabled = true,
     this.examReminderEnabled = true,
+    this.soundEnabled = true,
     this.defaultSound = 'default',
     this.permissionStatus = 'unknown',
     this.updatedAt,
@@ -17,6 +18,7 @@ class NotificationSettingsModel {
   final int reminderMinutesBefore;
   final bool homeworkReminderEnabled;
   final bool examReminderEnabled;
+  final bool soundEnabled;
   final String defaultSound;
   final String permissionStatus;
   final DateTime? updatedAt;
@@ -31,6 +33,7 @@ class NotificationSettingsModel {
           (data['reminderMinutesBefore'] as num?)?.toInt() ?? 15,
       homeworkReminderEnabled: data['homeworkReminderEnabled'] as bool? ?? true,
       examReminderEnabled: data['examReminderEnabled'] as bool? ?? true,
+      soundEnabled: data['soundEnabled'] as bool? ?? true,
       defaultSound: data['defaultSound'] as String? ?? 'default',
       permissionStatus: data['permissionStatus'] as String? ?? 'unknown',
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
@@ -50,6 +53,7 @@ class NotificationSettingsModel {
       'reminderMinutesBefore': reminderMinutesBefore,
       'homeworkReminderEnabled': homeworkReminderEnabled,
       'examReminderEnabled': examReminderEnabled,
+      'soundEnabled': soundEnabled,
       'defaultSound': defaultSound,
       'permissionStatus': permissionStatus,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -62,6 +66,7 @@ class NotificationSettingsModel {
     int? reminderMinutesBefore,
     bool? homeworkReminderEnabled,
     bool? examReminderEnabled,
+    bool? soundEnabled,
     String? defaultSound,
     String? permissionStatus,
   }) {
@@ -74,6 +79,7 @@ class NotificationSettingsModel {
       homeworkReminderEnabled:
           homeworkReminderEnabled ?? this.homeworkReminderEnabled,
       examReminderEnabled: examReminderEnabled ?? this.examReminderEnabled,
+      soundEnabled: soundEnabled ?? this.soundEnabled,
       defaultSound: defaultSound ?? this.defaultSound,
       permissionStatus: permissionStatus ?? this.permissionStatus,
       updatedAt: updatedAt,

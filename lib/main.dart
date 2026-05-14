@@ -184,6 +184,26 @@ class ThoiKhoaBieuApp extends ConsumerWidget {
             ref.read(appUserProvider).valueOrNull?.themeMode ?? 'system';
         WidgetSyncService.syncSchedules(schedules: schedules, themeMode: theme);
         ref.read(liveActivityActionsProvider).refresh();
+        final notificationSettings = ref
+            .read(notificationSettingsProvider)
+            .valueOrNull;
+        if (notificationSettings != null) {
+          NotificationService.rescheduleAllClassNotifications(
+            schedules,
+            settings: notificationSettings,
+          );
+        }
+      });
+    });
+    ref.listen(notificationSettingsProvider, (previous, next) {
+      next.whenData((settings) {
+        final schedules = ref.read(schedulesProvider).valueOrNull ?? const [];
+        if (schedules.isNotEmpty) {
+          NotificationService.rescheduleAllClassNotifications(
+            schedules,
+            settings: settings,
+          );
+        }
       });
     });
     final themeMode = ref

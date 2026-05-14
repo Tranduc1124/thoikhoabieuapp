@@ -114,6 +114,26 @@ class NotificationSettingsActions {
       settings.copyWith(permissionStatus: granted ? 'granted' : 'denied'),
     );
   }
+
+  Future<void> sendTestNotification() {
+    return NotificationService.scheduleTestNotification();
+  }
+
+  Future<int> logPendingNotifications() async {
+    final pending = await NotificationService.pendingNotificationRequests();
+    return pending.length;
+  }
+
+  Future<void> rescheduleAll() async {
+    final settings =
+        ref.read(notificationSettingsProvider).valueOrNull ??
+        const NotificationSettingsModel();
+    final schedules = ref.read(schedulesProvider).valueOrNull ?? const [];
+    await NotificationService.rescheduleAllClassNotifications(
+      schedules,
+      settings: settings,
+    );
+  }
 }
 
 final profileServiceProvider = Provider<ProfileService?>((ref) {

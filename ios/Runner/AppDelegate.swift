@@ -1,4 +1,4 @@
-import Flutter
+﻿import Flutter
 import UIKit
 import ActivityKit
 
@@ -26,6 +26,7 @@ enum ClassScheduleLiveActivityBridge {
 
   static func start(arguments: [String: Any]) async throws {
     guard areEnabled() else { return }
+    await end()
     let current = arguments["current"] as? [String: Any]
     let next = arguments["next"] as? [String: Any]
     let visible = current ?? next
@@ -169,6 +170,8 @@ enum LiveActivityChannelConfigurator {
           await ClassScheduleLiveActivityBridge.completedToday()
           result(nil)
         }
+      case "updateRemainingTime":
+        result(nil)
       case "end":
         guard #available(iOS 16.1, *) else {
           result(nil)
