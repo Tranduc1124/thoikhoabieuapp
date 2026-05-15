@@ -4,11 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../models/schedule_model.dart';
 import '../providers/schedule_provider.dart';
-import '../widgets/app_navigation_shell.dart';
+import '../services/app_feedback_service.dart';
 import '../widgets/day_timeline.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/glass_floating_button.dart';
 import '../widgets/loading_skeleton.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
@@ -22,139 +21,129 @@ class WeekScheduleScreen extends ConsumerWidget {
     final selectedDay = ref.watch(selectedDayProvider);
     final query = ref.watch(searchQueryProvider);
 
-    return AppNavigationShell(
-      currentIndex: 1,
-      floatingActionButton: GlassFloatingButton(
-        onPressed: () => context.push('/schedule/new'),
-        icon: Icons.add_rounded,
-      ),
-      child: SoftGradientBackground(
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-                child: SectionHeader(
-                  title: 'Thời khóa biểu tuần',
-                  subtitle:
-                      'Chọn từng ngày để xem lịch học buổi sáng, chiều và tối',
-                  trailing: IconButton.filledTonal(
-                    onPressed: () =>
-                        ref.read(selectedDayProvider.notifier).state =
-                            DateTime.now().weekday,
-                    icon: const Icon(Icons.today_rounded),
-                    tooltip: 'Hôm nay',
-                  ),
+    return SoftGradientBackground(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+              child: SectionHeader(
+                title: 'Thời khóa biểu tuần',
+                subtitle:
+                    'Chọn từng ngày để xem lịch học buổi sáng, chiều và tối',
+                trailing: IconButton.filledTonal(
+                  onPressed: () =>
+                      ref.read(selectedDayProvider.notifier).state =
+                          DateTime.now().weekday,
+                  icon: const Icon(Icons.today_rounded),
+                  tooltip: 'Hôm nay',
                 ),
               ),
-              Padding(
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SearchBar(
+                hintText: 'Tìm theo môn học',
+                leading: const Icon(Icons.search_rounded),
+                onChanged: (value) =>
+                    ref.read(searchQueryProvider.notifier).state = value,
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 50,
+              child: ListView.separated(
+                key: const PageStorageKey('week-days-scroll'),
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: SearchBar(
-                  hintText: 'Tìm theo môn học',
-                  leading: const Icon(Icons.search_rounded),
-                  onChanged: (value) =>
-                      ref.read(searchQueryProvider.notifier).state = value,
-                ),
+                scrollDirection: Axis.horizontal,
+                itemBuilder: (context, index) {
+                  final day = index + 1;
+                  return _DayPill(
+                    day: day,
+                    selected: selectedDay == day,
+                    onTap: () =>
+                        ref.read(selectedDayProvider.notifier).state = day,
+                  );
+                },
+                separatorBuilder: (context, index) => const SizedBox(width: 8),
+                itemCount: 7,
               ),
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 50,
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  scrollDirection: Axis.horizontal,
-                  itemBuilder: (context, index) {
-                    final day = index + 1;
-                    return _DayPill(
-                      day: day,
-                      selected: selectedDay == day,
-                      onTap: () =>
-                          ref.read(selectedDayProvider.notifier).state = day,
-                    );
-                  },
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(width: 8),
-                  itemCount: 7,
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: schedules.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: LoadingSkeleton(itemCount: 4),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Expanded(
-                child: schedules.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(20),
-                    child: LoadingSkeleton(itemCount: 4),
+                error: (error, _) => EmptyState(
+                  title: 'Không tải được lịch tuần',
+                  message: AppFeedbackService.messageFor(error),
+                  action: FilledButton.tonalIcon(
+                    onPressed: () => ref.invalidate(schedulesProvider),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Thử lại'),
                   ),
-                  error: (error, _) => EmptyState(
-                    title: 'Không tải được lịch tuần',
-                    message: error.toString(),
-                    action: FilledButton.tonalIcon(
-                      onPressed: () => ref.invalidate(schedulesProvider),
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Thử lại'),
-                    ),
-                  ),
-                  data: (items) {
-                    final filtered =
-                        items
-                            .where((item) => item.dayOfWeek == selectedDay)
-                            .where(
-                              (item) => query.trim().isEmpty
-                                  ? true
-                                  : item.subjectName.toLowerCase().contains(
-                                      query.trim().toLowerCase(),
-                                    ),
-                            )
-                            .toList()
-                          ..sort((a, b) => a.startTime.compareTo(b.startTime));
-                    if (filtered.isEmpty) {
-                      return EmptyState(
-                        title: 'Chưa có lịch cho ${dayName(selectedDay)}',
-                        message: 'Thêm môn học hoặc đổi bộ lọc để tiếp tục.',
-                        action: FilledButton.icon(
-                          onPressed: () => context.push('/schedule/new'),
-                          icon: const Icon(Icons.add_rounded),
-                          label: const Text('Thêm lịch học'),
-                        ),
-                      );
-                    }
-                    return AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 260),
-                      child: ListView(
-                        key: ValueKey('$selectedDay-${filtered.length}'),
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 112),
-                        children: [
-                          _FilterHint(count: filtered.length),
-                          const SizedBox(height: 18),
-                          _DayPartSection(
-                            title: 'Buổi sáng',
-                            schedules: filtered
-                                .where((item) => item.startTime < 12 * 60)
-                                .toList(),
-                          ),
-                          _DayPartSection(
-                            title: 'Buổi chiều',
-                            schedules: filtered
-                                .where(
-                                  (item) =>
-                                      item.startTime >= 12 * 60 &&
-                                      item.startTime < 18 * 60,
-                                )
-                                .toList(),
-                          ),
-                          _DayPartSection(
-                            title: 'Buổi tối',
-                            schedules: filtered
-                                .where((item) => item.startTime >= 18 * 60)
-                                .toList(),
-                          ),
-                        ],
+                ),
+                data: (items) {
+                  final filtered =
+                      items
+                          .where((item) => item.dayOfWeek == selectedDay)
+                          .where(
+                            (item) => query.trim().isEmpty
+                                ? true
+                                : item.subjectName.toLowerCase().contains(
+                                    query.trim().toLowerCase(),
+                                  ),
+                          )
+                          .toList()
+                        ..sort((a, b) => a.startTime.compareTo(b.startTime));
+                  if (filtered.isEmpty) {
+                    return EmptyState(
+                      title: 'Chưa có lịch cho ${dayName(selectedDay)}',
+                      message: 'Thêm môn học hoặc đổi bộ lọc để tiếp tục.',
+                      action: FilledButton.icon(
+                        onPressed: () => context.push('/schedule/new'),
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Thêm lịch học'),
                       ),
                     );
-                  },
-                ),
+                  }
+                  return ListView(
+                    key: PageStorageKey('week-scroll-$selectedDay'),
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 112),
+                    children: [
+                      _FilterHint(count: filtered.length),
+                      const SizedBox(height: 18),
+                      _DayPartSection(
+                        title: 'Buổi sáng',
+                        schedules: filtered
+                            .where((item) => item.startTime < 12 * 60)
+                            .toList(),
+                      ),
+                      _DayPartSection(
+                        title: 'Buổi chiều',
+                        schedules: filtered
+                            .where(
+                              (item) =>
+                                  item.startTime >= 12 * 60 &&
+                                  item.startTime < 18 * 60,
+                            )
+                            .toList(),
+                      ),
+                      _DayPartSection(
+                        title: 'Buổi tối',
+                        schedules: filtered
+                            .where((item) => item.startTime >= 18 * 60)
+                            .toList(),
+                      ),
+                    ],
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

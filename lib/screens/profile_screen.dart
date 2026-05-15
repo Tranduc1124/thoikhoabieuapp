@@ -14,6 +14,7 @@ import '../theme/app_colors.dart';
 import '../widgets/app_avatar.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/loading_skeleton.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
 
@@ -38,18 +39,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final hasToken = Api.isAuthenticated;
 
     if (userState.isLoading && hasToken) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: _ProfileLoadingView());
     }
 
     if (userState.hasError) {
       return Scaffold(
-        body: EmptyState(
-          title: 'Không tải được hồ sơ',
-          message: AppFeedbackService.messageFor(userState.error!),
-          action: FilledButton.icon(
-            onPressed: () => ref.read(appUserProvider.notifier).refresh(),
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Thử lại'),
+        body: SoftGradientBackground(
+          child: SafeArea(
+            child: EmptyState(
+              title: 'Không tải được hồ sơ',
+              message: AppFeedbackService.messageFor(userState.error!),
+              action: FilledButton.icon(
+                onPressed: () => ref.read(appUserProvider.notifier).refresh(),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Thử lại'),
+              ),
+            ),
           ),
         ),
       );
@@ -58,16 +63,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = userState.valueOrNull;
     if (!hasToken && user == null) {
       return const Scaffold(
-        body: EmptyState(
-          title: 'Chưa đăng nhập',
-          message:
-              'Đăng nhập để lưu lại thông tin cá nhân và tiếp tục việc học của bạn.',
+        body: SoftGradientBackground(
+          child: SafeArea(
+            child: EmptyState(
+              title: 'Chưa đăng nhập',
+              message:
+                  'Đăng nhập để lưu lại thông tin cá nhân và tiếp tục việc học của bạn.',
+            ),
+          ),
         ),
       );
     }
 
     if (hasToken && user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: _ProfileLoadingView());
     }
 
     return Scaffold(
@@ -390,6 +399,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (!mounted) return;
       AppFeedbackService.error(context, error);
     }
+  }
+}
+
+class _ProfileLoadingView extends StatelessWidget {
+  const _ProfileLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftGradientBackground(
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+          children: const [
+            SectionHeader(
+              title: 'Đang đồng bộ hồ sơ…',
+              subtitle:
+                  'Thông tin cá nhân và dữ liệu học tập đang được chuẩn bị.',
+            ),
+            SizedBox(height: 16),
+            LoadingSkeleton(variant: LoadingSkeletonVariant.profile),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -9,9 +9,7 @@ import '../providers/auth_provider.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/weather_provider.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_navigation_shell.dart';
 import '../widgets/empty_state.dart';
-import '../widgets/glass_floating_button.dart';
 import '../widgets/loading_skeleton.dart';
 import '../widgets/schedule_card.dart';
 import '../widgets/section_header.dart';
@@ -30,96 +28,89 @@ class HomeScreen extends ConsumerWidget {
     final user = ref.watch(appUserProvider).valueOrNull;
     final weather = ref.watch(homeWeatherProvider).valueOrNull;
 
-    return AppNavigationShell(
-      currentIndex: 0,
-      floatingActionButton: GlassFloatingButton(
-        onPressed: () => context.push('/schedule/new'),
-        icon: Icons.add_rounded,
-        label: 'Thêm lịch',
-      ),
-      child: SoftGradientBackground(
-        child: SafeArea(
-          child: CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-                sliver: SliverToBoxAdapter(
-                  child: _Header(
-                    name: user?.displayName,
-                    schedules: schedules.valueOrNull ?? const [],
-                    weather: weather,
-                  ),
+    return SoftGradientBackground(
+      child: SafeArea(
+        child: CustomScrollView(
+          key: const PageStorageKey('home-scroll'),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
+              sliver: SliverToBoxAdapter(
+                child: _Header(
+                  name: user?.displayName,
+                  schedules: schedules.valueOrNull ?? const [],
+                  weather: weather,
                 ),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                sliver: SliverToBoxAdapter(
-                  child: SearchBar(
-                    hintText: 'Tìm môn học',
-                    leading: const Icon(Icons.search_rounded),
-                    onChanged: (value) =>
-                        ref.read(searchQueryProvider.notifier).state = value,
-                  ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverToBoxAdapter(
+                child: SearchBar(
+                  hintText: 'Tìm môn học',
+                  leading: const Icon(Icons.search_rounded),
+                  onChanged: (value) =>
+                      ref.read(searchQueryProvider.notifier).state = value,
                 ),
               ),
-              const SliverPadding(
-                padding: EdgeInsets.fromLTRB(20, 22, 20, 0),
-                sliver: SliverToBoxAdapter(
-                  child: SectionHeader(
-                    title: 'Hôm nay',
-                    subtitle: 'Lịch học, trạng thái và các lớp sắp tới',
-                  ),
+            ),
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(20, 22, 20, 0),
+              sliver: SliverToBoxAdapter(
+                child: SectionHeader(
+                  title: 'Hôm nay',
+                  subtitle: 'Lịch học, trạng thái và các lớp sắp tới',
                 ),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 112),
-                sliver: schedules.when(
-                  loading: () => const SliverToBoxAdapter(
-                    child: LoadingSkeleton(itemCount: 3),
-                  ),
-                  error: (error, _) => SliverFillRemaining(
-                    child: EmptyState(
-                      title: 'Không tải được lịch',
-                      message: 'Vui lòng thử lại sau ít phút.',
-                      action: FilledButton.tonalIcon(
-                        onPressed: () => ref.invalidate(schedulesProvider),
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('Thử lại'),
-                      ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 112),
+              sliver: schedules.when(
+                loading: () => const SliverToBoxAdapter(
+                  child: LoadingSkeleton(itemCount: 3),
+                ),
+                error: (error, _) => SliverFillRemaining(
+                  child: EmptyState(
+                    title: 'Không tải được lịch',
+                    message: 'Vui lòng thử lại sau ít phút.',
+                    action: FilledButton.tonalIcon(
+                      onPressed: () => ref.invalidate(schedulesProvider),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Thử lại'),
                     ),
                   ),
-                  data: (items) {
-                    if (items.isEmpty) {
-                      return SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: EmptyState(
-                          title: 'Hôm nay chưa có lịch học',
-                          message:
-                              'Thêm môn học đầu tiên để theo dõi giờ học, phòng học và lời nhắc thật gọn gàng.',
-                          action: FilledButton.icon(
-                            onPressed: () => context.push('/schedule/new'),
-                            icon: const Icon(Icons.add_rounded),
-                            label: const Text('Thêm môn học'),
-                          ),
+                ),
+                data: (items) {
+                  if (items.isEmpty) {
+                    return SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: EmptyState(
+                        title: 'Hôm nay chưa có lịch học',
+                        message:
+                            'Thêm môn học đầu tiên để theo dõi giờ học, phòng học và lời nhắc thật gọn gàng.',
+                        action: FilledButton.icon(
+                          onPressed: () => context.push('/schedule/new'),
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Thêm môn học'),
                         ),
-                      );
-                    }
-                    return SliverList.builder(
-                      itemCount: items.length,
-                      itemBuilder: (context, index) => ScheduleCard(
-                        schedule: items[index],
-                        log: logBySchedule[items[index].id],
-                        index: index,
-                        onDelete: () => ref
-                            .read(scheduleActionsProvider)
-                            .delete(items[index].id),
                       ),
                     );
-                  },
-                ),
+                  }
+                  return SliverList.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) => ScheduleCard(
+                      schedule: items[index],
+                      log: logBySchedule[items[index].id],
+                      index: index,
+                      onDelete: () => ref
+                          .read(scheduleActionsProvider)
+                          .delete(items[index].id),
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

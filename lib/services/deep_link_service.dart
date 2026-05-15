@@ -50,11 +50,13 @@ class DeepLinkService {
         if (shareIndex >= 0 && shareIndex + 1 < segments.length) {
           return segments[shareIndex + 1];
         }
-        final last = segments.last;
-        if (!last.endsWith('.php') && last != 'api.php') {
-          return last;
+        if (uri.scheme == 'thoikhoabieu' &&
+            uri.host == 'share' &&
+            segments.isNotEmpty) {
+          return segments.first;
         }
       }
+      return null;
     }
     return value.contains('/') ? null : value;
   }

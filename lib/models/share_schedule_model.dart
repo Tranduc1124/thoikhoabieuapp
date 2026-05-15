@@ -1,4 +1,5 @@
 import 'schedule_model.dart';
+import '../utils/safe_json.dart';
 
 enum ShareScheduleType { today, week, subject, all }
 
@@ -47,54 +48,62 @@ class ShareScheduleModel {
   bool get isDeleted => deletedAt != null;
 
   factory ShareScheduleModel.fromMap(Map<String, dynamic> data) {
-    final rawSchedules =
-        (data['schedules'] ?? data['schedulesSnapshot']) as List?;
-    final rawSubjects = data['subjects'] as List?;
-    final id = (data['id'] ?? data['share_id'] ?? '').toString();
+    final safeData = JsonSafe.map(data);
+    final rawSchedules = JsonSafe.list(
+      safeData['schedules'] ?? safeData['schedulesSnapshot'],
+    );
+    final rawSubjects = JsonSafe.list(safeData['subjects']);
+    final id = JsonSafe.string(safeData['id'] ?? safeData['share_id']);
     final publicUrl =
-        (data['publicUrl'] ??
-                data['public_url'] ??
-                data['qrData'] ??
-                data['qr_data'])
+        (safeData['publicUrl'] ??
+                safeData['public_url'] ??
+                safeData['qrData'] ??
+                safeData['qr_data'])
             ?.toString() ??
         'https://minhduc.huutien.store/share/$id';
     final deepLink =
-        (data['deepLink'] ?? data['deep_link'])?.toString() ??
+        (safeData['deepLink'] ?? safeData['deep_link'])?.toString() ??
         'thoikhoabieu://share/$id';
     return ShareScheduleModel(
       id: id,
-      ownerId: (data['ownerId'] ?? data['owner_id'] ?? '').toString(),
-      ownerName: (data['ownerName'] ?? data['owner_name'] ?? 'Sinh viên')
-          .toString(),
-      title: (data['title'] ?? 'Thời khóa biểu').toString(),
+      ownerId: JsonSafe.string(safeData['ownerId'] ?? safeData['owner_id']),
+      ownerName:
+          (safeData['ownerName'] ?? safeData['owner_name'] ?? 'Sinh viên')
+              .toString(),
+      title: JsonSafe.string(safeData['title'], fallback: 'Thời khóa biểu'),
       shareType: ShareScheduleType.values.firstWhere(
-        (value) => value.name == (data['shareType'] ?? data['type']),
+        (value) => value.name == (safeData['shareType'] ?? safeData['type']),
         orElse: () => ShareScheduleType.week,
       ),
-      schedules: rawSchedules == null
-          ? const []
-          : rawSchedules
-                .whereType<Map>()
-                .map(
-                  (item) =>
-                      ScheduleModel.fromMap(Map<String, dynamic>.from(item)),
-                )
-                .toList(growable: false),
-      subjects: rawSubjects == null
-          ? const []
-          : rawSubjects.map((item) => item.toString()).toList(growable: false),
+      schedules: rawSchedules
+          .whereType<Map>()
+          .map((item) => ScheduleModel.fromMap(Map<String, dynamic>.from(item)))
+          .toList(growable: false),
+      subjects: rawSubjects
+          .map((item) => item.toString())
+          .toList(growable: false),
       deepLink: deepLink,
       qrData: publicUrl,
-      isActive: data['isActive'] as bool? ?? data['is_active'] as bool? ?? true,
-      theme: (data['theme'] ?? 'liquidGlass').toString(),
-      viewCount:
-          (data['viewCount'] ?? data['view_count'] as num?)?.toInt() ?? 0,
+      isActive: JsonSafe.boolean(
+        safeData['isActive'] ?? safeData['is_active'],
+        fallback: true,
+      ),
+      theme: JsonSafe.string(safeData['theme'], fallback: 'liquidGlass'),
+      viewCount: JsonSafe.integer(
+        safeData['viewCount'] ?? safeData['view_count'],
+      ),
       profilePhoto:
-          data['profilePhoto']?.toString() ?? data['profile_photo']?.toString(),
-      createdAt: _readDate(data['createdAt'] ?? data['created_at']),
-      updatedAt: _readDate(data['updatedAt'] ?? data['updated_at']),
-      expiresAt: _readDate(data['expiresAt'] ?? data['expires_at']),
-      deletedAt: _readDate(data['deletedAt'] ?? data['deleted_at']),
+          JsonSafe.string(
+            safeData['profilePhoto'] ?? safeData['profile_photo'],
+          ).trim().isEmpty
+          ? null
+          : JsonSafe.string(
+              safeData['profilePhoto'] ?? safeData['profile_photo'],
+            ),
+      createdAt: _readDate(safeData['createdAt'] ?? safeData['created_at']),
+      updatedAt: _readDate(safeData['updatedAt'] ?? safeData['updated_at']),
+      expiresAt: _readDate(safeData['expiresAt'] ?? safeData['expires_at']),
+      deletedAt: _readDate(safeData['deletedAt'] ?? safeData['deleted_at']),
     );
   }
 

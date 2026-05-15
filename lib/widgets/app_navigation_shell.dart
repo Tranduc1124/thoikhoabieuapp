@@ -5,45 +5,44 @@ import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import 'animated_pressable.dart';
 import 'glass_card.dart';
+import 'glass_floating_button.dart';
 
 class AppNavigationShell extends StatelessWidget {
-  const AppNavigationShell({
-    super.key,
-    required this.currentIndex,
-    required this.child,
-    this.floatingActionButton,
-  });
+  const AppNavigationShell({super.key, required this.navigationShell});
 
-  final int currentIndex;
-  final Widget child;
-  final Widget? floatingActionButton;
+  final StatefulNavigationShell navigationShell;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: child,
-      floatingActionButton: floatingActionButton,
+      body: RepaintBoundary(child: navigationShell),
+      floatingActionButton: _buildFloatingActionButton(context),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-        child: PremiumBottomNav(
-          currentIndex: currentIndex,
-          onSelected: (index) {
-            switch (index) {
-              case 0:
-                context.go('/home');
-              case 1:
-                context.go('/week');
-              case 2:
-                context.go('/today');
-              case 3:
-                context.go('/statistics');
-              case 4:
-                context.go('/settings');
-            }
-          },
+        child: RepaintBoundary(
+          child: PremiumBottomNav(
+            currentIndex: navigationShell.currentIndex,
+            onSelected: (index) {
+              if (index == navigationShell.currentIndex) {
+                return;
+              }
+              navigationShell.goBranch(index);
+            },
+          ),
         ),
       ),
+    );
+  }
+
+  Widget? _buildFloatingActionButton(BuildContext context) {
+    if (navigationShell.currentIndex > 2) {
+      return null;
+    }
+    return GlassFloatingButton(
+      onPressed: () => context.push('/schedule/new'),
+      icon: Icons.add_rounded,
+      label: navigationShell.currentIndex == 0 ? 'Thêm lịch' : null,
     );
   }
 }
@@ -110,9 +109,9 @@ class _PremiumNavButton extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return AnimatedPressable(
       onTap: onTap,
-      scale: 0.94,
+      scale: 0.96,
       child: AnimatedContainer(
-        duration: AppMotion.medium,
+        duration: const Duration(milliseconds: 220),
         curve: AppMotion.liquid,
         height: 58,
         margin: const EdgeInsets.symmetric(horizontal: 2),
@@ -137,9 +136,9 @@ class _PremiumNavButton extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.22),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
+                    color: colorScheme.primary.withValues(alpha: 0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, 7),
                   ),
                 ]
               : null,

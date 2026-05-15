@@ -7,6 +7,7 @@ import '../api/api.dart';
 import '../models/profile_card_model.dart';
 import '../models/schedule_model.dart';
 import '../models/user_model.dart';
+import '../utils/safe_json.dart';
 import 'app_feedback_service.dart';
 
 class AvatarUploadResult {
@@ -126,7 +127,9 @@ class ProfileService {
     );
     final data = await Api.call('profileCard.create', data: card.toMap());
     return ProfileCardModel.fromMap(
-      Map<String, dynamic>.from((data['card'] as Map?) ?? card.toMap()),
+      JsonSafe.map(data['card']).isEmpty
+          ? card.toMap()
+          : JsonSafe.map(data['card']),
     );
   }
 }

@@ -1,3 +1,5 @@
+import '../utils/safe_json.dart';
+
 class AppSettingsModel {
   const AppSettingsModel({
     this.themeMode = 'system',
@@ -17,16 +19,27 @@ class AppSettingsModel {
   final bool liveActivitiesEnabled;
   final DateTime? updatedAt;
 
-  factory AppSettingsModel.fromMap(Map<String, dynamic>? data) {
-    data ??= const {};
+  factory AppSettingsModel.fromMap(dynamic data) {
+    final safeData = JsonSafe.map(data);
     return AppSettingsModel(
-      themeMode: (data['themeMode'] ?? 'system').toString(),
-      accentColor: (data['accentColor'] as num?)?.toInt() ?? 0xFF6A8DFF,
-      liquidGlassEnabled: data['liquidGlassEnabled'] as bool? ?? true,
-      animationsEnabled: data['animationsEnabled'] as bool? ?? true,
-      dynamicIslandEnabled: data['dynamicIslandEnabled'] as bool? ?? false,
-      liveActivitiesEnabled: data['liveActivitiesEnabled'] as bool? ?? false,
-      updatedAt: _readDate(data['updatedAt']),
+      themeMode: JsonSafe.string(safeData['themeMode'], fallback: 'system'),
+      accentColor: JsonSafe.integer(
+        safeData['accentColor'],
+        fallback: 0xFF6A8DFF,
+      ),
+      liquidGlassEnabled: JsonSafe.boolean(
+        safeData['liquidGlassEnabled'],
+        fallback: true,
+      ),
+      animationsEnabled: JsonSafe.boolean(
+        safeData['animationsEnabled'],
+        fallback: true,
+      ),
+      dynamicIslandEnabled: JsonSafe.boolean(safeData['dynamicIslandEnabled']),
+      liveActivitiesEnabled: JsonSafe.boolean(
+        safeData['liveActivitiesEnabled'],
+      ),
+      updatedAt: _readDate(safeData['updatedAt']),
     );
   }
 

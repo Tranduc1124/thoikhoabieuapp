@@ -52,8 +52,14 @@ function main(): void
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
         $legacyAction = trim((string)($_GET['action'] ?? ''));
         $legacyShareId = trim((string)($_GET['shareId'] ?? $_GET['id'] ?? ''));
-        if ($legacyAction === 'share.get' && $legacyShareId !== '') {
+        $accept = mb_strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+        $expectsHtml = str_contains($accept, 'text/html') || str_contains($accept, 'application/xhtml+xml');
+        if (($legacyAction === 'share.get' || $expectsHtml) && $legacyShareId !== '') {
             header('Location: ' . buildPublicShareUrl($legacyShareId), true, 302);
+            exit;
+        }
+        if ($expectsHtml) {
+            header('Location: ' . rtrim((string)APP_BASE_URL, '/') . '/share', true, 302);
             exit;
         }
     }
@@ -630,7 +636,7 @@ function normalizeDate(string $value): string
 function decodeJsonObject(string $json): array
 {
     $decoded = json_decode($json, true);
-    return is_array($decoded) ? $decoded : [];
+    return is_array($decoded) && !array_is_list($decoded) ? $decoded : [];
 }
 
 function decodeJsonList(string $json): array
@@ -856,6 +862,7 @@ function findProfileCardRow(PDO $pdo, string $cardId): array
 
 function serializeUser(array $row): array
 {
+    $socialLinks = decodeJsonObject((string)($row['social_links_json'] ?? '{}'));
     return [
         'id' => (string)$row['uid'],
         'uid' => (string)$row['uid'],
@@ -875,7 +882,7 @@ function serializeUser(array $row): array
         'allowFriendsToViewTimetable' => (int)$row['allow_friends_to_view_timetable'] === 1,
         'hideStatistics' => (int)$row['hide_statistics'] === 1,
         'hideStreak' => (int)$row['hide_streak'] === 1,
-        'socialLinks' => decodeJsonObject((string)($row['social_links_json'] ?? '{}')),
+        'socialLinks' => $socialLinks === [] ? new stdClass() : $socialLinks,
         'createdAt' => isoDateTime($row['created_at']),
         'updatedAt' => isoDateTime($row['updated_at']),
         'lastSyncedAt' => isoDateTime($row['updated_at']),
@@ -1157,7 +1164,7 @@ function handleAuthRegister(PDO $pdo, array $data): void
         'allow_friends_to_view_timetable' => 1,
         'hide_statistics' => 0,
         'hide_streak' => 0,
-        'social_links_json' => jsonEncode([]),
+        'social_links_json' => jsonEncode(new stdClass()),
     ]);
 
     $userId = (int)$pdo->lastInsertId();

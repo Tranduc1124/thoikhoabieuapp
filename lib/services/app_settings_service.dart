@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/api.dart';
 import '../models/app_settings_model.dart';
+import '../utils/safe_json.dart';
 
 class AppSettingsService {
   const AppSettingsService({required this.userId});
@@ -10,9 +11,7 @@ class AppSettingsService {
 
   Future<AppSettingsModel> loadRemote() async {
     final data = await Api.call('settings.get');
-    final settings = AppSettingsModel.fromMap(
-      Map<String, dynamic>.from((data['settings'] as Map?) ?? const {}),
-    );
+    final settings = AppSettingsModel.fromMap(JsonSafe.map(data['settings']));
     await cache(settings);
     return settings;
   }

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/schedule_provider.dart';
+import '../services/app_feedback_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_navigation_shell.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/loading_skeleton.dart';
@@ -19,109 +19,98 @@ class StatisticsScreen extends ConsumerWidget {
     final stats = ref.watch(weeklyStatsProvider);
     final scheduleCount = ref.watch(schedulesProvider).valueOrNull?.length ?? 0;
 
-    return AppNavigationShell(
-      currentIndex: 3,
-      child: SoftGradientBackground(
-        child: SafeArea(
-          child: stats.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(20),
-              child: LoadingSkeleton(itemCount: 3),
+    return SoftGradientBackground(
+      child: SafeArea(
+        child: stats.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(20),
+            child: LoadingSkeleton(itemCount: 3),
+          ),
+          error: (error, _) => EmptyState(
+            title: 'Không tải được thống kê',
+            message: AppFeedbackService.messageFor(error),
+            action: FilledButton.tonalIcon(
+              onPressed: () {
+                ref.invalidate(schedulesProvider);
+                ref.invalidate(weekStudyLogsProvider);
+              },
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Thử lại'),
             ),
-            error: (error, _) => EmptyState(
-              title: 'Không tải được thống kê',
-              message: error.toString(),
-              action: FilledButton.tonalIcon(
-                onPressed: () {
-                  ref.invalidate(schedulesProvider);
-                  ref.invalidate(weekStudyLogsProvider);
-                },
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Thử lại'),
-              ),
-            ),
-            data: (value) {
-              final entries = value.hoursBySubject.entries.toList()
-                ..sort((a, b) => b.value.compareTo(a.value));
-              if (entries.isEmpty) {
-                return const EmptyState(
-                  title: 'Chưa có dữ liệu thống kê',
-                  message:
-                      'Thêm thời khóa biểu để xem tổng số giờ học và những môn học nổi bật trong tuần.',
-                );
-              }
-              final completion = scheduleCount == 0
-                  ? 0.0
-                  : (value.completedCount / scheduleCount).clamp(0.0, 1.0);
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 112),
-                children: [
-                  const SectionHeader(
-                    title: 'Thống kê tuần',
-                    subtitle: 'Tổng quan thời lượng và tiến độ học tập của bạn',
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
+          ),
+          data: (value) {
+            final entries = value.hoursBySubject.entries.toList()
+              ..sort((a, b) => b.value.compareTo(a.value));
+            if (entries.isEmpty) {
+              return const EmptyState(
+                title: 'Chưa có dữ liệu thống kê',
+                message:
+                    'Thêm thời khóa biểu để xem tổng số giờ học và những môn học nổi bật trong tuần.',
+              );
+            }
+            final completion = scheduleCount == 0
+                ? 0.0
+                : (value.completedCount / scheduleCount).clamp(0.0, 1.0);
+            return ListView(
+              key: const PageStorageKey('statistics-scroll'),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 112),
+              children: [
+                const SectionHeader(
+                  title: 'Thống kê tuần',
+                  subtitle: 'Tổng quan thời lượng và tiến độ học tập của bạn',
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MetricCard(
+                        label: 'Tổng giờ',
+                        value: value.totalHours.toStringAsFixed(1),
+                        icon: Icons.timer_rounded,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _MetricCard(
+                        label: 'Hoàn thành',
+                        value: '${(completion * 100).round()}%',
+                        icon: Icons.check_circle_rounded,
+                        color: const Color(0xFF10A987),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                GlassCard(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'Tổng giờ',
-                          value: value.totalHours.toStringAsFixed(1),
-                          icon: Icons.timer_rounded,
-                          color: Theme.of(context).colorScheme.primary,
+                      Text(
+                        'Tuần này bạn dành nhiều thời gian nhất cho môn ${value.topSubject}',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Bạn đã hoàn thành ${(completion * 100).round()}% lịch học trong tuần này.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.textSecondary,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'Hoàn thành',
-                          value: '${(completion * 100).round()}%',
-                          icon: Icons.check_circle_rounded,
-                          color: const Color(0xFF10A987),
-                        ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 250,
+                        child: BarChart(_chartData(context, entries)),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  GlassCard(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tuần này bạn dành nhiều thời gian nhất cho môn ${value.topSubject}',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w900),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Bạn đã hoàn thành ${(completion * 100).round()}% lịch học trong tuần này.',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.textSecondary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0, end: 1),
-                          duration: const Duration(milliseconds: 720),
-                          curve: Curves.easeOutCubic,
-                          builder: (context, value, child) {
-                            return SizedBox(
-                              height: 250,
-                              child: BarChart(
-                                _chartData(context, entries, value),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -130,7 +119,6 @@ class StatisticsScreen extends ConsumerWidget {
   BarChartData _chartData(
     BuildContext context,
     List<MapEntry<String, double>> entries,
-    double progress,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     final palette = [
@@ -182,7 +170,7 @@ class StatisticsScreen extends ConsumerWidget {
             x: i,
             barRods: [
               BarChartRodData(
-                toY: entries[i].value * progress,
+                toY: entries[i].value,
                 width: 24,
                 borderRadius: BorderRadius.circular(10),
                 gradient: LinearGradient(

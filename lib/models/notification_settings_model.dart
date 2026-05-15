@@ -1,3 +1,5 @@
+import '../utils/safe_json.dart';
+
 class NotificationSettingsModel {
   const NotificationSettingsModel({
     this.enabled = true,
@@ -21,20 +23,36 @@ class NotificationSettingsModel {
   final String permissionStatus;
   final DateTime? updatedAt;
 
-  factory NotificationSettingsModel.fromMap(Map<String, dynamic>? data) {
-    data ??= const {};
+  factory NotificationSettingsModel.fromMap(dynamic data) {
+    final safeData = JsonSafe.map(data);
     return NotificationSettingsModel(
-      enabled: data['enabled'] as bool? ?? true,
-      nextClassReminderEnabled:
-          data['nextClassReminderEnabled'] as bool? ?? true,
-      reminderMinutesBefore:
-          (data['reminderMinutesBefore'] as num?)?.toInt() ?? 15,
-      homeworkReminderEnabled: data['homeworkReminderEnabled'] as bool? ?? true,
-      examReminderEnabled: data['examReminderEnabled'] as bool? ?? true,
-      soundEnabled: data['soundEnabled'] as bool? ?? true,
-      defaultSound: (data['defaultSound'] ?? 'default').toString(),
-      permissionStatus: (data['permissionStatus'] ?? 'unknown').toString(),
-      updatedAt: _readDate(data['updatedAt']),
+      enabled: JsonSafe.boolean(safeData['enabled'], fallback: true),
+      nextClassReminderEnabled: JsonSafe.boolean(
+        safeData['nextClassReminderEnabled'],
+        fallback: true,
+      ),
+      reminderMinutesBefore: JsonSafe.integer(
+        safeData['reminderMinutesBefore'],
+        fallback: 15,
+      ),
+      homeworkReminderEnabled: JsonSafe.boolean(
+        safeData['homeworkReminderEnabled'],
+        fallback: true,
+      ),
+      examReminderEnabled: JsonSafe.boolean(
+        safeData['examReminderEnabled'],
+        fallback: true,
+      ),
+      soundEnabled: JsonSafe.boolean(safeData['soundEnabled'], fallback: true),
+      defaultSound: JsonSafe.string(
+        safeData['defaultSound'],
+        fallback: 'default',
+      ),
+      permissionStatus: JsonSafe.string(
+        safeData['permissionStatus'],
+        fallback: 'unknown',
+      ),
+      updatedAt: _readDate(safeData['updatedAt']),
     );
   }
 

@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../api/api.dart';
 import '../models/schedule_model.dart';
 import '../models/share_schedule_model.dart';
+import '../utils/safe_json.dart';
 import 'app_feedback_service.dart';
 import 'deep_link_service.dart';
 
@@ -71,8 +72,9 @@ class ShareService {
       profilePhoto: profilePhoto,
     );
     final data = await Api.call('share.create', data: share.toCreateMap());
+    final shareData = JsonSafe.map(data['share']);
     return ShareScheduleModel.fromMap(
-      Map<String, dynamic>.from((data['share'] as Map?) ?? share.toCreateMap()),
+      shareData.isEmpty ? share.toCreateMap() : shareData,
     );
   }
 

@@ -35,6 +35,7 @@ import 'services/notification_service.dart';
 import 'services/widget_sync_service.dart';
 import 'theme/app_motion.dart';
 import 'theme/app_theme.dart';
+import 'widgets/app_navigation_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,26 +58,57 @@ final _routerProvider = Provider<GoRouter>((ref) {
         path: '/login',
         pageBuilder: (context, state) => _page(state, const LoginScreen()),
       ),
-      GoRoute(
-        path: '/home',
-        pageBuilder: (context, state) => _page(state, const HomeScreen()),
-      ),
-      GoRoute(
-        path: '/week',
-        pageBuilder: (context, state) =>
-            _page(state, const WeekScheduleScreen()),
-      ),
-      GoRoute(
-        path: '/today',
-        pageBuilder: (context, state) => _page(state, const TodayScreen()),
-      ),
-      GoRoute(
-        path: '/statistics',
-        pageBuilder: (context, state) => _page(state, const StatisticsScreen()),
-      ),
-      GoRoute(
-        path: '/settings',
-        pageBuilder: (context, state) => _page(state, const SettingsScreen()),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return AppNavigationShell(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/home',
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage<void>(child: HomeScreen()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/week',
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage<void>(child: WeekScheduleScreen()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/today',
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage<void>(child: TodayScreen()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/statistics',
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage<void>(child: StatisticsScreen()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/settings',
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage<void>(child: SettingsScreen()),
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
         path: '/backend-diagnostics',
@@ -182,8 +214,8 @@ CustomTransitionPage<void> _page(GoRouterState state, Widget child) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
-    transitionDuration: AppMotion.slow,
-    reverseTransitionDuration: AppMotion.medium,
+    transitionDuration: const Duration(milliseconds: 240),
+    reverseTransitionDuration: const Duration(milliseconds: 220),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       final curve = CurvedAnimation(
         parent: animation,
@@ -194,13 +226,10 @@ CustomTransitionPage<void> _page(GoRouterState state, Widget child) {
         opacity: curve,
         child: SlideTransition(
           position: Tween<Offset>(
-            begin: const Offset(0, 0.035),
+            begin: const Offset(0, 0.02),
             end: Offset.zero,
           ).animate(curve),
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.985, end: 1).animate(curve),
-            child: child,
-          ),
+          child: child,
         ),
       );
     },

@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'api_exception.dart';
 import '../models/auth_session.dart';
 import '../services/app_feedback_service.dart';
+import '../utils/safe_json.dart';
 
 class Api {
   Api._();
@@ -96,15 +97,15 @@ class Api {
   }
 
   static Map<String, dynamic>? userPayloadFromData(Map<String, dynamic> data) {
-    final directUser = data['user'];
-    if (directUser is Map) {
-      return Map<String, dynamic>.from(directUser);
+    final directUser = JsonSafe.nullableMap(data['user']);
+    if (directUser != null) {
+      return directUser;
     }
     if (data.containsKey('id') ||
         data.containsKey('uid') ||
         data.containsKey('email') ||
         data.containsKey('name')) {
-      return Map<String, dynamic>.from(data);
+      return JsonSafe.map(data);
     }
     return null;
   }
@@ -208,7 +209,7 @@ class Api {
 
     final data = payload['data'];
     if (data is Map<String, dynamic>) return data;
-    if (data is Map) return Map<String, dynamic>.from(data);
+    if (data is Map) return JsonSafe.map(data);
     return {'result': data};
   }
 

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/weather_now_model.dart';
+import '../utils/safe_json.dart';
 
 class WeatherService {
   const WeatherService();
@@ -51,12 +52,10 @@ class WeatherService {
         .get(_weatherUri)
         .timeout(const Duration(seconds: 4));
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
-    final current = Map<String, dynamic>.from(
-      (payload['current'] as Map?) ?? const {},
-    );
+    final current = JsonSafe.map(payload['current']);
     return WeatherNowModel(
-      temperatureC: (current['temperature_2m'] as num?)?.toDouble() ?? 0,
-      weatherCode: (current['weather_code'] as num?)?.toInt() ?? 0,
+      temperatureC: JsonSafe.decimal(current['temperature_2m']),
+      weatherCode: JsonSafe.integer(current['weather_code']),
       locationLabel: _defaultLocationLabel,
       updatedAt:
           DateTime.tryParse((current['time'] ?? '').toString()) ??

@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/api.dart';
 import '../models/notification_settings_model.dart';
+import '../utils/safe_json.dart';
 
 class NotificationSettingsService {
   const NotificationSettingsService({required this.userId});
@@ -12,7 +13,7 @@ class NotificationSettingsService {
     try {
       final data = await Api.call('notification.settings');
       final settings = NotificationSettingsModel.fromMap(
-        Map<String, dynamic>.from(data['settings'] as Map),
+        JsonSafe.map(data['settings']),
       );
       await _cache(settings);
       return settings;

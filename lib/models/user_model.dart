@@ -1,3 +1,5 @@
+import '../utils/safe_json.dart';
+
 class AppUser {
   const AppUser({
     required this.id,
@@ -63,34 +65,49 @@ class AppUser {
   }
 
   factory AppUser.fromMap(Map<String, dynamic> data) {
-    final id = (data['id'] ?? data['uid'] ?? '').toString();
-    final name = (data['name'] ?? data['displayName'] ?? '').toString().trim();
-    final username = (data['username'] ?? '').toString().trim();
-    final rawSocialLinks =
-        data['socialLinks'] as Map<String, dynamic>? ?? const {};
+    final safeData = JsonSafe.map(data);
+    final resolvedId = JsonSafe.string(safeData['id']).trim().isNotEmpty
+        ? safeData['id']
+        : safeData['uid'];
+    final id = JsonSafe.string(resolvedId);
+    final name = JsonSafe.string(
+      safeData['name'] ?? safeData['displayName'],
+    ).trim();
+    final username = JsonSafe.string(safeData['username']).trim();
+    final rawSocialLinks = JsonSafe.map(safeData['socialLinks']);
     return AppUser(
       id: id,
       name: name,
-      email: (data['email'] ?? '').toString().trim(),
+      email: JsonSafe.string(safeData['email']).trim(),
       username: username,
-      bio: (data['bio'] ?? '').toString(),
-      avatarUrl: data['avatarUrl']?.toString(),
-      themeMode: (data['themeMode'] ?? 'system').toString(),
-      profileTheme: (data['profileTheme'] ?? 'aurora').toString(),
-      favoriteSubject: (data['favoriteSubject'] ?? '').toString(),
-      accentColor: _readColor(data['accentColor']),
-      studyStreak: (data['studyStreak'] as num?)?.toInt() ?? 0,
-      isProfilePublic: data['isProfilePublic'] as bool? ?? true,
-      allowFriendsToViewTimetable:
-          data['allowFriendsToViewTimetable'] as bool? ?? true,
-      hideStatistics: data['hideStatistics'] as bool? ?? false,
-      hideStreak: data['hideStreak'] as bool? ?? false,
+      bio: JsonSafe.string(safeData['bio']),
+      avatarUrl: JsonSafe.string(safeData['avatarUrl']).trim().isEmpty
+          ? null
+          : JsonSafe.string(safeData['avatarUrl']).trim(),
+      themeMode: JsonSafe.string(safeData['themeMode'], fallback: 'system'),
+      profileTheme: JsonSafe.string(
+        safeData['profileTheme'],
+        fallback: 'aurora',
+      ),
+      favoriteSubject: JsonSafe.string(safeData['favoriteSubject']),
+      accentColor: _readColor(safeData['accentColor']),
+      studyStreak: JsonSafe.integer(safeData['studyStreak']),
+      isProfilePublic: JsonSafe.boolean(
+        safeData['isProfilePublic'],
+        fallback: true,
+      ),
+      allowFriendsToViewTimetable: JsonSafe.boolean(
+        safeData['allowFriendsToViewTimetable'],
+        fallback: true,
+      ),
+      hideStatistics: JsonSafe.boolean(safeData['hideStatistics']),
+      hideStreak: JsonSafe.boolean(safeData['hideStreak']),
       socialLinks: rawSocialLinks.map(
         (key, value) => MapEntry(key, value.toString()),
       ),
-      createdAt: _readDate(data['createdAt']),
-      updatedAt: _readDate(data['updatedAt']),
-      lastSyncedAt: _readDate(data['lastSyncedAt']),
+      createdAt: _readDate(safeData['createdAt']),
+      updatedAt: _readDate(safeData['updatedAt']),
+      lastSyncedAt: _readDate(safeData['lastSyncedAt']),
     );
   }
 
