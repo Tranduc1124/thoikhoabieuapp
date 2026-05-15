@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
 import '../repositories/schedule_repository.dart';
-import '../services/firebase_service.dart';
 import 'auth_provider.dart';
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
@@ -11,14 +10,14 @@ final selectedDayProvider = StateProvider<int>((ref) => DateTime.now().weekday);
 
 final scheduleRepositoryProvider = Provider<ScheduleRepository?>((ref) {
   final user = ref.watch(authControllerProvider).valueOrNull;
-  if (!FirebaseService.isAvailable || user == null) return null;
+  if (user == null) return null;
   return ScheduleRepository(userId: user.uid);
 });
 
-final schedulesProvider = StreamProvider<List<ScheduleModel>>((ref) {
+final schedulesProvider = FutureProvider<List<ScheduleModel>>((ref) async {
   final repository = ref.watch(scheduleRepositoryProvider);
-  if (repository == null) return Stream.value(const []);
-  return repository.watchSchedules();
+  if (repository == null) return const [];
+  return repository.loadSchedules();
 });
 
 final todaySchedulesProvider = Provider<AsyncValue<List<ScheduleModel>>>((ref) {
@@ -59,16 +58,16 @@ final selectedDaySchedulesProvider = Provider<AsyncValue<List<ScheduleModel>>>((
   });
 });
 
-final todayStudyLogsProvider = StreamProvider<List<StudyLogModel>>((ref) {
+final todayStudyLogsProvider = FutureProvider<List<StudyLogModel>>((ref) async {
   final repository = ref.watch(scheduleRepositoryProvider);
-  if (repository == null) return Stream.value(const []);
-  return repository.watchStudyLogsForDate(DateTime.now());
+  if (repository == null) return const [];
+  return repository.loadStudyLogsForDate(DateTime.now());
 });
 
-final weekStudyLogsProvider = StreamProvider<List<StudyLogModel>>((ref) {
+final weekStudyLogsProvider = FutureProvider<List<StudyLogModel>>((ref) async {
   final repository = ref.watch(scheduleRepositoryProvider);
-  if (repository == null) return Stream.value(const []);
-  return repository.watchStudyLogsForWeek(DateTime.now());
+  if (repository == null) return const [];
+  return repository.loadStudyLogsForWeek(DateTime.now());
 });
 
 final scheduleActionsProvider = Provider<ScheduleActions>(
@@ -83,20 +82,46 @@ class ScheduleActions {
   ScheduleRepository get _repository {
     final repository = ref.read(scheduleRepositoryProvider);
     if (repository == null) {
-      throw StateError('Ban can dang nhap va cau hinh Firebase truoc.');
+      throw StateError('Bạn cần đăng nhập và kết nối máy chủ trước.');
     }
     return repository;
   }
 
-  Future<String> add(ScheduleModel schedule) =>
-      _repository.addSchedule(schedule);
-  Future<void> update(ScheduleModel schedule) =>
-      _repository.updateSchedule(schedule);
-  Future<void> delete(String id) => _repository.deleteSchedule(id);
-  Future<void> start(ScheduleModel schedule) =>
-      _repository.markStarted(schedule, DateTime.now());
-  Future<void> complete(ScheduleModel schedule, String note) =>
-      _repository.markCompleted(schedule, DateTime.now(), noteAfterClass: note);
+  void _refresh() {
+    ref.invalidate(schedulesProvider);
+    ref.invalidate(todayStudyLogsProvider);
+    ref.invalidate(weekStudyLogsProvider);
+  }
+
+  Future<String> add(ScheduleModel schedule) async {
+    final id = await _repository.addSchedule(schedule);
+    _refresh();
+    return id;
+  }
+
+  Future<void> update(ScheduleModel schedule) async {
+    await _repository.updateSchedule(schedule);
+    _refresh();
+  }
+
+  Future<void> delete(String id) async {
+    await _repository.deleteSchedule(id);
+    _refresh();
+  }
+
+  Future<void> start(ScheduleModel schedule) async {
+    await _repository.markStarted(schedule, DateTime.now());
+    _refresh();
+  }
+
+  Future<void> complete(ScheduleModel schedule, String note) async {
+    await _repository.markCompleted(
+      schedule,
+      DateTime.now(),
+      noteAfterClass: note,
+    );
+    _refresh();
+  }
 }
 
 class WeeklyStats {
@@ -145,7 +170,7 @@ final weeklyStatsProvider = Provider<AsyncValue<WeeklyStats>>((ref) {
   return AsyncData(
     WeeklyStats(
       totalHours: total,
-      topSubject: sorted.isEmpty ? 'Chua co mon hoc' : sorted.first.key,
+      topSubject: sorted.isEmpty ? 'Chưa có môn học' : sorted.first.key,
       completedCount: completedIds.length,
       hoursBySubject: hoursBySubject,
     ),

@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class AppUser {
   const AppUser({
     required this.id,
@@ -43,24 +41,24 @@ class AppUser {
   final DateTime? updatedAt;
   final DateTime? lastSyncedAt;
 
-  factory AppUser.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data() ?? <String, dynamic>{};
+  factory AppUser.fromMap(Map<String, dynamic> data) {
+    final id = (data['id'] ?? data['uid'] ?? '').toString();
     final name = (data['name'] as String?)?.trim();
     final username = (data['username'] as String?)?.trim();
     final rawSocialLinks =
         data['socialLinks'] as Map<String, dynamic>? ?? const {};
     return AppUser(
-      id: doc.id,
+      id: id,
       name: name?.isNotEmpty == true ? name! : 'Sinh viên',
-      email: data['email'] as String? ?? '',
+      email: (data['email'] ?? '').toString(),
       username: username?.isNotEmpty == true
           ? username!
-          : '@${doc.id.substring(0, 6)}',
-      bio: data['bio'] as String? ?? '',
-      avatarUrl: data['avatarUrl'] as String?,
-      themeMode: data['themeMode'] as String? ?? 'system',
-      profileTheme: data['profileTheme'] as String? ?? 'aurora',
-      favoriteSubject: data['favoriteSubject'] as String? ?? '',
+          : '@${id.padRight(6, '0').substring(0, 6)}',
+      bio: (data['bio'] ?? '').toString(),
+      avatarUrl: data['avatarUrl']?.toString(),
+      themeMode: (data['themeMode'] ?? 'system').toString(),
+      profileTheme: (data['profileTheme'] ?? 'aurora').toString(),
+      favoriteSubject: (data['favoriteSubject'] ?? '').toString(),
       accentColor: _readColor(data['accentColor']),
       studyStreak: (data['studyStreak'] as num?)?.toInt() ?? 0,
       isProfilePublic: data['isProfilePublic'] as bool? ?? true,
@@ -71,14 +69,15 @@ class AppUser {
       socialLinks: rawSocialLinks.map(
         (key, value) => MapEntry(key, value.toString()),
       ),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      createdAt: _readDate(data['createdAt']),
+      updatedAt: _readDate(data['updatedAt']),
+      lastSyncedAt: _readDate(data['lastSyncedAt']),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'name': name,
       'email': email,
       'username': username,
@@ -94,13 +93,9 @@ class AppUser {
       'hideStatistics': hideStatistics,
       'hideStreak': hideStreak,
       'socialLinks': socialLinks,
-      'createdAt': createdAt == null
-          ? FieldValue.serverTimestamp()
-          : Timestamp.fromDate(createdAt!),
-      'updatedAt': FieldValue.serverTimestamp(),
-      'lastSyncedAt': lastSyncedAt == null
-          ? FieldValue.serverTimestamp()
-          : Timestamp.fromDate(lastSyncedAt!),
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'lastSyncedAt': lastSyncedAt?.toIso8601String(),
     };
   }
 
@@ -108,5 +103,13 @@ class AppUser {
     if (value is num) return value.toInt();
     if (value is String) return int.tryParse(value) ?? 0xFF6A8DFF;
     return 0xFF6A8DFF;
+  }
+
+  static DateTime? _readDate(Object? value) {
+    if (value is DateTime) return value;
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }

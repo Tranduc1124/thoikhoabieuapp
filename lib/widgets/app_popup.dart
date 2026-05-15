@@ -72,6 +72,9 @@ class _PopupCard extends StatelessWidget {
       AppPopupType.success => AppColors.success,
       AppPopupType.error => colorScheme.error,
     };
+    final iconHighlight = context.isDark
+        ? Color.lerp(accent, Colors.white, 0.16)!
+        : Color.lerp(accent, Colors.white, 0.30)!;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
@@ -84,8 +87,10 @@ class _PopupCard extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(30),
-              color: colorScheme.surfaceContainer.withValues(alpha: 0.96),
-              border: Border.all(color: colorScheme.glassStroke),
+              color: context.surfaceColor.withValues(
+                alpha: context.isDark ? 0.96 : 0.98,
+              ),
+              border: Border.all(color: context.borderColor),
               boxShadow: [
                 BoxShadow(
                   color: accent.withValues(alpha: 0.18),
@@ -106,10 +111,7 @@ class _PopupCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(
-                          colors: [
-                            accent,
-                            Color.lerp(accent, Colors.white, 0.30)!,
-                          ],
+                          colors: [accent, iconHighlight],
                         ),
                       ),
                       child: Icon(switch (type) {

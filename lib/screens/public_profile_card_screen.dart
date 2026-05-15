@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/pro_feature_providers.dart';
-import '../services/firebase_error_translator.dart';
+import '../services/app_feedback_service.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_avatar.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/qr_share_box.dart';
 import '../widgets/soft_gradient_background.dart';
-import '../theme/app_colors.dart';
 
 class PublicProfileCardScreen extends ConsumerWidget {
   const PublicProfileCardScreen({super.key, required this.cardId});
@@ -26,7 +27,7 @@ class PublicProfileCardScreen extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => EmptyState(
                 title: 'Không mở được profile card',
-                message: FirebaseErrorTranslator.readable(error),
+                message: AppFeedbackService.messageFor(error),
               ),
               data: (data) {
                 if (data == null) {
@@ -60,14 +61,10 @@ class PublicProfileCardScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          CircleAvatar(
+                          AppAvatar(
+                            name: data.displayName,
+                            primaryUrl: data.avatarUrl,
                             radius: 32,
-                            backgroundImage: data.avatarUrl != null
-                                ? NetworkImage(data.avatarUrl!)
-                                : null,
-                            child: data.avatarUrl == null
-                                ? const Icon(Icons.person_rounded)
-                                : null,
                           ),
                           const SizedBox(width: 14),
                           Expanded(

@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'schedule_model.dart';
 
 enum ShareScheduleType { today, week, subject, all }
@@ -22,6 +20,7 @@ class ShareScheduleModel {
     this.createdAt,
     this.updatedAt,
     this.expiresAt,
+    this.deletedAt,
   });
 
   final String id;
@@ -40,24 +39,26 @@ class ShareScheduleModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final DateTime? expiresAt;
+  final DateTime? deletedAt;
 
   List<ScheduleModel> get schedulesSnapshot => schedules;
   String get link => deepLink;
+  bool get isDeleted => deletedAt != null;
 
-  factory ShareScheduleModel.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data() ?? const <String, dynamic>{};
+  factory ShareScheduleModel.fromMap(Map<String, dynamic> data) {
     final rawSchedules =
         (data['schedules'] ?? data['schedulesSnapshot']) as List?;
     final rawSubjects = data['subjects'] as List?;
+    final id = (data['id'] ?? data['share_id'] ?? '').toString();
     final deepLink =
-        data['deepLink'] as String? ?? 'thoikhoabieu://share/${doc.id}';
+        (data['deepLink'] ?? data['deep_link'])?.toString() ??
+        'thoikhoabieu://share/$id';
     return ShareScheduleModel(
-      id: doc.id,
-      ownerId: data['ownerId'] as String? ?? '',
-      ownerName: data['ownerName'] as String? ?? 'Sinh viên',
-      title: data['title'] as String? ?? 'Thời khóa biểu',
+      id: id,
+      ownerId: (data['ownerId'] ?? data['owner_id'] ?? '').toString(),
+      ownerName: (data['ownerName'] ?? data['owner_name'] ?? 'Sinh viên')
+          .toString(),
+      title: (data['title'] ?? 'Thời khóa biểu').toString(),
       shareType: ShareScheduleType.values.firstWhere(
         (value) => value.name == (data['shareType'] ?? data['type']),
         orElse: () => ShareScheduleType.week,
@@ -67,32 +68,37 @@ class ShareScheduleModel {
           : rawSchedules
                 .whereType<Map>()
                 .map(
-                  (item) => _scheduleFromMap(Map<String, dynamic>.from(item)),
+                  (item) =>
+                      ScheduleModel.fromMap(Map<String, dynamic>.from(item)),
                 )
                 .toList(growable: false),
       subjects: rawSubjects == null
           ? const []
           : rawSubjects.map((item) => item.toString()).toList(growable: false),
       deepLink: deepLink,
-      qrData: data['qrData'] as String? ?? deepLink,
-      isActive: data['isActive'] as bool? ?? true,
-      theme: data['theme'] as String? ?? 'liquidGlass',
-      viewCount: (data['viewCount'] as num?)?.toInt() ?? 0,
-      profilePhoto: data['profilePhoto'] as String?,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
-      expiresAt: (data['expiresAt'] as Timestamp?)?.toDate(),
+      qrData: (data['qrData'] ?? data['qr_data'] ?? deepLink).toString(),
+      isActive: data['isActive'] as bool? ?? data['is_active'] as bool? ?? true,
+      theme: (data['theme'] ?? 'liquidGlass').toString(),
+      viewCount:
+          (data['viewCount'] ?? data['view_count'] as num?)?.toInt() ?? 0,
+      profilePhoto:
+          data['profilePhoto']?.toString() ?? data['profile_photo']?.toString(),
+      createdAt: _readDate(data['createdAt'] ?? data['created_at']),
+      updatedAt: _readDate(data['updatedAt'] ?? data['updated_at']),
+      expiresAt: _readDate(data['expiresAt'] ?? data['expires_at']),
+      deletedAt: _readDate(data['deletedAt'] ?? data['deleted_at']),
     );
   }
 
   Map<String, dynamic> toCreateMap() {
     return {
+      'id': id,
       'ownerId': ownerId,
       'ownerName': ownerName,
       'title': title,
       'shareType': shareType.name,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
       'isActive': isActive,
       'theme': theme,
       'subjects': subjects,
@@ -105,7 +111,8 @@ class ShareScheduleModel {
       'deepLink': deepLink,
       'profilePhoto': profilePhoto,
       'viewCount': viewCount,
-      'expiresAt': expiresAt == null ? null : Timestamp.fromDate(expiresAt!),
+      'expiresAt': expiresAt?.toIso8601String(),
+      'deletedAt': deletedAt?.toIso8601String(),
     };
   }
 
@@ -121,6 +128,7 @@ class ShareScheduleModel {
     int? viewCount,
     String? profilePhoto,
     DateTime? expiresAt,
+    DateTime? deletedAt,
   }) {
     return ShareScheduleModel(
       id: id,
@@ -139,52 +147,18 @@ class ShareScheduleModel {
       createdAt: createdAt,
       updatedAt: updatedAt,
       expiresAt: expiresAt ?? this.expiresAt,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
   static Map<String, dynamic> _scheduleToMap(ScheduleModel schedule) {
-    return {
-      'id': schedule.id,
-      'subjectName': schedule.subjectName,
-      'dayOfWeek': schedule.dayOfWeek,
-      'startTime': schedule.startTime,
-      'endTime': schedule.endTime,
-      'room': schedule.room,
-      'teacher': schedule.teacher,
-      'note': schedule.note,
-      'color': schedule.color,
-      'locationAddress': schedule.locationAddress,
-      'latitude': schedule.latitude,
-      'longitude': schedule.longitude,
-      'appleMapsUrl': schedule.appleMapsUrl,
-      'googleMapsUrl': schedule.googleMapsUrl,
-      'repeatWeekly': schedule.repeatWeekly,
-      'reminderEnabled': schedule.reminderEnabled,
-      'reminderMinutesBefore': schedule.reminderMinutesBefore,
-    };
+    return schedule.toCreateMap();
   }
 
-  static ScheduleModel _scheduleFromMap(Map<String, dynamic> map) {
-    return ScheduleModel(
-      id: map['id'] as String? ?? '',
-      subjectName: map['subjectName'] as String? ?? '',
-      dayOfWeek: (map['dayOfWeek'] as num?)?.toInt() ?? 1,
-      startTime: (map['startTime'] as num?)?.toInt() ?? 0,
-      endTime: (map['endTime'] as num?)?.toInt() ?? 0,
-      room: map['room'] as String? ?? '',
-      teacher: map['teacher'] as String? ?? '',
-      note: map['note'] as String? ?? '',
-      color: (map['color'] as num?)?.toInt() ?? 0xFF6A8DFF,
-      locationAddress: map['locationAddress'] as String? ?? '',
-      latitude: (map['latitude'] as num?)?.toDouble(),
-      longitude: (map['longitude'] as num?)?.toDouble(),
-      appleMapsUrl: map['appleMapsUrl'] as String?,
-      googleMapsUrl: map['googleMapsUrl'] as String?,
-      hasCustomColor: map.containsKey('color'),
-      repeatWeekly: map['repeatWeekly'] as bool? ?? true,
-      reminderEnabled: map['reminderEnabled'] as bool? ?? true,
-      reminderMinutesBefore:
-          (map['reminderMinutesBefore'] as num?)?.toInt() ?? 15,
-    );
+  static DateTime? _readDate(Object? value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }

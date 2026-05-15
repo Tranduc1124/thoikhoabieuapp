@@ -4,10 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/schedule_model.dart';
 import '../models/share_schedule_model.dart';
 import '../providers/pro_feature_providers.dart';
-import '../services/firebase_error_translator.dart';
+import '../services/app_feedback_service.dart';
 import '../services/share_debug_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_popup.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/loading_skeleton.dart';
@@ -109,7 +108,7 @@ class _SharedScheduleViewScreenState
                   loading: () => const LoadingSkeleton(itemCount: 3),
                   error: (error, _) => EmptyState(
                     title: 'Không mở được lịch chia sẻ',
-                    message: FirebaseErrorTranslator.readable(error),
+                    message: AppFeedbackService.messageFor(error),
                     action: FilledButton.tonalIcon(
                       onPressed: () =>
                           ref.invalidate(publicShareProvider(shareId!)),
@@ -143,13 +142,13 @@ class _SharedScheduleViewScreenState
     if (data == null) {
       return const EmptyState(
         title: 'Không tìm thấy lịch',
-        message: 'Share ID không tồn tại hoặc chủ sở hữu đã xóa liên kết.',
+        message: 'Link chia sẻ đã bị xoá hoặc không còn hoạt động.',
       );
     }
     if (!data.isActive) {
       return const EmptyState(
-        title: 'Liên kết đã tắt hoặc hết hạn',
-        message: 'Chủ sở hữu không còn cho phép mở snapshot này.',
+        title: 'Link không còn hoạt động',
+        message: 'Link chia sẻ đã bị xoá hoặc không còn hoạt động.',
       );
     }
 
@@ -274,20 +273,18 @@ class _SharedScheduleViewScreenState
   ) async {
     final service = ref.read(shareServiceProvider);
     if (service == null) {
-      await showAppPopup(
+      AppFeedbackService.error(
         context,
-        title: 'Chưa đăng nhập',
-        message: 'Bạn cần đăng nhập để import lịch vào tài khoản.',
-        type: AppPopupType.error,
+        const AppUserMessageException(
+          'Bạn cần đăng nhập để import lịch vào tài khoản.',
+        ),
       );
       return;
     }
     if (schedules.isEmpty) {
-      await showAppPopup(
+      AppFeedbackService.info(
         context,
-        title: 'Chưa chọn dữ liệu',
-        message: 'Hãy chọn ít nhất một buổi học để import.',
-        type: AppPopupType.info,
+        'Hãy chọn ít nhất một buổi học để import.',
       );
       return;
     }
@@ -299,22 +296,15 @@ class _SharedScheduleViewScreenState
         schedules: schedules,
       );
       if (!mounted) return;
-      await showAppPopup(
+      AppFeedbackService.success(
         context,
-        title: 'Import hoàn tất',
-        message: imported == 0
-            ? 'Không có buổi học mới nào được thêm vì dữ liệu đã tồn tại.'
-            : 'Đã thêm $imported buổi học vào tài khoản của bạn.',
-        type: AppPopupType.success,
+        imported == 0
+            ? 'Không có môn học mới để thêm'
+            : 'Đã thêm $imported buổi học',
       );
     } catch (error) {
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Import thất bại',
-        message: FirebaseErrorTranslator.readable(error),
-        type: AppPopupType.error,
-      );
+      AppFeedbackService.error(context, error);
     } finally {
       if (mounted) {
         setState(() => _importing = false);
@@ -325,11 +315,11 @@ class _SharedScheduleViewScreenState
   Future<void> _open() async {
     final normalized = ShareDebugService.validateShareInput(_controller.text);
     if (normalized == null || normalized.isEmpty) {
-      await showAppPopup(
+      AppFeedbackService.error(
         context,
-        title: 'Link không hợp lệ',
-        message: 'Hãy nhập share ID hoặc link chia sẻ hợp lệ.',
-        type: AppPopupType.error,
+        const AppUserMessageException(
+          'Hãy nhập share ID hoặc link chia sẻ hợp lệ.',
+        ),
       );
       return;
     }

@@ -4,14 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'models/schedule_model.dart';
+import 'api/api.dart';
 import 'models/profile_card_model.dart';
+import 'models/schedule_model.dart';
 import 'models/share_schedule_model.dart';
 import 'providers/auth_provider.dart';
 import 'providers/pro_feature_providers.dart';
 import 'providers/schedule_provider.dart';
 import 'screens/add_edit_schedule_screen.dart';
-import 'screens/firebase_diagnostics_screen.dart';
+import 'screens/backend_diagnostics_screen.dart';
 import 'screens/friends_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
@@ -20,18 +21,17 @@ import 'screens/notification_settings_screen.dart';
 import 'screens/profile_card_preview_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/public_profile_card_screen.dart';
-import 'screens/share_preview_screen.dart';
-import 'screens/share_schedule_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/shared_schedule_view_screen.dart';
+import 'screens/share_preview_screen.dart';
+import 'screens/share_schedule_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/statistics_screen.dart';
 import 'screens/today_screen.dart';
 import 'screens/week_schedule_screen.dart';
 import 'screens/widget_preview_screen.dart';
+import 'services/backend_diagnostics_service.dart';
 import 'services/deep_link_service.dart';
-import 'services/firebase_diagnostics_service.dart';
-import 'services/firebase_service.dart';
 import 'services/notification_service.dart';
 import 'services/widget_sync_service.dart';
 import 'theme/app_motion.dart';
@@ -39,8 +39,8 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FirebaseService.initialize();
-  await FirebaseDiagnosticsService.checkFirebaseStatus();
+  await Api.initialize();
+  await BackendDiagnosticsService.checkBackendStatus();
   await NotificationService.initialize();
   await WidgetSyncService.initialize();
   runApp(const ProviderScope(child: ThoiKhoaBieuApp()));
@@ -80,9 +80,9 @@ final _routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => _page(state, const SettingsScreen()),
       ),
       GoRoute(
-        path: '/firebase-diagnostics',
+        path: '/backend-diagnostics',
         pageBuilder: (context, state) =>
-            _page(state, const FirebaseDiagnosticsScreen()),
+            _page(state, const BackendDiagnosticsScreen()),
       ),
       GoRoute(
         path: '/profile',

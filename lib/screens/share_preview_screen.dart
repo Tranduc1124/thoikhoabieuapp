@@ -5,10 +5,9 @@ import 'package:screenshot/screenshot.dart';
 
 import '../models/share_schedule_model.dart';
 import '../providers/pro_feature_providers.dart';
-import '../services/firebase_error_translator.dart';
+import '../services/app_feedback_service.dart';
 import '../services/share_debug_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_popup.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/qr_share_box.dart';
 import '../widgets/share_schedule_card.dart';
@@ -54,7 +53,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Link public, QR và ảnh poster đều được tạo từ cùng một snapshot Firebase để tránh lệch dữ liệu.',
+                      'Link public, QR và ảnh poster đều được tạo từ cùng một snapshot để tránh lệch dữ liệu.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: colorScheme.textSecondary,
                         fontWeight: FontWeight.w600,
@@ -185,13 +184,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
       );
       await service.shareImage(file, text: widget.share.deepLink);
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Đã mở share sheet',
-        message:
-            'Poster QR đã được tạo và chuyển sang hệ thống chia sẻ của thiết bị.',
-        type: AppPopupType.success,
-      );
+      AppFeedbackService.success(context, 'Đã mở bảng chia sẻ');
     });
   }
 
@@ -201,13 +194,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
     await _runBusyTask(() async {
       await service.shareLink(widget.share);
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Link đã sẵn sàng',
-        message:
-            'Native share sheet đã được mở với link public và deep link của thời khóa biểu.',
-        type: AppPopupType.success,
-      );
+      AppFeedbackService.success(context, 'Đã mở bảng chia sẻ');
     });
   }
 
@@ -217,20 +204,10 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
     try {
       await service.copyLink(widget.share.qrData);
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Đã copy link',
-        message: 'Link công khai đã được copy vào clipboard.',
-        type: AppPopupType.success,
-      );
+      AppFeedbackService.success(context, 'Đã sao chép link');
     } catch (error) {
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Không thể copy link',
-        message: FirebaseErrorTranslator.readable(error),
-        type: AppPopupType.error,
-      );
+      AppFeedbackService.error(context, error);
     }
   }
 
@@ -238,17 +215,12 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
     final service = ref.read(shareServiceProvider);
     if (service == null) return;
     await _runBusyTask(() async {
-      final file = await service.saveShareImage(
+      await service.saveShareImage(
         controller: _controller,
         filename: 'thoikhoabieu_poster_${widget.share.id}',
       );
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Đã lưu poster',
-        message: 'Ảnh được lưu tại:\n${file.path}',
-        type: AppPopupType.success,
-      );
+      AppFeedbackService.success(context, 'Đã lưu poster chia sẻ');
     });
   }
 
@@ -258,12 +230,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
       await task();
     } catch (error) {
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Tác vụ chia sẻ thất bại',
-        message: FirebaseErrorTranslator.readable(error),
-        type: AppPopupType.error,
-      );
+      AppFeedbackService.error(context, error);
     } finally {
       if (mounted) {
         setState(() => _busy = false);

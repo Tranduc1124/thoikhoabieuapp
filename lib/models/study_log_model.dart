@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum StudyStatus { planned, started, completed }
 
 class StudyLogModel {
@@ -21,34 +19,40 @@ class StudyLogModel {
   final String noteAfterClass;
   final DateTime? completedAt;
 
-  factory StudyLogModel.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data() ?? <String, dynamic>{};
+  factory StudyLogModel.fromMap(Map<String, dynamic> data) {
     return StudyLogModel(
-      id: doc.id,
-      scheduleId: data['scheduleId'] as String? ?? '',
-      subjectName: data['subjectName'] as String? ?? '',
-      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      id: (data['id'] ?? '').toString(),
+      scheduleId: (data['scheduleId'] ?? data['schedule_id'] ?? '').toString(),
+      subjectName: (data['subjectName'] ?? data['subject_name'] ?? '')
+          .toString(),
+      date: _readDate(data['date']) ?? DateTime.now(),
       status: StudyStatus.values.firstWhere(
         (value) => value.name == data['status'],
         orElse: () => StudyStatus.planned,
       ),
-      noteAfterClass: data['noteAfterClass'] as String? ?? '',
-      completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
+      noteAfterClass: (data['noteAfterClass'] ?? data['note_after_class'] ?? '')
+          .toString(),
+      completedAt: _readDate(data['completedAt'] ?? data['completed_at']),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'scheduleId': scheduleId,
       'subjectName': subjectName,
-      'date': Timestamp.fromDate(date),
+      'date': date.toIso8601String(),
       'status': status.name,
       'noteAfterClass': noteAfterClass,
-      'completedAt': completedAt == null
-          ? null
-          : Timestamp.fromDate(completedAt!),
+      'completedAt': completedAt?.toIso8601String(),
     };
+  }
+
+  static DateTime? _readDate(Object? value) {
+    if (value is DateTime) return value;
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }

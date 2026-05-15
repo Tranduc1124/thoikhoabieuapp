@@ -131,11 +131,11 @@ class EmptyStateView extends StatelessWidget {
     if (lower.contains('failed-precondition') ||
         lower.contains('requires an index') ||
         lower.contains('composite index') ||
-        lower.contains('firestore.indexes.json')) {
-      return 'Firebase đang tạo chỉ mục. Vui lòng thử lại sau vài phút.';
+        lower.contains('indexes.json')) {
+      return 'Hệ thống đang chuẩn bị dữ liệu. Vui lòng thử lại sau vài phút.';
     }
     if (lower.contains('permission-denied')) {
-      return 'Bạn chưa có quyền đọc dữ liệu. Kiểm tra Firestore Rules.';
+      return 'Bạn chưa có quyền đọc dữ liệu này.';
     }
     if (lower.contains('network') ||
         lower.contains('unavailable') ||

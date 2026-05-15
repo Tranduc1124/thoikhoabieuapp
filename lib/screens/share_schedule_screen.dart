@@ -6,10 +6,9 @@ import '../models/schedule_model.dart';
 import '../models/share_schedule_model.dart';
 import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
-import '../services/firebase_error_translator.dart';
+import '../services/app_feedback_service.dart';
 import '../services/nfc_quick_share_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_popup.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_header.dart';
@@ -89,7 +88,7 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'App sẽ tạo snapshot public trên Firebase, QR code và deep link để người nhận xem hoặc import.',
+                            'App sẽ tạo snapshot public, QR code và deep link để người nhận xem hoặc import.',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: colorScheme.textSecondary,
@@ -264,20 +263,20 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
   Future<void> _createShare(List<ScheduleModel> selected) async {
     final service = ref.read(shareServiceProvider);
     if (service == null) {
-      await showAppPopup(
+      AppFeedbackService.error(
         context,
-        title: 'Chưa đăng nhập',
-        message: 'Bạn cần đăng nhập trước khi chia sẻ thời khóa biểu.',
-        type: AppPopupType.error,
+        const AppUserMessageException(
+          'Bạn cần đăng nhập trước khi chia sẻ thời khóa biểu.',
+        ),
       );
       return;
     }
     if (selected.isEmpty) {
-      await showAppPopup(
+      AppFeedbackService.error(
         context,
-        title: 'Không có dữ liệu',
-        message: 'Danh sách môn học đang trống nên chưa thể tạo chia sẻ.',
-        type: AppPopupType.error,
+        const AppUserMessageException(
+          'Danh sách môn học đang trống nên chưa thể tạo chia sẻ.',
+        ),
       );
       return;
     }
@@ -290,24 +289,13 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
         schedules: selected,
       );
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Đã tạo chia sẻ',
-        message:
-            'Link, QR code và bản xem trước đã sẵn sàng. Bạn có thể gửi ngay cho người khác.',
-        type: AppPopupType.success,
-      );
+      AppFeedbackService.success(context, 'Đã tạo link chia sẻ');
       if (mounted) {
         context.push('/share/preview', extra: share);
       }
     } catch (error) {
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Không thể tạo chia sẻ',
-        message: FirebaseErrorTranslator.readable(error),
-        type: AppPopupType.error,
-      );
+      AppFeedbackService.error(context, error);
     } finally {
       if (mounted) {
         setState(() => _creating = false);
@@ -324,12 +312,7 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
       );
     } catch (error) {
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'NFC chưa sẵn sàng',
-        message: FirebaseErrorTranslator.readable(error),
-        type: AppPopupType.info,
-      );
+      AppFeedbackService.info(context, AppFeedbackService.messageFor(error));
     }
   }
 

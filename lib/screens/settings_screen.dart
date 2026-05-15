@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pro_feature_providers.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_avatar.dart';
 import '../widgets/app_navigation_shell.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_header.dart';
@@ -16,8 +17,8 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(appUserProvider).valueOrNull;
-    final themeMode = user?.themeMode ?? 'system';
     final auth = ref.watch(authControllerProvider).valueOrNull;
+    final themeMode = user?.themeMode ?? 'system';
     final notificationSettings = ref
         .watch(notificationSettingsProvider)
         .valueOrNull;
@@ -36,7 +37,7 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               const SectionHeader(
                 title: 'Cài đặt',
-                subtitle: 'Widget, thông báo, chia sẻ và đồng bộ cloud',
+                subtitle: 'Giao diện, thông báo, widget và đồng bộ dữ liệu.',
               ),
               GlassCard(
                 onTap: () => context.push('/profile'),
@@ -46,22 +47,11 @@ class SettingsScreen extends ConsumerWidget {
                 ).colorScheme.primary.withValues(alpha: 0.22),
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
+                  leading: AppAvatar(
+                    name: user?.name ?? auth?.displayName ?? 'Tài khoản',
+                    primaryUrl: user?.avatarUrl,
+                    secondaryUrl: auth?.photoURL,
                     radius: 29,
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.18),
-                    backgroundImage:
-                        user?.avatarUrl == null ||
-                            !(user!.avatarUrl!.startsWith('http'))
-                        ? null
-                        : NetworkImage(user.avatarUrl!),
-                    child: user?.avatarUrl == null
-                        ? Icon(
-                            Icons.person_rounded,
-                            color: Theme.of(context).colorScheme.primary,
-                          )
-                        : null,
                   ),
                   title: Text(
                     user?.name ?? auth?.email ?? 'Tài khoản',
@@ -69,7 +59,7 @@ class SettingsScreen extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   subtitle: Text(
-                    user?.email ?? auth?.email ?? 'Đã đồng bộ Firebase',
+                    user?.email ?? auth?.email ?? 'Đã đăng nhập qua API',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -112,17 +102,13 @@ class SettingsScreen extends ConsumerWidget {
               const SizedBox(height: 14),
               _SettingsSection(
                 title: 'Thông báo',
-                child: Column(
-                  children: [
-                    _SettingTile(
-                      icon: Icons.notifications_active_outlined,
-                      title: 'Cài đặt thông báo',
-                      subtitle:
-                          'Nhắc trước ${notificationSettings?.reminderMinutesBefore ?? 15} phút, permission và âm báo',
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.push('/notifications'),
-                    ),
-                  ],
+                child: _SettingTile(
+                  icon: Icons.notifications_active_outlined,
+                  title: 'Cài đặt thông báo',
+                  subtitle:
+                      'Nhắc trước ${notificationSettings?.reminderMinutesBefore ?? 15} phút, quyền truy cập và âm báo.',
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/notifications'),
                 ),
               ),
               if (liveActivitySupported) ...[
@@ -149,17 +135,13 @@ class SettingsScreen extends ConsumerWidget {
               const SizedBox(height: 14),
               _SettingsSection(
                 title: 'Widget iPhone',
-                child: Column(
-                  children: [
-                    _SettingTile(
-                      icon: Icons.widgets_rounded,
-                      title: 'Preview & sync widget',
-                      subtitle:
-                          'Small, medium, large preview cho màn hình chính',
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.push('/widget-preview'),
-                    ),
-                  ],
+                child: _SettingTile(
+                  icon: Icons.widgets_rounded,
+                  title: 'Preview và sync widget',
+                  subtitle:
+                      'Xem nhanh small, medium và large widget cho màn hình chính.',
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push('/widget-preview'),
                 ),
               ),
               const SizedBox(height: 14),
@@ -169,8 +151,8 @@ class SettingsScreen extends ConsumerWidget {
                   children: [
                     _SettingTile(
                       icon: Icons.ios_share_rounded,
-                      title: 'Chia sẻ lịch học',
-                      subtitle: 'Tạo ảnh, QR và public link chỉ xem',
+                      title: 'Chia sẻ thời khóa biểu',
+                      subtitle: 'Tạo ảnh, QR và public link chỉ xem.',
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/share'),
                     ),
@@ -178,15 +160,15 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingTile(
                       icon: Icons.link_rounded,
                       title: 'Các link đã chia sẻ',
-                      subtitle: 'Tắt hoặc xoá public link',
+                      subtitle: 'Bật, tắt hoặc xóa public link.',
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/shared-links'),
                     ),
                     const SizedBox(height: 10),
                     _SettingTile(
                       icon: Icons.qr_code_scanner_rounded,
-                      title: 'Xem lịch từ shareId',
-                      subtitle: 'Nhập link hoặc mã chia sẻ',
+                      title: 'Nhập lịch được chia sẻ',
+                      subtitle: 'Nhập link hoặc mã chia sẻ.',
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/shared'),
                     ),
@@ -195,13 +177,13 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
               _SettingsSection(
-                title: 'Đồng bộ & Sao lưu',
+                title: 'Đồng bộ và sao lưu',
                 child: Column(
                   children: [
                     _SettingTile(
                       icon: Icons.cloud_done_outlined,
-                      title: 'Profile & backup',
-                      subtitle: 'Tên, avatar, sync status và export JSON',
+                      title: 'Profile và backup',
+                      subtitle: 'Tên, avatar, trạng thái sync và export JSON.',
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/profile'),
                     ),
@@ -209,7 +191,7 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingTile(
                       icon: Icons.sync_rounded,
                       title: 'Sync widget ngay',
-                      subtitle: 'Cập nhật dữ liệu local cho iOS widget',
+                      subtitle: 'Cập nhật dữ liệu local cho iOS widget.',
                       trailing: const Icon(Icons.refresh_rounded),
                       onTap: () =>
                           ref.read(widgetSyncActionsProvider).syncNow(),
@@ -217,11 +199,11 @@ class SettingsScreen extends ConsumerWidget {
                     const SizedBox(height: 10),
                     _SettingTile(
                       icon: Icons.bug_report_outlined,
-                      title: 'Firebase diagnostics',
+                      title: 'Backend diagnostics',
                       subtitle:
-                          'Kiểm tra initialize, Auth, Firestore, Project ID',
+                          'Kiểm tra kết nối API, phiên đăng nhập và trạng thái backend.',
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.push('/firebase-diagnostics'),
+                      onTap: () => context.push('/backend-diagnostics'),
                     ),
                   ],
                 ),
@@ -230,7 +212,9 @@ class SettingsScreen extends ConsumerWidget {
               FilledButton.tonalIcon(
                 onPressed: () async {
                   await ref.read(authControllerProvider.notifier).signOut();
-                  if (context.mounted) context.go('/login');
+                  if (context.mounted) {
+                    context.go('/login');
+                  }
                 },
                 icon: const Icon(Icons.logout_rounded),
                 label: const Text('Đăng xuất'),

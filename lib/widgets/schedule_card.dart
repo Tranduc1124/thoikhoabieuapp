@@ -247,18 +247,18 @@ class PremiumScheduleCard extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xoá lịch học?'),
+        title: const Text('Xóa lịch học?'),
         content: Text(
-          'Môn ${schedule.subjectName} sẽ bị xoá khỏi lịch của bạn.',
+          'Môn ${schedule.subjectName} sẽ bị xóa khỏi lịch của bạn.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Huỷ'),
+            child: const Text('Hủy'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xoá'),
+            child: const Text('Xóa'),
           ),
         ],
       ),
@@ -290,7 +290,7 @@ class PremiumScheduleCard extends StatelessWidget {
         colors: [Color(0xFF94A3B8), Color(0xFFCBD5E1)],
       ),
       _ClassStatus.cancelled => const _StatusData(
-        label: 'Huỷ',
+        label: 'Hủy',
         icon: Icons.cancel_rounded,
         colors: [Color(0xFFF87171), Color(0xFFFB7185)],
       ),
@@ -412,9 +412,9 @@ class _MoreMenu extends StatelessWidget {
         ),
         padding: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        color: colorScheme.isDark
-            ? const Color(0xFF151D2F)
-            : Colors.white.withValues(alpha: 0.96),
+        color: context.surfaceColor.withValues(
+          alpha: context.isDark ? 0.98 : 0.96,
+        ),
         onSelected: (value) {
           if (value == 'edit') {
             context.push('/schedule/${schedule.id}', extra: schedule);
@@ -439,7 +439,7 @@ class _MoreMenu extends StatelessWidget {
                 children: [
                   Icon(Icons.delete_outline_rounded),
                   SizedBox(width: 10),
-                  Text('Xoá'),
+                  Text('Xóa'),
                 ],
               ),
             ),
@@ -640,7 +640,7 @@ class _ScheduleStatusPillState extends State<ScheduleStatusPill>
               border: Border.all(
                 color: widget.muted
                     ? colorScheme.glassStrokeSubtle
-                    : Colors.white.withValues(alpha: 0.22),
+                    : colorScheme.glassStroke,
               ),
               boxShadow: [
                 BoxShadow(

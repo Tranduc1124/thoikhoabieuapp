@@ -25,7 +25,7 @@ class WidgetPreviewScreen extends ConsumerWidget {
             children: [
               const SectionHeader(
                 title: 'Home Screen Widget',
-                subtitle: 'Dữ liệu được sync local cho WidgetKit đọc nhanh',
+                subtitle: 'Dữ liệu được sync local để WidgetKit đọc nhanh',
               ),
               const SizedBox(height: 16),
               _SmallWidgetPreview(next: next),

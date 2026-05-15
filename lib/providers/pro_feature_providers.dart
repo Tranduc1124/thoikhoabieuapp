@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../api/api.dart';
 import '../models/app_settings_model.dart';
 import '../models/classroom_location_model.dart';
 import '../models/friend_model.dart';
@@ -12,9 +12,6 @@ import '../models/user_model.dart';
 import '../services/app_settings_service.dart';
 import '../services/backup_service.dart';
 import '../services/classroom_location_service.dart';
-import '../services/deep_link_service.dart';
-import '../services/firebase_error_translator.dart';
-import '../services/firebase_service.dart';
 import '../services/friend_service.dart';
 import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
@@ -31,10 +28,10 @@ final appSettingsServiceProvider = Provider<AppSettingsService?>((ref) {
   return AppSettingsService(userId: user.uid);
 });
 
-final appSettingsProvider = StreamProvider<AppSettingsModel>((ref) {
+final appSettingsProvider = FutureProvider<AppSettingsModel>((ref) async {
   final service = ref.watch(appSettingsServiceProvider);
-  if (service == null) return Stream.value(const AppSettingsModel());
-  return service.watch();
+  if (service == null) return const AppSettingsModel();
+  return service.load();
 });
 
 final liveActivitySupportProvider = FutureProvider<bool>((ref) {
@@ -64,6 +61,7 @@ class LiveActivityActions {
       liveActivitiesEnabled: enabled,
     );
     await service.save(settings);
+    ref.invalidate(appSettingsProvider);
     await refresh();
   }
 
@@ -85,12 +83,12 @@ final notificationSettingsServiceProvider =
       return NotificationSettingsService(userId: user.uid);
     });
 
-final notificationSettingsProvider = StreamProvider<NotificationSettingsModel>((
+final notificationSettingsProvider = FutureProvider<NotificationSettingsModel>((
   ref,
-) {
+) async {
   final service = ref.watch(notificationSettingsServiceProvider);
-  if (service == null) return Stream.value(const NotificationSettingsModel());
-  return service.watch();
+  if (service == null) return const NotificationSettingsModel();
+  return service.load();
 });
 
 final notificationSettingsActionsProvider =
@@ -107,6 +105,7 @@ class NotificationSettingsActions {
     final service = ref.read(notificationSettingsServiceProvider);
     if (service == null) return;
     await service.save(settings);
+    ref.invalidate(notificationSettingsProvider);
     final schedules = ref.read(schedulesProvider).valueOrNull ?? const [];
     await NotificationService.rescheduleAllClassNotifications(
       schedules,
@@ -176,28 +175,28 @@ final shareServiceProvider = Provider<ShareService?>((ref) {
   if (user == null) return null;
   return ShareService(
     userId: user.uid,
-    ownerName: appUser?.name ?? user.displayName ?? 'Sinh viên',
+    ownerName: appUser?.name ?? user.displayName,
     profilePhoto: appUser?.avatarUrl ?? user.photoURL,
   );
 });
 
-final mySharesProvider = StreamProvider<List<ShareScheduleModel>>((ref) {
+final mySharesProvider = FutureProvider<List<ShareScheduleModel>>((ref) async {
   final service = ref.watch(shareServiceProvider);
-  if (service == null) return Stream.value(const []);
-  return service.watchMyShares();
+  if (service == null) return const [];
+  return service.listMyShares();
 });
 
-final friendsProvider = StreamProvider<List<FriendModel>>((ref) {
+final friendsProvider = FutureProvider<List<FriendModel>>((ref) async {
   final service = ref.watch(friendServiceProvider);
-  if (service == null) return Stream.value(const []);
-  return service.watchFriends();
+  if (service == null) return const [];
+  return service.listFriends();
 });
 
-final incomingFriendRequestsProvider = StreamProvider<List<FriendRequestModel>>(
-  (ref) {
+final incomingFriendRequestsProvider = FutureProvider<List<FriendRequestModel>>(
+  (ref) async {
     final service = ref.watch(friendServiceProvider);
-    if (service == null) return Stream.value(const []);
-    return service.watchIncomingRequests();
+    if (service == null) return const [];
+    return service.listIncomingRequests();
   },
 );
 
@@ -210,33 +209,35 @@ final friendSearchProvider = FutureProvider<List<AppUser>>((ref) async {
   return service.searchUsers(query);
 });
 
-final classroomLocationsProvider = StreamProvider<List<ClassroomLocationModel>>(
-  (ref) {
+final classroomLocationsProvider = FutureProvider<List<ClassroomLocationModel>>(
+  (ref) async {
     final service = ref.watch(classroomLocationServiceProvider);
-    if (service == null) return Stream.value(const []);
-    return service.watchLocations();
+    if (service == null) return const [];
+    return service.listLocations();
   },
 );
 
-final profileCardsProvider = StreamProvider<List<ProfileCardModel>>((ref) {
-  final user = ref.watch(authControllerProvider).valueOrNull;
-  if (user == null) return Stream.value(const []);
-  return FirebaseService.profileCards()
-      .where('ownerId', isEqualTo: user.uid)
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map(
-        (snapshot) => snapshot.docs
-            .map(ProfileCardModel.fromFirestore)
-            .toList(growable: false),
-      );
+final profileCardsProvider = FutureProvider<List<ProfileCardModel>>((
+  ref,
+) async {
+  final data = await Api.call('profileCard.list');
+  final items = (data['cards'] as List? ?? const []);
+  return items
+      .whereType<Map>()
+      .map((item) => ProfileCardModel.fromMap(Map<String, dynamic>.from(item)))
+      .toList(growable: false);
 });
 
 final publicProfileCardProvider =
     FutureProvider.family<ProfileCardModel?, String>((ref, cardId) async {
-      final doc = await FirebaseService.profileCards().doc(cardId.trim()).get();
-      if (!doc.exists) return null;
-      return ProfileCardModel.fromFirestore(doc);
+      final data = await Api.call(
+        'profileCard.get',
+        authenticated: false,
+        data: {'cardId': cardId.trim()},
+      );
+      final card = data['card'];
+      if (card is! Map) return null;
+      return ProfileCardModel.fromMap(Map<String, dynamic>.from(card));
     });
 
 final publicShareProvider = FutureProvider.family<ShareScheduleModel?, String>((
@@ -245,22 +246,14 @@ final publicShareProvider = FutureProvider.family<ShareScheduleModel?, String>((
 ) async {
   final service = ref.watch(shareServiceProvider);
   if (service != null) return service.getPublicShare(shareId);
-  if (FirebaseService.isAvailable) {
-    try {
-      final normalized =
-          DeepLinkService.extractShareId(shareId) ?? shareId.trim();
-      final doc = await FirebaseService.publicShares().doc(normalized).get();
-      if (!doc.exists) return null;
-      final share = ShareScheduleModel.fromFirestore(doc);
-      if (share.isActive) {
-        await doc.reference.update({'viewCount': FieldValue.increment(1)});
-      }
-      return share;
-    } catch (error) {
-      throw Exception(FirebaseErrorTranslator.firestore(error));
-    }
-  }
-  return null;
+  final data = await Api.call(
+    'share.get',
+    authenticated: false,
+    data: {'shareId': shareId.trim()},
+  );
+  final share = data['share'];
+  if (share is! Map) return null;
+  return ShareScheduleModel.fromMap(Map<String, dynamic>.from(share));
 });
 
 final widgetSyncActionsProvider = Provider<WidgetSyncActions>((ref) {
@@ -279,5 +272,6 @@ class WidgetSyncActions {
       schedules: schedules,
       themeMode: theme,
     );
+    await Api.call('widget.sync');
   }
 }

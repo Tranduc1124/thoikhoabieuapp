@@ -70,7 +70,7 @@ class _Bar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final base = colorScheme.tileSurface;
     final highlight = colorScheme.isDark
-        ? Colors.white.withValues(alpha: 0.20)
+        ? Colors.white.withValues(alpha: 0.12)
         : Colors.white.withValues(alpha: 0.95);
     return FractionallySizedBox(
       widthFactor: widthFactor,

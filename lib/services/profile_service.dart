@@ -1,14 +1,27 @@
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+import '../api/api.dart';
 import '../models/profile_card_model.dart';
 import '../models/schedule_model.dart';
 import '../models/user_model.dart';
-import 'firebase_service.dart';
+import 'app_feedback_service.dart';
+
+class AvatarUploadResult {
+  const AvatarUploadResult({
+    this.avatarUrl,
+    this.warningMessage,
+    this.didUpdate = false,
+  });
+
+  final String? avatarUrl;
+  final String? warningMessage;
+  final bool didUpdate;
+
+  bool get didPickImage => avatarUrl != null || warningMessage != null;
+}
 
 class ProfileService {
   const ProfileService({required this.userId});
@@ -29,65 +42,64 @@ class ProfileService {
     bool? hideStatistics,
     bool? hideStreak,
   }) async {
-    final data = <String, dynamic>{
-      'name': name.trim(),
-      'updatedAt': FieldValue.serverTimestamp(),
-      'lastSyncedAt': FieldValue.serverTimestamp(),
-    };
-    if (username != null) {
-      data['username'] = username.trim();
-    }
-    if (bio != null) {
-      data['bio'] = bio.trim();
-    }
-    if (avatarUrl != null) {
-      data['avatarUrl'] = avatarUrl;
-    }
-    if (accentColor != null) {
-      data['accentColor'] = accentColor;
-    }
-    if (themeMode != null) {
-      data['themeMode'] = themeMode;
-    }
-    if (profileTheme != null) {
-      data['profileTheme'] = profileTheme;
-    }
+    final data = <String, dynamic>{'name': name.trim()};
+    if (username != null) data['username'] = username.trim();
+    if (bio != null) data['bio'] = bio.trim();
+    if (avatarUrl != null) data['avatarUrl'] = avatarUrl;
+    if (accentColor != null) data['accentColor'] = accentColor;
+    if (themeMode != null) data['themeMode'] = themeMode;
+    if (profileTheme != null) data['profileTheme'] = profileTheme;
     if (favoriteSubject != null) {
       data['favoriteSubject'] = favoriteSubject.trim();
     }
-    if (isProfilePublic != null) {
-      data['isProfilePublic'] = isProfilePublic;
-    }
+    if (isProfilePublic != null) data['isProfilePublic'] = isProfilePublic;
     if (allowFriendsToViewTimetable != null) {
       data['allowFriendsToViewTimetable'] = allowFriendsToViewTimetable;
     }
-    if (hideStatistics != null) {
-      data['hideStatistics'] = hideStatistics;
-    }
-    if (hideStreak != null) {
-      data['hideStreak'] = hideStreak;
-    }
+    if (hideStatistics != null) data['hideStatistics'] = hideStatistics;
+    if (hideStreak != null) data['hideStreak'] = hideStreak;
 
-    await FirebaseService.userDoc(userId).set(data, SetOptions(merge: true));
-    await FirebaseAuth.instance.currentUser?.updateDisplayName(name.trim());
-    if (avatarUrl != null) {
-      await FirebaseAuth.instance.currentUser?.updatePhotoURL(avatarUrl);
+    try {
+      await Api.call('profile.update', data: data);
+    } catch (error) {
+      throw AppUserMessageException(
+        error.toString().replaceFirst('Exception: ', ''),
+        debugMessage: 'updateProfile failed: $error',
+      );
     }
   }
 
-  Future<String?> pickAndUploadAvatar() async {
+  Future<AvatarUploadResult> pickAndUploadAvatar() async {
     final picked = await ImagePicker().pickImage(
       source: ImageSource.gallery,
       maxWidth: 900,
       imageQuality: 85,
     );
-    if (picked == null) return null;
+    if (picked == null) {
+      return const AvatarUploadResult();
+    }
+
     try {
-      final ref = FirebaseService.storage.ref('users/$userId/avatar.jpg');
-      await ref.putFile(File(picked.path));
-      return ref.getDownloadURL();
-    } catch (_) {
-      return picked.path;
+      final data = await Api.upload(
+        'profile.uploadAvatar',
+        file: File(picked.path),
+        fileField: 'avatar',
+      );
+      return AvatarUploadResult(
+        avatarUrl: data['avatarUrl']?.toString(),
+        didUpdate: true,
+      );
+    } catch (error) {
+      final message = error.toString();
+      if (message.contains('Chưa cấu hình lưu ảnh đại diện')) {
+        return const AvatarUploadResult(
+          warningMessage: 'Chưa cấu hình lưu ảnh đại diện.',
+        );
+      }
+      throw AppUserMessageException(
+        message.replaceFirst('Exception: ', ''),
+        debugMessage: 'pickAndUploadAvatar failed: $error',
+      );
     }
   }
 
@@ -112,7 +124,9 @@ class ProfileService {
       theme: user.profileTheme,
       qrLink: profileLink,
     );
-    await FirebaseService.profileCards().doc(cardId).set(card.toMap());
-    return card;
+    final data = await Api.call('profileCard.create', data: card.toMap());
+    return ProfileCardModel.fromMap(
+      Map<String, dynamic>.from((data['card'] as Map?) ?? card.toMap()),
+    );
   }
 }

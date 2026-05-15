@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class ClassroomLocationModel {
   const ClassroomLocationModel({
     required this.id,
@@ -30,27 +28,29 @@ class ClassroomLocationModel {
   bool get hasLocation =>
       address.trim().isNotEmpty || (latitude != null && longitude != null);
 
-  factory ClassroomLocationModel.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data() ?? const <String, dynamic>{};
+  factory ClassroomLocationModel.fromMap(Map<String, dynamic> data) {
     return ClassroomLocationModel(
-      id: doc.id,
-      userId: data['userId'] as String? ?? '',
-      scheduleId: data['scheduleId'] as String? ?? '',
-      roomName: data['roomName'] as String? ?? '',
-      address: data['address'] as String? ?? '',
-      latitude: (data['latitude'] as num?)?.toDouble(),
-      longitude: (data['longitude'] as num?)?.toDouble(),
-      appleMapsUrl: data['appleMapsUrl'] as String?,
-      googleMapsUrl: data['googleMapsUrl'] as String?,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      id: (data['id'] ?? '').toString(),
+      userId: (data['userId'] ?? data['user_id'] ?? '').toString(),
+      scheduleId: (data['scheduleId'] ?? data['schedule_id'] ?? '').toString(),
+      roomName: (data['roomName'] ?? data['room_name'] ?? '').toString(),
+      address: (data['address'] ?? '').toString(),
+      latitude: _readDouble(data['latitude']),
+      longitude: _readDouble(data['longitude']),
+      appleMapsUrl:
+          data['appleMapsUrl']?.toString() ??
+          data['apple_maps_url']?.toString(),
+      googleMapsUrl:
+          data['googleMapsUrl']?.toString() ??
+          data['google_maps_url']?.toString(),
+      createdAt: _readDate(data['createdAt'] ?? data['created_at']),
+      updatedAt: _readDate(data['updatedAt'] ?? data['updated_at']),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'userId': userId,
       'scheduleId': scheduleId,
       'roomName': roomName,
@@ -59,10 +59,8 @@ class ClassroomLocationModel {
       'longitude': longitude,
       'appleMapsUrl': appleMapsUrl,
       'googleMapsUrl': googleMapsUrl,
-      'createdAt': createdAt == null
-          ? FieldValue.serverTimestamp()
-          : Timestamp.fromDate(createdAt!),
-      'updatedAt': FieldValue.serverTimestamp(),
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
@@ -87,5 +85,20 @@ class ClassroomLocationModel {
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
+  }
+
+  static double? _readDouble(Object? value) {
+    if (value is num) return value.toDouble();
+    if (value is String && value.trim().isNotEmpty) {
+      return double.tryParse(value);
+    }
+    return null;
+  }
+
+  static DateTime? _readDate(Object? value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }

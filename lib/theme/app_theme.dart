@@ -12,6 +12,14 @@ class AppTheme {
 
   static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
+    const fontFallback = [
+      'Be Vietnam Pro',
+      'Inter',
+      '.SF Pro Text',
+      'SF Pro Text',
+      'Roboto',
+      'Arial',
+    ];
     final colorScheme =
         ColorScheme.fromSeed(
           seedColor: isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
@@ -36,7 +44,7 @@ class AppTheme {
               ? const Color(0xFF1C2940)
               : const Color(0xFFEAF0FD),
           outline: isDark
-              ? Colors.white.withValues(alpha: 0.18)
+              ? Colors.white.withValues(alpha: 0.12)
               : const Color(0xFFD7E1F2),
           outlineVariant: isDark
               ? Colors.white.withValues(alpha: 0.10)
@@ -54,6 +62,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      fontFamilyFallback: fontFallback,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: isDark
           ? AppColors.darkBgMid
@@ -80,7 +89,7 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: colorScheme.glassSurface,
+        color: colorScheme.cardGlassColor,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -157,7 +166,7 @@ class AppTheme {
         ),
       ),
       popupMenuTheme: PopupMenuThemeData(
-        color: isDark ? const Color(0xFF131D30) : Colors.white,
+        color: colorScheme.surfaceColor,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         textStyle: textTheme.bodyMedium?.copyWith(
@@ -165,10 +174,113 @@ class AppTheme {
           fontWeight: FontWeight.w700,
         ),
       ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colorScheme.surfaceColor.withValues(
+          alpha: isDark ? 0.98 : 0.99,
+        ),
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          side: BorderSide(color: colorScheme.glassStroke),
+        ),
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: colorScheme.textPrimary,
+          fontWeight: FontWeight.w900,
+        ),
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: colorScheme.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: colorScheme.tileSurface,
+        selectedColor: colorScheme.primary.withValues(
+          alpha: isDark ? 0.22 : 0.16,
+        ),
+        disabledColor: colorScheme.tileSurface.withValues(alpha: 0.70),
+        secondarySelectedColor: colorScheme.primary.withValues(
+          alpha: isDark ? 0.22 : 0.16,
+        ),
+        side: BorderSide(color: colorScheme.glassStrokeSubtle),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        labelStyle: textTheme.labelLarge?.copyWith(
+          color: colorScheme.textSecondary,
+          fontWeight: FontWeight.w800,
+        ),
+        secondaryLabelStyle: textTheme.labelLarge?.copyWith(
+          color: colorScheme.primary,
+          fontWeight: FontWeight.w900,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return colorScheme.primary.withValues(
+                alpha: isDark ? 0.22 : 0.14,
+              );
+            }
+            return colorScheme.tileSurface;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return colorScheme.textPrimary;
+            }
+            return colorScheme.textSecondary;
+          }),
+          side: WidgetStatePropertyAll(
+            BorderSide(color: colorScheme.glassStrokeSubtle),
+          ),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          ),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          ),
+          textStyle: WidgetStatePropertyAll(
+            textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.onPrimary;
+          }
+          return colorScheme.surfaceColor;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primary.withValues(alpha: 0.75);
+          }
+          return colorScheme.surfaceContainerHighest;
+        }),
+        trackOutlineColor: WidgetStatePropertyAll(colorScheme.glassStroke),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: colorScheme.surfaceColor,
+        hourMinuteColor: colorScheme.tileSurface,
+        hourMinuteTextColor: colorScheme.textPrimary,
+        dialBackgroundColor: colorScheme.surfaceContainer,
+        dialHandColor: colorScheme.primary,
+        dialTextColor: colorScheme.textPrimary,
+        dayPeriodColor: colorScheme.tileSurface,
+        dayPeriodTextColor: colorScheme.textSecondary,
+        entryModeIconColor: colorScheme.textSecondary,
+        helpTextStyle: textTheme.labelLarge?.copyWith(
+          color: colorScheme.textSecondary,
+          fontWeight: FontWeight.w800,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          side: BorderSide(color: colorScheme.glassStroke),
+        ),
+      ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: isDark
-            ? const Color(0xFF1B2638)
+            ? const Color(0xFF151F32)
             : const Color(0xFFFFFFFF),
         contentTextStyle: TextStyle(
           color: colorScheme.onSurface,

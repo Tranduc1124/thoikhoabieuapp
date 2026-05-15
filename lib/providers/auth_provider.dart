@@ -1,49 +1,38 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import '../api/api.dart';
+import '../models/auth_session.dart';
 import '../models/user_model.dart';
-import '../services/firebase_error_translator.dart';
-import '../services/firebase_service.dart';
+import '../services/app_feedback_service.dart';
 
-final authControllerProvider = AsyncNotifierProvider<AuthController, User?>(
-  AuthController.new,
-);
+final authControllerProvider =
+    AsyncNotifierProvider<AuthController, AuthSession?>(AuthController.new);
 
-final appUserProvider = StreamProvider<AppUser?>((ref) {
-  final auth = ref.watch(authControllerProvider);
-  final user = auth.valueOrNull;
-  if (!FirebaseService.isAvailable || user == null) {
-    return Stream.value(null);
-  }
-  return FirebaseService.userDoc(user.uid).snapshots().map((doc) {
-    if (!doc.exists) return null;
-    return AppUser.fromFirestore(doc);
-  });
+final appUserProvider = FutureProvider<AppUser?>((ref) async {
+  final session = ref.watch(authControllerProvider).valueOrNull;
+  if (session == null || session.uid.isEmpty) return null;
+  final data = await Api.call('profile.get');
+  return AppUser.fromMap(Map<String, dynamic>.from(data['user'] as Map));
 });
 
-class AuthController extends AsyncNotifier<User?> {
+class AuthController extends AsyncNotifier<AuthSession?> {
   @override
-  Future<User?> build() async {
-    if (!FirebaseService.isAvailable) return null;
-    return FirebaseService.auth.authStateChanges().first;
+  Future<AuthSession?> build() async {
+    await Api.initialize();
+    return Api.currentSession;
   }
 
   Future<void> signInWithEmail(String email, String password) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      try {
-        final credential = await FirebaseService.auth
-            .signInWithEmailAndPassword(
-              email: email.trim(),
-              password: password,
-            );
-        return credential.user;
-      } catch (error) {
-        throw Exception(FirebaseErrorTranslator.auth(error));
-      }
+      final data = await Api.call(
+        'auth.login',
+        authenticated: false,
+        data: {'email': email.trim(), 'password': password},
+      );
+      await Api.applyAuthPayload(data);
+      ref.invalidate(appUserProvider);
+      return Api.currentSession;
     });
   }
 
@@ -54,117 +43,52 @@ class AuthController extends AsyncNotifier<User?> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      try {
-        final credential = await FirebaseService.auth
-            .createUserWithEmailAndPassword(
-              email: email.trim(),
-              password: password,
-            );
-        await credential.user?.updateDisplayName(name.trim());
-        await _ensureUserDoc(credential.user, overrideName: name.trim());
-        return credential.user;
-      } catch (error) {
-        throw Exception(FirebaseErrorTranslator.auth(error));
-      }
+      final data = await Api.call(
+        'auth.register',
+        authenticated: false,
+        data: {
+          'name': name.trim(),
+          'email': email.trim(),
+          'password': password,
+        },
+      );
+      await Api.applyAuthPayload(data);
+      ref.invalidate(appUserProvider);
+      return Api.currentSession;
     });
   }
 
-  Future<void> signInWithGoogle() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      try {
-        final googleUser = await GoogleSignIn().signIn();
-        if (googleUser == null) return state.valueOrNull;
-        final googleAuth = await googleUser.authentication;
-        final credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-        final userCredential = await FirebaseService.auth.signInWithCredential(
-          credential,
-        );
-        await _ensureUserDoc(userCredential.user);
-        return userCredential.user;
-      } catch (error) {
-        throw Exception(FirebaseErrorTranslator.auth(error));
-      }
-    });
+  Future<void> signInWithGoogle() {
+    throw const AppUserMessageException(
+      'Đăng nhập Google chưa được bật trên bản backend này.',
+    );
   }
 
-  Future<void> signInWithApple() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      try {
-        final apple = await SignInWithApple.getAppleIDCredential(
-          scopes: [
-            AppleIDAuthorizationScopes.email,
-            AppleIDAuthorizationScopes.fullName,
-          ],
-        );
-        final credential = OAuthProvider('apple.com').credential(
-          idToken: apple.identityToken,
-          accessToken: apple.authorizationCode,
-        );
-        final userCredential = await FirebaseService.auth.signInWithCredential(
-          credential,
-        );
-        await _ensureUserDoc(userCredential.user);
-        return userCredential.user;
-      } catch (error) {
-        throw Exception(FirebaseErrorTranslator.auth(error));
-      }
-    });
+  Future<void> signInWithApple() {
+    throw const AppUserMessageException(
+      'Đăng nhập Apple chưa được bật trên bản backend này.',
+    );
   }
 
-  Future<void> resetPassword(String email) {
-    return FirebaseService.auth
-        .sendPasswordResetEmail(email: email.trim())
-        .catchError((Object error) {
-          throw Exception(FirebaseErrorTranslator.auth(error));
-        });
+  Future<void> resetPassword(String email) async {
+    await Api.call(
+      'auth.resetPassword',
+      authenticated: false,
+      data: {'email': email.trim()},
+    );
   }
 
   Future<void> updateThemeMode(String themeMode) async {
-    final user = state.valueOrNull;
-    if (user == null) return;
-    await FirebaseService.userDoc(user.uid).set({
-      'themeMode': themeMode,
-      'updatedAt': FieldValue.serverTimestamp(),
-      'lastSyncedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-    await FirebaseService.appSettings(user.uid).set({
-      'themeMode': themeMode,
-      'liquidGlassEnabled': true,
-      'animationsEnabled': true,
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await Api.call('settings.update', data: {'themeMode': themeMode});
+    ref.invalidate(appUserProvider);
   }
 
   Future<void> signOut() async {
-    if (!FirebaseService.isAvailable) return;
-    await FirebaseService.auth.signOut();
-    await GoogleSignIn().signOut();
+    try {
+      await Api.call('auth.logout');
+    } catch (_) {}
+    await Api.clearSession();
+    ref.invalidate(appUserProvider);
     state = const AsyncData(null);
-  }
-
-  Future<void> _ensureUserDoc(User? user, {String? overrideName}) async {
-    if (user == null) return;
-    final doc = FirebaseService.userDoc(user.uid);
-    final snapshot = await doc.get();
-    if (snapshot.exists) return;
-    final displayName = overrideName?.isNotEmpty == true
-        ? overrideName!
-        : user.displayName ?? 'Sinh viên';
-    final username = '@${user.uid.substring(0, 6)}';
-    final appUser = AppUser(
-      id: user.uid,
-      name: displayName,
-      email: user.email ?? '',
-      username: username,
-      bio: 'Đang xây dựng nhịp học tập của riêng mình.',
-      avatarUrl: user.photoURL,
-      favoriteSubject: '',
-    );
-    await doc.set(appUser.toMap());
   }
 }

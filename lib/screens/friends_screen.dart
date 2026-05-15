@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/friend_model.dart';
 import '../models/friend_request_model.dart';
@@ -9,10 +8,9 @@ import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
-import '../services/firebase_error_translator.dart';
-import '../services/firebase_service.dart';
+import '../services/app_feedback_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_popup.dart';
+import '../widgets/app_avatar.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/loading_skeleton.dart';
@@ -94,7 +92,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                 loading: () => const LoadingSkeleton(itemCount: 1),
                 error: (error, _) => EmptyState(
                   title: 'Không tải được lời mời',
-                  message: FirebaseErrorTranslator.readable(error),
+                  message: AppFeedbackService.messageFor(error),
                 ),
                 data: (items) {
                   if (items.isEmpty) {
@@ -120,7 +118,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                 loading: () => const LoadingSkeleton(itemCount: 2),
                 error: (error, _) => EmptyState(
                   title: 'Không tìm được người dùng',
-                  message: FirebaseErrorTranslator.readable(error),
+                  message: AppFeedbackService.messageFor(error),
                 ),
                 data: (items) {
                   if (_searchController.text.trim().isEmpty) {
@@ -149,7 +147,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                 loading: () => const LoadingSkeleton(itemCount: 2),
                 error: (error, _) => EmptyState(
                   title: 'Không tải được danh sách bạn',
-                  message: FirebaseErrorTranslator.readable(error),
+                  message: AppFeedbackService.messageFor(error),
                 ),
                 data: (items) {
                   if (items.isEmpty) {
@@ -269,13 +267,9 @@ class _RequestTile extends ConsumerWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                backgroundImage: request.fromAvatarUrl == null
-                    ? null
-                    : NetworkImage(request.fromAvatarUrl!),
-                child: request.fromAvatarUrl == null
-                    ? const Icon(Icons.person_rounded)
-                    : null,
+              AppAvatar(
+                name: request.fromName,
+                primaryUrl: request.fromAvatarUrl,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -295,20 +289,13 @@ class _RequestTile extends ConsumerWidget {
                 child: OutlinedButton(
                   onPressed: () async {
                     try {
-                      await FirebaseService.friendRequests()
-                          .doc(request.id)
-                          .update({
-                            'status': FriendRequestStatus.declined.name,
-                            'updatedAt': FieldValue.serverTimestamp(),
-                          });
+                      final service = ref.read(friendServiceProvider);
+                      if (service == null) return;
+                      await service.rejectRequest(request.id);
+                      ref.invalidate(incomingFriendRequestsProvider);
                     } catch (error) {
                       if (!context.mounted) return;
-                      await showAppPopup(
-                        context,
-                        title: 'Không thể từ chối lời mời',
-                        message: FirebaseErrorTranslator.readable(error),
-                        type: AppPopupType.error,
-                      );
+                      AppFeedbackService.error(context, error);
                     }
                   },
                   child: const Text('Từ chối'),
@@ -329,14 +316,11 @@ class _RequestTile extends ConsumerWidget {
                         currentUser: currentUser,
                         schedules: schedules,
                       );
+                      ref.invalidate(incomingFriendRequestsProvider);
+                      ref.invalidate(friendsProvider);
                     } catch (error) {
                       if (!context.mounted) return;
-                      await showAppPopup(
-                        context,
-                        title: 'Không thể chấp nhận lời mời',
-                        message: FirebaseErrorTranslator.readable(error),
-                        type: AppPopupType.error,
-                      );
+                      AppFeedbackService.error(context, error);
                     }
                   },
                   child: const Text('Chấp nhận'),
@@ -361,15 +345,7 @@ class _SearchUserTile extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundImage:
-                user.avatarUrl != null && user.avatarUrl!.startsWith('http')
-                ? NetworkImage(user.avatarUrl!)
-                : null,
-            child: user.avatarUrl == null
-                ? const Icon(Icons.person_rounded)
-                : null,
-          ),
+          AppAvatar(name: user.name, primaryUrl: user.avatarUrl),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -396,21 +372,11 @@ class _SearchUserTile extends ConsumerWidget {
                   toUser: user,
                 );
                 if (context.mounted) {
-                  await showAppPopup(
-                    context,
-                    title: 'Đã gửi lời mời',
-                    message: 'Lời mời kết bạn đã được gửi tới ${user.name}.',
-                    type: AppPopupType.success,
-                  );
+                  AppFeedbackService.success(context, 'Đã gửi lời mời kết bạn');
                 }
               } catch (error) {
                 if (!context.mounted) return;
-                await showAppPopup(
-                  context,
-                  title: 'Không thể gửi lời mời',
-                  message: FirebaseErrorTranslator.readable(error),
-                  type: AppPopupType.error,
-                );
+                AppFeedbackService.error(context, error);
               }
             },
             child: const Text('Kết bạn'),
@@ -434,14 +400,10 @@ class _FriendTile extends ConsumerWidget {
         children: [
           Stack(
             children: [
-              CircleAvatar(
+              AppAvatar(
+                name: friend.friendName,
+                primaryUrl: friend.friendAvatarUrl,
                 radius: 26,
-                backgroundImage: friend.friendAvatarUrl != null
-                    ? NetworkImage(friend.friendAvatarUrl!)
-                    : null,
-                child: friend.friendAvatarUrl == null
-                    ? const Icon(Icons.person_rounded)
-                    : null,
               ),
               Positioned(
                 right: 2,
@@ -490,12 +452,7 @@ class _FriendTile extends ConsumerWidget {
                 await service.removeFriend(friend.friendId);
               } catch (error) {
                 if (!context.mounted) return;
-                await showAppPopup(
-                  context,
-                  title: 'Không thể xoá bạn',
-                  message: FirebaseErrorTranslator.readable(error),
-                  type: AppPopupType.error,
-                );
+                AppFeedbackService.error(context, error);
               }
             },
             icon: const Icon(Icons.person_remove_alt_1_rounded),

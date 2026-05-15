@@ -4,10 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../models/share_schedule_model.dart';
 import '../providers/pro_feature_providers.dart';
-import '../services/firebase_error_translator.dart';
+import '../services/app_feedback_service.dart';
 import '../services/share_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_popup.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/loading_skeleton.dart';
@@ -44,7 +43,7 @@ class _ManageSharedLinksScreenState
               padding: const EdgeInsets.all(20),
               child: EmptyState(
                 title: 'Không tải được danh sách link',
-                message: FirebaseErrorTranslator.readable(error),
+                message: AppFeedbackService.messageFor(error),
                 action: FilledButton.tonalIcon(
                   onPressed: () => ref.invalidate(mySharesProvider),
                   icon: const Icon(Icons.refresh_rounded),
@@ -85,21 +84,16 @@ class _ManageSharedLinksScreenState
                           : () => _runShareAction(
                               share.id,
                               () => service.shareLink(share),
-                              successTitle: 'Đã mở share sheet',
-                              successMessage:
-                                  'Link công khai đã được gửi vào hệ thống chia sẻ.',
+                              successMessage: 'Đã mở bảng chia sẻ',
                             ),
                       onToggle: service == null
                           ? null
                           : (value) => _runShareAction(
                               share.id,
                               () => service.setActive(share.id, value),
-                              successTitle: value
-                                  ? 'Đã bật link'
-                                  : 'Đã tắt link',
                               successMessage: value
-                                  ? 'Người khác có thể mở snapshot này trở lại.'
-                                  : 'Người khác sẽ không mở được snapshot này nữa.',
+                                  ? 'Đã bật link chia sẻ'
+                                  : 'Đã tắt link chia sẻ',
                             ),
                       onDelete: service == null
                           ? null
@@ -123,50 +117,57 @@ class _ManageSharedLinksScreenState
     );
   }
 
-  Future<void> _confirmDelete(ShareService service, ShareScheduleModel share) {
-    return showAppPopup(
-      context,
-      title: 'Xóa link chia sẻ',
-      message:
-          'Link ${share.title} sẽ bị xóa khỏi Firebase và không thể mở lại bằng QR hay deep link.',
-      type: AppPopupType.error,
-      primaryLabel: 'Xóa',
-      onPrimary: () {
-        _runShareAction(
-          share.id,
-          () => service.deleteShare(share.id),
-          successTitle: 'Đã xóa link',
-          successMessage: 'Link chia sẻ đã bị gỡ khỏi danh sách public.',
-        );
-      },
+  Future<void> _confirmDelete(
+    ShareService service,
+    ShareScheduleModel share,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xóa link chia sẻ?'),
+        content: Text(
+          'Link "${share.title}" sẽ bị tắt và không còn mở được từ link công khai nữa.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Huỷ'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _runShareAction(
+      share.id,
+      () => service.deleteShare(share.id),
+      successMessage: 'Đã xoá link chia sẻ',
     );
   }
 
   Future<void> _runShareAction(
     String shareId,
     Future<void> Function() action, {
-    required String successTitle,
     required String successMessage,
   }) async {
     setState(() => _busyIds.add(shareId));
+    final loading = AppFeedbackService.loading(
+      context,
+      'Đang cập nhật link chia sẻ...',
+    );
     try {
       await action();
+      loading.close();
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: successTitle,
-        message: successMessage,
-        type: AppPopupType.success,
-      );
+      AppFeedbackService.success(context, successMessage);
       ref.invalidate(mySharesProvider);
     } catch (error) {
+      loading.close();
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Không thể hoàn tất thao tác',
-        message: FirebaseErrorTranslator.readable(error),
-        type: AppPopupType.error,
-      );
+      AppFeedbackService.error(context, error);
     } finally {
       if (mounted) {
         setState(() => _busyIds.remove(shareId));

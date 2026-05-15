@@ -36,8 +36,8 @@ class WeekScheduleScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
                 child: SectionHeader(
-                  title: 'Thời khoá biểu tuần',
-                  subtitle: 'Chọn ngày để xem timeline sáng, chiều, tối',
+                  title: 'Thời khóa biểu tuần',
+                  subtitle: 'Chọn ngày để xem timeline sáng, chiều và tối',
                   trailing: IconButton.filledTonal(
                     onPressed: () =>
                         ref.read(selectedDayProvider.notifier).state =

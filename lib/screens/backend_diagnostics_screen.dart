@@ -1,49 +1,49 @@
 import 'package:flutter/material.dart';
 
-import '../services/firebase_diagnostics_service.dart';
+import '../services/backend_diagnostics_service.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
 
-class FirebaseDiagnosticsScreen extends StatefulWidget {
-  const FirebaseDiagnosticsScreen({super.key});
+class BackendDiagnosticsScreen extends StatefulWidget {
+  const BackendDiagnosticsScreen({super.key});
 
   @override
-  State<FirebaseDiagnosticsScreen> createState() =>
-      _FirebaseDiagnosticsScreenState();
+  State<BackendDiagnosticsScreen> createState() =>
+      _BackendDiagnosticsScreenState();
 }
 
-class _FirebaseDiagnosticsScreenState extends State<FirebaseDiagnosticsScreen> {
-  late Future<FirebaseDiagnosticsResult> _future;
+class _BackendDiagnosticsScreenState extends State<BackendDiagnosticsScreen> {
+  late Future<BackendDiagnosticsResult> _future;
 
   @override
   void initState() {
     super.initState();
-    _future = FirebaseDiagnosticsService.checkFirebaseStatus();
+    _future = BackendDiagnosticsService.checkBackendStatus();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Firebase diagnostics')),
+      appBar: AppBar(title: const Text('Backend diagnostics')),
       body: SoftGradientBackground(
         child: SafeArea(
-          child: FutureBuilder<FirebaseDiagnosticsResult>(
+          child: FutureBuilder<BackendDiagnosticsResult>(
             future: _future,
             builder: (context, snapshot) {
               return ListView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                 children: [
                   SectionHeader(
-                    title: 'Kiểm tra Firebase',
+                    title: 'Kiểm tra API chung',
                     subtitle:
                         snapshot.connectionState == ConnectionState.waiting
-                        ? 'Đang kiểm tra cấu hình...'
-                        : 'Không log secret/private key.',
+                        ? 'Đang kiểm tra kết nối máy chủ...'
+                        : 'Không hiển thị token hoặc thông tin nhạy cảm.',
                     trailing: IconButton.filledTonal(
                       onPressed: () => setState(() {
                         _future =
-                            FirebaseDiagnosticsService.checkFirebaseStatus();
+                            BackendDiagnosticsService.checkBackendStatus();
                       }),
                       icon: const Icon(Icons.refresh_rounded),
                     ),

@@ -1,12 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
+import '../api/api.dart';
+import '../models/classroom_location_model.dart';
 import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
-import '../models/classroom_location_model.dart';
-import '../services/firebase_service.dart';
+import '../services/app_feedback_service.dart';
 import '../services/app_settings_service.dart';
 import '../services/classroom_location_service.dart';
-import '../services/firebase_error_translator.dart';
 import '../services/live_activity_service.dart';
 import '../services/notification_service.dart';
 import '../services/notification_settings_service.dart';
@@ -17,99 +17,124 @@ class ScheduleRepository {
 
   final String userId;
 
-  CollectionReference<Map<String, dynamic>> get _schedules =>
-      FirebaseService.schedules(userId);
-  CollectionReference<Map<String, dynamic>> get _logs =>
-      FirebaseService.studyLogs(userId);
-
-  Stream<List<ScheduleModel>> watchSchedules() async* {
+  Future<List<ScheduleModel>> loadSchedules() async {
     try {
-      yield* _schedules
-          .orderBy('dayOfWeek')
-          .orderBy('startTime')
-          .snapshots()
-          .map(
-            (snapshot) => snapshot.docs
-                .map(ScheduleModel.fromFirestore)
-                .toList(growable: false),
-          );
+      final data = await Api.call('schedule.list');
+      final items = (data['schedules'] as List? ?? const []);
+      return items
+          .whereType<Map>()
+          .map((item) => ScheduleModel.fromMap(Map<String, dynamic>.from(item)))
+          .toList(growable: false);
     } catch (error) {
-      throw Exception(FirebaseErrorTranslator.firestore(error));
+      throw AppUserMessageException(
+        AppFeedbackService.messageFor(error),
+        debugMessage: 'loadSchedules failed: $error',
+      );
     }
   }
 
-  Stream<List<StudyLogModel>> watchStudyLogsForDate(DateTime date) async* {
-    final start = DateTime(date.year, date.month, date.day);
-    final end = start.add(const Duration(days: 1));
+  Future<List<StudyLogModel>> loadStudyLogsForDate(DateTime date) async {
     try {
-      yield* _logs
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-          .where('date', isLessThan: Timestamp.fromDate(end))
-          .snapshots()
-          .map(
-            (snapshot) =>
-                snapshot.docs.map(StudyLogModel.fromFirestore).toList(),
-          );
+      final data = await Api.call(
+        'studyLog.list',
+        data: {'date': date.toIso8601String()},
+      );
+      final items = (data['studyLogs'] as List? ?? const []);
+      return items
+          .whereType<Map>()
+          .map((item) => StudyLogModel.fromMap(Map<String, dynamic>.from(item)))
+          .toList(growable: false);
     } catch (error) {
-      throw Exception(FirebaseErrorTranslator.firestore(error));
+      throw AppUserMessageException(
+        AppFeedbackService.messageFor(error),
+        debugMessage: 'loadStudyLogsForDate failed: $error',
+      );
     }
   }
 
-  Stream<List<StudyLogModel>> watchStudyLogsForWeek(DateTime date) async* {
+  Future<List<StudyLogModel>> loadStudyLogsForWeek(DateTime date) async {
     final start = DateTime(
       date.year,
       date.month,
       date.day,
     ).subtract(Duration(days: date.weekday - 1));
-    final end = start.add(const Duration(days: 7));
     try {
-      yield* _logs
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-          .where('date', isLessThan: Timestamp.fromDate(end))
-          .snapshots()
-          .map(
-            (snapshot) =>
-                snapshot.docs.map(StudyLogModel.fromFirestore).toList(),
-          );
+      final data = await Api.call(
+        'studyLog.list',
+        data: {'weekStart': start.toIso8601String()},
+      );
+      final items = (data['studyLogs'] as List? ?? const []);
+      return items
+          .whereType<Map>()
+          .map((item) => StudyLogModel.fromMap(Map<String, dynamic>.from(item)))
+          .toList(growable: false);
     } catch (error) {
-      throw Exception(FirebaseErrorTranslator.firestore(error));
+      throw AppUserMessageException(
+        AppFeedbackService.messageFor(error),
+        debugMessage: 'loadStudyLogsForWeek failed: $error',
+      );
     }
   }
 
   Future<String> addSchedule(ScheduleModel schedule) async {
+    _validate(schedule);
     try {
-      _validate(schedule);
-      final doc = await _schedules.add(schedule.toCreateMap());
-      await _syncLocation(schedule.copyWith(id: doc.id));
+      final data = await Api.call(
+        'schedule.create',
+        data: schedule.toCreateMap(),
+      );
+      final id = (data['id'] ?? data['scheduleId'] ?? '').toString();
+      final saved = schedule.copyWith(id: id);
+      await _runBestEffort(
+        () => _syncLocation(saved),
+        label: 'sync location after add',
+      );
       await _afterScheduleChanged();
-      return doc.id;
+      return id;
     } catch (error) {
-      throw Exception(FirebaseErrorTranslator.firestore(error));
+      throw AppUserMessageException(
+        AppFeedbackService.messageFor(error),
+        debugMessage: 'addSchedule failed: $error',
+      );
     }
   }
 
   Future<void> updateSchedule(ScheduleModel schedule) async {
+    _validate(schedule);
     try {
-      _validate(schedule);
-      await _schedules.doc(schedule.id).update(schedule.toUpdateMap());
-      await _syncLocation(schedule);
+      await Api.call('schedule.update', data: schedule.toUpdateMap());
+      await _runBestEffort(
+        () => _syncLocation(schedule),
+        label: 'sync location after update',
+      );
       await _afterScheduleChanged();
     } catch (error) {
-      throw Exception(FirebaseErrorTranslator.firestore(error));
+      throw AppUserMessageException(
+        AppFeedbackService.messageFor(error),
+        debugMessage: 'updateSchedule failed: $error',
+      );
     }
   }
 
   Future<void> deleteSchedule(String id) async {
     try {
-      await _schedules.doc(id).delete();
-      await FirebaseService.classroomLocations()
-          .doc(_locationDocId(id))
-          .delete();
-      await NotificationService.cancelSchedule(id);
-      await _afterScheduleChanged();
+      await Api.call('schedule.delete', data: {'id': id});
     } catch (error) {
-      throw Exception(FirebaseErrorTranslator.firestore(error));
+      throw AppUserMessageException(
+        AppFeedbackService.messageFor(error),
+        debugMessage: 'deleteSchedule failed: $error',
+      );
     }
+
+    await _runBestEffort(
+      () => ClassroomLocationService(userId: userId).delete(_locationDocId(id)),
+      label: 'delete classroom location',
+    );
+    await _runBestEffort(
+      () => NotificationService.cancelSchedule(id),
+      label: 'cancel schedule notification',
+    );
+    await _afterScheduleChanged();
   }
 
   Future<void> markStarted(ScheduleModel schedule, DateTime date) {
@@ -151,58 +176,70 @@ class ScheduleRepository {
       completedAt: status == StudyStatus.completed ? DateTime.now() : null,
     );
     try {
-      await _logs.doc(id).set(log.toMap(), SetOptions(merge: true));
+      await Api.call('studyLog.update', data: log.toMap());
       await _afterScheduleChanged();
     } catch (error) {
-      throw Exception(FirebaseErrorTranslator.firestore(error));
+      throw AppUserMessageException(
+        AppFeedbackService.messageFor(error),
+        debugMessage: 'upsertLog failed: $error',
+      );
     }
   }
 
   Future<void> _afterScheduleChanged() async {
     try {
-      final snapshot = await _schedules
-          .orderBy('dayOfWeek')
-          .orderBy('startTime')
-          .get();
-      final schedules = snapshot.docs.map(ScheduleModel.fromFirestore).toList();
+      final schedules = await loadSchedules();
       final settings = await NotificationSettingsService(userId: userId).load();
-      await NotificationService.rescheduleAllClassNotifications(
-        schedules,
-        settings: settings,
-      );
-      final user = await FirebaseService.userDoc(userId).get();
-      await WidgetSyncService.syncSchedules(
-        schedules: schedules,
-        themeMode: user.data()?['themeMode'] as String? ?? 'system',
+      await _runBestEffort(
+        () => NotificationService.rescheduleAllClassNotifications(
+          schedules,
+          settings: settings,
+        ),
+        label: 'reschedule notifications',
       );
       final appSettings = await AppSettingsService(userId: userId).load();
-      await LiveActivityService.refreshLiveActivityForToday(
-        schedules: schedules,
-        enabled:
-            appSettings.dynamicIslandEnabled &&
-            appSettings.liveActivitiesEnabled,
+      await _runBestEffort(
+        () => WidgetSyncService.syncSchedules(
+          schedules: schedules,
+          themeMode: appSettings.themeMode,
+        ),
+        label: 'sync widget data',
       );
-      await FirebaseService.userDoc(userId).set({
-        'lastSyncedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    } catch (_) {
-      // Cloud/widget/notification refresh should not make schedule CRUD fail.
+      await _runBestEffort(
+        () => LiveActivityService.refreshLiveActivityForToday(
+          schedules: schedules,
+          enabled:
+              appSettings.dynamicIslandEnabled &&
+              appSettings.liveActivitiesEnabled,
+        ),
+        label: 'refresh live activity',
+      );
+      await _runBestEffort(
+        () => Api.call('widget.sync'),
+        label: 'sync widget backend state',
+      );
+      await _runBestEffort(
+        () => Api.call('dynamicIsland.sync'),
+        label: 'sync dynamic island backend state',
+      );
+      await _runBestEffort(
+        () => Api.call('notification.sync'),
+        label: 'sync notification backend state',
+      );
+    } catch (error) {
+      debugPrint('Schedule refresh failed for $userId: $error');
     }
   }
 
   Future<void> _syncLocation(ScheduleModel schedule) async {
-    final locationDoc = FirebaseService.classroomLocations().doc(
-      _locationDocId(schedule.id),
-    );
+    final locationId = _locationDocId(schedule.id);
     if (!schedule.hasMapLocation) {
-      try {
-        await locationDoc.delete();
-      } catch (_) {}
+      await ClassroomLocationService(userId: userId).delete(locationId);
       return;
     }
     final service = ClassroomLocationService(userId: userId);
     final location = ClassroomLocationModel(
-      id: _locationDocId(schedule.id),
+      id: locationId,
       userId: userId,
       scheduleId: schedule.id,
       roomName: schedule.room,
@@ -224,17 +261,28 @@ class ScheduleRepository {
             longitude: schedule.longitude,
           ),
     );
-    await locationDoc.set(location.toMap());
+    await service.save(location);
+  }
+
+  Future<void> _runBestEffort(
+    Future<void> Function() action, {
+    required String label,
+  }) async {
+    try {
+      await action();
+    } catch (error) {
+      debugPrint('Best effort failure [$label] userId=$userId error=$error');
+    }
   }
 
   String _locationDocId(String scheduleId) => '${userId}_$scheduleId';
 
   void _validate(ScheduleModel schedule) {
     if (schedule.subjectName.trim().isEmpty) {
-      throw ArgumentError('Ten mon hoc khong duoc de trong.');
+      throw const AppUserMessageException('Tên môn học không được để trống.');
     }
     if (schedule.endTime <= schedule.startTime) {
-      throw ArgumentError('Gio ket thuc phai sau gio bat dau.');
+      throw const AppUserMessageException('Giờ kết thúc phải sau giờ bắt đầu.');
     }
   }
 }

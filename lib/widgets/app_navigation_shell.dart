@@ -132,9 +132,7 @@ class _PremiumNavButton extends StatelessWidget {
                 )
               : null,
           border: Border.all(
-            color: selected
-                ? Colors.white.withValues(alpha: 0.22)
-                : Colors.transparent,
+            color: selected ? colorScheme.glassStroke : Colors.transparent,
           ),
           boxShadow: selected
               ? [

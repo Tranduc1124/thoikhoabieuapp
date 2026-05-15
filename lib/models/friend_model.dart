@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class FriendModel {
   const FriendModel({
     required this.id,
@@ -29,36 +27,61 @@ class FriendModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  factory FriendModel.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> doc, {
+  factory FriendModel.fromMap(
+    Map<String, dynamic> data, {
     required String currentUserId,
   }) {
-    final data = doc.data() ?? const <String, dynamic>{};
-    final userIds = (data['userIds'] as List? ?? const [])
-        .map((item) => item.toString())
-        .toList(growable: false);
+    final userIds =
+        (data['userIds'] as List? ?? data['user_ids'] as List? ?? const [])
+            .map((item) => item.toString())
+            .toList(growable: false);
     final profiles = (data['profiles'] as Map<String, dynamic>? ?? const {});
-    final friendId = userIds.firstWhere(
-      (item) => item != currentUserId,
-      orElse: () => currentUserId,
-    );
+    final friendId =
+        (data['friendId'] ?? data['friend_id'])?.toString() ??
+        userIds.firstWhere(
+          (item) => item != currentUserId,
+          orElse: () => currentUserId,
+        );
     final friendProfile =
-        profiles[friendId] as Map<String, dynamic>? ?? const {};
+        profiles[friendId] as Map<String, dynamic>? ??
+        (data['profile'] as Map<String, dynamic>? ?? const {});
     return FriendModel(
-      id: doc.id,
+      id: (data['id'] ?? '').toString(),
       userIds: userIds,
       friendId: friendId,
-      friendName: friendProfile['name'] as String? ?? 'Bạn học',
-      friendAvatarUrl: friendProfile['avatarUrl'] as String?,
-      friendUsername: friendProfile['username'] as String?,
-      sharedSubjects: (data['sharedSubjects'] as List? ?? const [])
-          .map((item) => item.toString())
-          .toList(growable: false),
-      weeklyHours: (friendProfile['weeklyHours'] as num?)?.toDouble() ?? 0,
-      studyStreak: (friendProfile['studyStreak'] as num?)?.toInt() ?? 0,
-      online: friendProfile['online'] as bool? ?? false,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      friendName: (data['friendName'] ?? friendProfile['name'] ?? 'Bạn học')
+          .toString(),
+      friendAvatarUrl:
+          data['friendAvatarUrl']?.toString() ??
+          friendProfile['avatarUrl']?.toString(),
+      friendUsername:
+          data['friendUsername']?.toString() ??
+          friendProfile['username']?.toString(),
+      sharedSubjects:
+          (data['sharedSubjects'] as List? ??
+                  data['shared_subjects'] as List? ??
+                  const [])
+              .map((item) => item.toString())
+              .toList(growable: false),
+      weeklyHours:
+          (data['weeklyHours'] ?? friendProfile['weeklyHours'] as num?)
+              ?.toDouble() ??
+          0,
+      studyStreak:
+          (data['studyStreak'] ?? friendProfile['studyStreak'] as num?)
+              ?.toInt() ??
+          0,
+      online:
+          data['online'] as bool? ?? friendProfile['online'] as bool? ?? false,
+      createdAt: _readDate(data['createdAt'] ?? data['created_at']),
+      updatedAt: _readDate(data['updatedAt'] ?? data['updated_at']),
     );
+  }
+
+  static DateTime? _readDate(Object? value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }

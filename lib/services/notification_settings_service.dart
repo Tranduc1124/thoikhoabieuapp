@@ -1,46 +1,29 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../api/api.dart';
 import '../models/notification_settings_model.dart';
-import 'firebase_service.dart';
 
 class NotificationSettingsService {
   const NotificationSettingsService({required this.userId});
 
   final String userId;
 
-  Stream<NotificationSettingsModel> watch() {
-    if (!FirebaseService.isAvailable) {
-      return Stream.fromFuture(loadCached());
-    }
-    return FirebaseService.notificationSettings(userId).snapshots().map((doc) {
-      final settings = doc.exists
-          ? NotificationSettingsModel.fromFirestore(doc)
-          : const NotificationSettingsModel();
-      _cache(settings);
-      return settings;
-    });
-  }
-
   Future<NotificationSettingsModel> load() async {
-    if (!FirebaseService.isAvailable) return loadCached();
-    final doc = await FirebaseService.notificationSettings(userId).get();
-    if (!doc.exists) return const NotificationSettingsModel();
-    final settings = NotificationSettingsModel.fromFirestore(doc);
-    await _cache(settings);
-    return settings;
+    try {
+      final data = await Api.call('notification.settings');
+      final settings = NotificationSettingsModel.fromMap(
+        Map<String, dynamic>.from(data['settings'] as Map),
+      );
+      await _cache(settings);
+      return settings;
+    } catch (_) {
+      return loadCached();
+    }
   }
 
   Future<void> save(NotificationSettingsModel settings) async {
     await _cache(settings);
-    if (!FirebaseService.isAvailable) return;
-    await FirebaseService.notificationSettings(
-      userId,
-    ).set(settings.toMap(), SetOptions(merge: true));
-    await FirebaseService.userDoc(userId).set({
-      'updatedAt': FieldValue.serverTimestamp(),
-      'lastSyncedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await Api.call('notification.settings', data: settings.toMap());
   }
 
   Future<NotificationSettingsModel> loadCached() async {

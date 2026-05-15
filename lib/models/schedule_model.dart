@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class ScheduleModel {
@@ -71,38 +70,53 @@ class ScheduleModel {
     );
   }
 
-  factory ScheduleModel.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data() ?? <String, dynamic>{};
+  factory ScheduleModel.fromMap(Map<String, dynamic> data) {
     final hasColor = data.containsKey('color');
     return ScheduleModel(
-      id: doc.id,
-      subjectName: data['subjectName'] as String? ?? '',
-      dayOfWeek: (data['dayOfWeek'] as num?)?.toInt() ?? 1,
-      startTime: _readMinutes(data['startTime']),
-      endTime: _readMinutes(data['endTime']),
-      room: data['room'] as String? ?? '',
-      teacher: data['teacher'] as String? ?? '',
-      note: data['note'] as String? ?? '',
+      id: (data['id'] ?? data['scheduleId'] ?? '').toString(),
+      subjectName: (data['subjectName'] ?? data['subject_name'] ?? '')
+          .toString(),
+      dayOfWeek:
+          (data['dayOfWeek'] ?? data['day_of_week'] as num?)?.toInt() ?? 1,
+      startTime: _readMinutes(data['startTime'] ?? data['start_time']),
+      endTime: _readMinutes(data['endTime'] ?? data['end_time']),
+      room: (data['room'] ?? '').toString(),
+      teacher: (data['teacher'] ?? '').toString(),
+      note: (data['note'] ?? '').toString(),
       color: _readColor(data['color']),
-      locationAddress: data['locationAddress'] as String? ?? '',
-      latitude: (data['latitude'] as num?)?.toDouble(),
-      longitude: (data['longitude'] as num?)?.toDouble(),
-      appleMapsUrl: data['appleMapsUrl'] as String?,
-      googleMapsUrl: data['googleMapsUrl'] as String?,
+      locationAddress:
+          (data['locationAddress'] ?? data['location_address'] ?? '')
+              .toString(),
+      latitude: _readDouble(data['latitude']),
+      longitude: _readDouble(data['longitude']),
+      appleMapsUrl:
+          data['appleMapsUrl']?.toString() ??
+          data['apple_maps_url']?.toString(),
+      googleMapsUrl:
+          data['googleMapsUrl']?.toString() ??
+          data['google_maps_url']?.toString(),
       hasCustomColor: hasColor,
-      repeatWeekly: data['repeatWeekly'] as bool? ?? true,
-      reminderEnabled: data['reminderEnabled'] as bool? ?? false,
+      repeatWeekly:
+          data['repeatWeekly'] as bool? ??
+          data['repeat_weekly'] as bool? ??
+          true,
+      reminderEnabled:
+          data['reminderEnabled'] as bool? ??
+          data['reminder_enabled'] as bool? ??
+          false,
       reminderMinutesBefore:
-          (data['reminderMinutesBefore'] as num?)?.toInt() ?? 10,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+          (data['reminderMinutesBefore'] ??
+                  data['reminder_minutes_before'] as num?)
+              ?.toInt() ??
+          10,
+      createdAt: _readDate(data['createdAt'] ?? data['created_at']),
+      updatedAt: _readDate(data['updatedAt'] ?? data['updated_at']),
     );
   }
 
   Map<String, dynamic> toCreateMap() {
     return {
+      'id': id,
       'subjectName': subjectName,
       'dayOfWeek': dayOfWeek,
       'startTime': startTime,
@@ -119,16 +133,12 @@ class ScheduleModel {
       'repeatWeekly': repeatWeekly,
       'reminderEnabled': reminderEnabled,
       'reminderMinutesBefore': reminderMinutesBefore,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
-  Map<String, dynamic> toUpdateMap() {
-    final map = toCreateMap()..remove('createdAt');
-    map['updatedAt'] = FieldValue.serverTimestamp();
-    return map;
-  }
+  Map<String, dynamic> toUpdateMap() => toCreateMap();
 
   ScheduleModel copyWith({
     String? id,
@@ -190,6 +200,7 @@ class ScheduleModel {
         return parts[0]! * 60 + parts[1]!;
       }
     }
+    if (value is String) return int.tryParse(value) ?? 0;
     return 0;
   }
 
@@ -207,6 +218,22 @@ class ScheduleModel {
       return int.tryParse(normalized) ?? 0xFF2F80ED;
     }
     return 0xFF6A8DFF;
+  }
+
+  static double? _readDouble(Object? value) {
+    if (value is num) return value.toDouble();
+    if (value is String && value.trim().isNotEmpty) {
+      return double.tryParse(value);
+    }
+    return null;
+  }
+
+  static DateTime? _readDate(Object? value) {
+    if (value is DateTime) return value;
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }
 

@@ -1,28 +1,34 @@
 import 'package:url_launcher/url_launcher.dart';
 
+import '../api/api.dart';
 import '../models/classroom_location_model.dart';
-import 'firebase_service.dart';
 
 class ClassroomLocationService {
   const ClassroomLocationService({required this.userId});
 
   final String userId;
 
-  Stream<List<ClassroomLocationModel>> watchLocations() {
-    return FirebaseService.classroomLocations()
-        .where('userId', isEqualTo: userId)
-        .snapshots()
+  Future<List<ClassroomLocationModel>> listLocations() async {
+    final data = await Api.call('location.list');
+    final items = (data['locations'] as List? ?? const []);
+    return items
+        .whereType<Map>()
         .map(
-          (snapshot) => snapshot.docs
-              .map(ClassroomLocationModel.fromFirestore)
-              .toList(growable: false),
-        );
+          (item) =>
+              ClassroomLocationModel.fromMap(Map<String, dynamic>.from(item)),
+        )
+        .toList(growable: false);
   }
 
-  Future<void> save(ClassroomLocationModel location) {
-    return FirebaseService.classroomLocations()
-        .doc(location.id)
-        .set(location.toMap());
+  Future<void> save(ClassroomLocationModel location) async {
+    await Api.call(
+      location.id.isEmpty ? 'location.create' : 'location.update',
+      data: location.toMap(),
+    );
+  }
+
+  Future<void> delete(String id) async {
+    await Api.call('location.delete', data: {'id': id});
   }
 
   Future<void> openAppleMaps(ClassroomLocationModel location) async {

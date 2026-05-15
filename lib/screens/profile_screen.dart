@@ -8,9 +8,9 @@ import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
-import '../services/firebase_error_translator.dart';
+import '../services/app_feedback_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_popup.dart';
+import '../widgets/app_avatar.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_header.dart';
@@ -30,6 +30,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(appUserProvider).valueOrNull;
+    final auth = ref.watch(authControllerProvider).valueOrNull;
     final schedules =
         ref.watch(schedulesProvider).valueOrNull ?? const <ScheduleModel>[];
     final stats = ref.watch(weeklyStatsProvider).valueOrNull;
@@ -62,6 +63,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 user: user,
                 schedules: schedules,
                 weeklyHours: stats?.totalHours ?? 0,
+                authPhotoUrl: auth?.photoURL,
                 onEdit: _editProfile,
                 onAvatarTap: _changeAvatar,
               ),
@@ -162,20 +164,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final service = ref.read(profileServiceProvider);
     final user = ref.read(appUserProvider).valueOrNull;
     if (service == null || user == null) return;
-    final avatar = await service.pickAndUploadAvatar();
-    if (avatar == null) return;
-    await service.updateProfile(
-      name: user.name,
-      username: user.username,
-      bio: user.bio,
-      favoriteSubject: user.favoriteSubject,
-      avatarUrl: avatar,
-      profileTheme: user.profileTheme,
-      isProfilePublic: user.isProfilePublic,
-      allowFriendsToViewTimetable: user.allowFriendsToViewTimetable,
-      hideStatistics: user.hideStatistics,
-      hideStreak: user.hideStreak,
-    );
+    try {
+      final result = await service.pickAndUploadAvatar();
+      if (!mounted) return;
+      if (result.warningMessage != null) {
+        AppFeedbackService.info(context, result.warningMessage!);
+      }
+      if (result.avatarUrl == null) return;
+      await service.updateProfile(
+        name: user.name,
+        username: user.username,
+        bio: user.bio,
+        favoriteSubject: user.favoriteSubject,
+        avatarUrl: result.avatarUrl,
+        profileTheme: user.profileTheme,
+        isProfilePublic: user.isProfilePublic,
+        allowFriendsToViewTimetable: user.allowFriendsToViewTimetable,
+        hideStatistics: user.hideStatistics,
+        hideStreak: user.hideStreak,
+      );
+      if (!mounted) return;
+      AppFeedbackService.success(context, 'Đã cập nhật ảnh đại diện');
+    } catch (error) {
+      if (!mounted) return;
+      AppFeedbackService.error(context, error);
+    }
   }
 
   Future<void> _editProfile() async {
@@ -278,8 +291,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               hideStatistics: hideStats,
                               hideStreak: hideStreak,
                             );
-                            if (!context.mounted) return;
+                            if (!context.mounted || !mounted) return;
                             Navigator.pop(context);
+                            AppFeedbackService.success(
+                              this.context,
+                              'Đã cập nhật hồ sơ',
+                            );
+                          } catch (error) {
+                            if (!mounted) return;
+                            AppFeedbackService.error(this.context, error);
                           } finally {
                             if (mounted) setState(() => _saving = false);
                           }
@@ -299,12 +319,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       await ref.read(widgetSyncActionsProvider).syncNow();
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Đã đồng bộ',
-        message: 'Cloud, widget và dữ liệu học tập đã được cập nhật.',
-        type: AppPopupType.success,
-      );
+      AppFeedbackService.success(context, 'Đã đồng bộ dữ liệu');
+    } catch (error) {
+      if (!mounted) return;
+      AppFeedbackService.error(context, error);
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
@@ -336,12 +354,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context.push('/profile-card', extra: card);
     } catch (error) {
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Không thể tạo profile card',
-        message: FirebaseErrorTranslator.readable(error),
-        type: AppPopupType.error,
-      );
+      AppFeedbackService.error(context, error);
     }
   }
 }
@@ -351,6 +364,7 @@ class _ProfileHeroCard extends StatelessWidget {
     required this.user,
     required this.schedules,
     required this.weeklyHours,
+    required this.authPhotoUrl,
     required this.onEdit,
     required this.onAvatarTap,
   });
@@ -358,6 +372,7 @@ class _ProfileHeroCard extends StatelessWidget {
   final AppUser user;
   final List<ScheduleModel> schedules;
   final double weeklyHours;
+  final String? authPhotoUrl;
   final VoidCallback onEdit;
   final VoidCallback onAvatarTap;
 
@@ -374,16 +389,12 @@ class _ProfileHeroCard extends StatelessWidget {
                 tag: 'profile-avatar-${user.id}',
                 child: GestureDetector(
                   onTap: onAvatarTap,
-                  child: CircleAvatar(
+                  child: AppAvatar(
+                    name: user.name,
+                    primaryUrl: user.avatarUrl,
+                    secondaryUrl: authPhotoUrl,
                     radius: 38,
-                    backgroundImage:
-                        user.avatarUrl != null &&
-                            user.avatarUrl!.startsWith('http')
-                        ? NetworkImage(user.avatarUrl!)
-                        : null,
-                    child: user.avatarUrl == null
-                        ? const Icon(Icons.person_rounded, size: 32)
-                        : null,
+                    iconSize: 32,
                   ),
                 ),
               ),

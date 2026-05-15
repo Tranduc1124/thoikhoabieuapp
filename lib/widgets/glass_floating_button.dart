@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import 'animated_pressable.dart';
 
 class GlassFloatingButton extends StatelessWidget {
@@ -32,7 +33,7 @@ class GlassFloatingButton extends StatelessWidget {
               Color.lerp(colorScheme.primary, colorScheme.tertiary, 0.45)!,
             ],
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+          border: Border.all(color: colorScheme.glassStroke),
           boxShadow: [
             BoxShadow(
               color: colorScheme.primary.withValues(alpha: 0.24),

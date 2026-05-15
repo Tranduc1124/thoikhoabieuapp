@@ -41,29 +41,36 @@ extension AppColorTokens on ColorScheme {
           AppColors.lightBgBottom,
         ];
 
-  Color get glassSurface => isDark
-      ? Colors.white.withValues(alpha: 0.095)
-      : Colors.white.withValues(alpha: 0.72);
+  Color get surfaceColor =>
+      isDark ? const Color(0xFF111827) : const Color(0xFFFFFFFF);
 
-  Color get glassSurfaceStrong => isDark
-      ? Colors.white.withValues(alpha: 0.13)
-      : Colors.white.withValues(alpha: 0.84);
+  Color get cardGlassColor =>
+      isDark ? const Color(0xFF151F32) : Colors.white.withValues(alpha: 0.82);
+
+  Color get glassSurface =>
+      isDark ? const Color(0xCC101827) : Colors.white.withValues(alpha: 0.72);
+
+  Color get glassSurfaceStrong =>
+      isDark ? const Color(0xE6151F32) : Colors.white.withValues(alpha: 0.84);
 
   Color get glassStroke => isDark
-      ? Colors.white.withValues(alpha: 0.14)
+      ? Colors.white.withValues(alpha: 0.12)
       : Colors.white.withValues(alpha: 0.78);
 
   Color get glassStrokeSubtle => isDark
-      ? Colors.white.withValues(alpha: 0.09)
+      ? Colors.white.withValues(alpha: 0.12)
       : Colors.white.withValues(alpha: 0.50);
 
   Color get tileSurface => isDark
-      ? Colors.white.withValues(alpha: 0.075)
+      ? Colors.white.withValues(alpha: 0.08)
       : Colors.white.withValues(alpha: 0.58);
 
   Color get softShadow => isDark
       ? Colors.black.withValues(alpha: 0.34)
       : primary.withValues(alpha: 0.11);
+
+  Color get borderColor =>
+      isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFD7E1F2);
 
   Color get textPrimary => isDark ? AppColors.darkText : AppColors.lightText;
 
@@ -72,4 +79,22 @@ extension AppColorTokens on ColorScheme {
 
   Color get textHint =>
       isDark ? AppColors.darkTextHint : AppColors.lightTextHint;
+}
+
+extension AppThemeContext on BuildContext {
+  ThemeData get theme => Theme.of(this);
+
+  ColorScheme get colorScheme => theme.colorScheme;
+
+  bool get isDark => theme.brightness == Brightness.dark;
+
+  Color get surfaceColor => colorScheme.surfaceColor;
+
+  Color get cardGlassColor => colorScheme.cardGlassColor;
+
+  Color get textPrimary => colorScheme.textPrimary;
+
+  Color get textSecondary => colorScheme.textSecondary;
+
+  Color get borderColor => colorScheme.borderColor;
 }

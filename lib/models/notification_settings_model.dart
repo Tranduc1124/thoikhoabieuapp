@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class NotificationSettingsModel {
   const NotificationSettingsModel({
     this.enabled = true,
@@ -34,16 +32,10 @@ class NotificationSettingsModel {
       homeworkReminderEnabled: data['homeworkReminderEnabled'] as bool? ?? true,
       examReminderEnabled: data['examReminderEnabled'] as bool? ?? true,
       soundEnabled: data['soundEnabled'] as bool? ?? true,
-      defaultSound: data['defaultSound'] as String? ?? 'default',
-      permissionStatus: data['permissionStatus'] as String? ?? 'unknown',
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      defaultSound: (data['defaultSound'] ?? 'default').toString(),
+      permissionStatus: (data['permissionStatus'] ?? 'unknown').toString(),
+      updatedAt: _readDate(data['updatedAt']),
     );
-  }
-
-  factory NotificationSettingsModel.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    return NotificationSettingsModel.fromMap(doc.data());
   }
 
   Map<String, dynamic> toMap() {
@@ -56,7 +48,7 @@ class NotificationSettingsModel {
       'soundEnabled': soundEnabled,
       'defaultSound': defaultSound,
       'permissionStatus': permissionStatus,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
@@ -84,5 +76,12 @@ class NotificationSettingsModel {
       permissionStatus: permissionStatus ?? this.permissionStatus,
       updatedAt: updatedAt,
     );
+  }
+
+  static DateTime? _readDate(Object? value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }

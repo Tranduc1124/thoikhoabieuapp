@@ -47,7 +47,7 @@ class StatisticsScreen extends ConsumerWidget {
                 return const EmptyState(
                   title: 'Chưa có dữ liệu thống kê',
                   message:
-                      'Thêm thời khoá biểu để xem tổng số giờ học và môn học nổi bật.',
+                      'Thêm thời khóa biểu để xem tổng số giờ học và môn học nổi bật.',
                 );
               }
               final completion = scheduleCount == 0

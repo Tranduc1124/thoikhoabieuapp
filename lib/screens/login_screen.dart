@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
-import '../services/firebase_service.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/soft_gradient_background.dart';
 
@@ -95,7 +94,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Đồng bộ lịch học, ghi chú và nhắc nhở trên mọi thiết bị.',
+                      'Đồng bộ lịch học, ghi chú và nhắc nhở qua API PHP/MySQL gọn nhẹ.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         height: 1.4,
@@ -104,23 +103,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ],
                 ),
               ),
-              if (!FirebaseService.isAvailable) ...[
-                const SizedBox(height: 18),
-                _FirebaseWarning(
-                  error: FirebaseService.initializationError,
-                  onRetry: () async {
-                    final ok = await FirebaseService.initialize();
-                    if (!mounted) return;
-                    ref.invalidate(authControllerProvider);
-                    setState(() {});
-                    _showMessage(
-                      ok
-                          ? 'Firebase đã khởi tạo thành công.'
-                          : 'Firebase vẫn lỗi. Kiểm tra diagnostics và file cấu hình.',
-                    );
-                  },
-                ),
-              ],
               const SizedBox(height: 24),
               GlassCard(
                 padding: const EdgeInsets.all(18),
@@ -203,26 +185,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: auth.isLoading ? null : _google,
-                      icon: const Icon(Icons.g_mobiledata_rounded, size: 30),
-                      label: const Text('Google'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: auth.isLoading ? null : _apple,
-                      icon: const Icon(Icons.apple_rounded),
-                      label: const Text('Apple'),
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => setState(() => _isRegister = !_isRegister),
@@ -235,7 +197,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               if (auth.hasError) ...[
                 const SizedBox(height: 12),
                 Text(
-                  auth.error.toString(),
+                  auth.error.toString().replaceFirst('Exception: ', ''),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: colorScheme.error),
                 ),
@@ -264,12 +226,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _google() =>
-      ref.read(authControllerProvider.notifier).signInWithGoogle();
-
-  Future<void> _apple() =>
-      ref.read(authControllerProvider.notifier).signInWithApple();
-
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
@@ -277,7 +233,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
     await ref.read(authControllerProvider.notifier).resetPassword(email);
-    _showMessage('Đã gửi email đặt lại mật khẩu.');
+    _showMessage(
+      'Nếu email tồn tại, hệ thống sẽ gửi hướng dẫn đặt lại mật khẩu.',
+    );
   }
 
   void _showMessage(String message) {
@@ -285,54 +243,5 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
-  }
-}
-
-class _FirebaseWarning extends StatelessWidget {
-  const _FirebaseWarning({required this.error, required this.onRetry});
-
-  final Object? error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return GlassCard(
-      padding: const EdgeInsets.all(14),
-      borderColor: colorScheme.error.withValues(alpha: 0.20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.info_outline_rounded, color: colorScheme.error),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Firebase khởi tạo thất bại. Kiểm tra lib/firebase_options.dart, GoogleService-Info.plist và bundle id.',
-                  style: TextStyle(color: colorScheme.onSurfaceVariant),
-                ),
-              ),
-            ],
-          ),
-          if (error != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              error.toString(),
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
-            ),
-          ],
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Thử lại Firebase'),
-          ),
-        ],
-      ),
-    );
   }
 }

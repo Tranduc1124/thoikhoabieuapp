@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum FriendRequestStatus { pending, accepted, declined, blocked }
 
 class FriendRequestModel {
@@ -29,30 +27,31 @@ class FriendRequestModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  factory FriendRequestModel.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data() ?? const <String, dynamic>{};
+  factory FriendRequestModel.fromMap(Map<String, dynamic> data) {
     return FriendRequestModel(
-      id: doc.id,
-      fromUserId: data['fromUserId'] as String? ?? '',
-      toUserId: data['toUserId'] as String? ?? '',
-      fromName: data['fromName'] as String? ?? 'Bạn học',
-      toName: data['toName'] as String? ?? 'Bạn học',
-      fromAvatarUrl: data['fromAvatarUrl'] as String?,
-      toAvatarUrl: data['toAvatarUrl'] as String?,
-      message: data['message'] as String? ?? '',
+      id: (data['id'] ?? '').toString(),
+      fromUserId: (data['fromUserId'] ?? data['from_user_id'] ?? '').toString(),
+      toUserId: (data['toUserId'] ?? data['to_user_id'] ?? '').toString(),
+      fromName: (data['fromName'] ?? data['from_name'] ?? 'Bạn học').toString(),
+      toName: (data['toName'] ?? data['to_name'] ?? 'Bạn học').toString(),
+      fromAvatarUrl:
+          data['fromAvatarUrl']?.toString() ??
+          data['from_avatar_url']?.toString(),
+      toAvatarUrl:
+          data['toAvatarUrl']?.toString() ?? data['to_avatar_url']?.toString(),
+      message: (data['message'] ?? '').toString(),
       status: FriendRequestStatus.values.firstWhere(
         (value) => value.name == data['status'],
         orElse: () => FriendRequestStatus.pending,
       ),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      createdAt: _readDate(data['createdAt'] ?? data['created_at']),
+      updatedAt: _readDate(data['updatedAt'] ?? data['updated_at']),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'fromUserId': fromUserId,
       'toUserId': toUserId,
       'fromName': fromName,
@@ -61,10 +60,15 @@ class FriendRequestModel {
       'toAvatarUrl': toAvatarUrl,
       'message': message,
       'status': status.name,
-      'createdAt': createdAt == null
-          ? FieldValue.serverTimestamp()
-          : Timestamp.fromDate(createdAt!),
-      'updatedAt': FieldValue.serverTimestamp(),
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
+  }
+
+  static DateTime? _readDate(Object? value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }

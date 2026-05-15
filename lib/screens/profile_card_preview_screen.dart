@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:screenshot/screenshot.dart';
 
 import '../models/profile_card_model.dart';
-import '../widgets/app_popup.dart';
+import '../providers/pro_feature_providers.dart';
+import '../services/app_feedback_service.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_avatar.dart';
 import '../widgets/qr_share_box.dart';
 import '../widgets/soft_gradient_background.dart';
-import '../providers/pro_feature_providers.dart';
-import '../services/firebase_error_translator.dart';
-import '../theme/app_colors.dart';
 
 class ProfileCardPreviewScreen extends ConsumerStatefulWidget {
   const ProfileCardPreviewScreen({super.key, required this.card});
@@ -68,20 +68,10 @@ class _ProfileCardPreviewScreenState
       );
       await shareService.shareImage(file, text: widget.card.qrLink);
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Đã mở share sheet',
-        message: 'Profile card đã được chuyển sang hệ thống chia sẻ.',
-        type: AppPopupType.success,
-      );
+      AppFeedbackService.success(context, 'Đã mở bảng chia sẻ');
     } catch (error) {
       if (!mounted) return;
-      await showAppPopup(
-        context,
-        title: 'Không thể chia sẻ profile card',
-        message: FirebaseErrorTranslator.readable(error),
-        type: AppPopupType.error,
-      );
+      AppFeedbackService.error(context, error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -123,14 +113,11 @@ class _ProfilePoster extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
+              AppAvatar(
+                name: card.displayName,
+                primaryUrl: card.avatarUrl,
                 radius: 34,
-                backgroundImage: card.avatarUrl != null
-                    ? NetworkImage(card.avatarUrl!)
-                    : null,
-                child: card.avatarUrl == null
-                    ? const Icon(Icons.person_rounded, size: 28)
-                    : null,
+                iconSize: 28,
               ),
               const SizedBox(width: 14),
               Expanded(

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
-import '../services/firebase_service.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/soft_gradient_background.dart';
 
@@ -33,9 +32,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
     final user = await ref.read(authControllerProvider.future);
     if (!mounted) return;
-    context.go(
-      FirebaseService.isAvailable && user != null ? '/home' : '/login',
-    );
+    context.go(user != null ? '/home' : '/login');
   }
 
   @override
@@ -96,13 +93,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Thời Khoá Biểu',
+                      'Thời Khóa Biểu',
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Lịch học gọn gàng, đồng bộ mọi nơi',
+                      'Lịch học gọn gàng, đồng bộ qua API chung',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: colorScheme.onSurfaceVariant),
                     ),

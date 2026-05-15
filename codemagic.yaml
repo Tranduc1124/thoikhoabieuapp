@@ -8,8 +8,6 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
-      groups:
-        - firebase
       vars:
         BUNDLE_ID: "com.minhduc.thoikhoabieuapp"
 
@@ -28,7 +26,7 @@ workflows:
             sed -i '' "s/# platform :ios.*/platform :ios, '15.0'/" ios/Podfile
             grep -q "platform :ios" ios/Podfile || sed -i '' "1s/^/platform :ios, '15.0'\n/" ios/Podfile
           fi
-          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Thời Khoá Biểu" ios/Runner/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Thời Khóa Biểu" ios/Runner/Info.plist || true
           perl -0pi -e 's/PRODUCT_BUNDLE_IDENTIFIER = \x7bBUNDLE_ID\x7d;/PRODUCT_BUNDLE_IDENTIFIER = com.minhduc.thoikhoabieuapp;/g; s/com\.example\.thoikhoabieuapp/com.minhduc.thoikhoabieuapp/g' ios/Runner.xcodeproj/project.pbxproj
           perl -0pi -e "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/Runner.xcodeproj/project.pbxproj
 
@@ -36,16 +34,6 @@ workflows:
         script: |
           flutter clean
           flutter pub get
-
-      - name: Prepare Firebase iOS config
-        script: |
-          if [ -n "$GOOGLE_SERVICE_INFO_PLIST_BASE64" ]; then
-            echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
-          fi
-          if [ ! -f ios/Runner/GoogleService-Info.plist ]; then
-            echo "Missing ios/Runner/GoogleService-Info.plist. Commit it to the private repo or set GOOGLE_SERVICE_INFO_PLIST_BASE64 in Codemagic."
-            exit 1
-          fi
 
       - name: Debug iOS bundle identifiers
         script: |

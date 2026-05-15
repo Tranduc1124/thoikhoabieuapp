@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class AppSettingsModel {
   const AppSettingsModel({
     this.themeMode = 'system',
@@ -22,20 +20,14 @@ class AppSettingsModel {
   factory AppSettingsModel.fromMap(Map<String, dynamic>? data) {
     data ??= const {};
     return AppSettingsModel(
-      themeMode: data['themeMode'] as String? ?? 'system',
+      themeMode: (data['themeMode'] ?? 'system').toString(),
       accentColor: (data['accentColor'] as num?)?.toInt() ?? 0xFF6A8DFF,
       liquidGlassEnabled: data['liquidGlassEnabled'] as bool? ?? true,
       animationsEnabled: data['animationsEnabled'] as bool? ?? true,
       dynamicIslandEnabled: data['dynamicIslandEnabled'] as bool? ?? false,
       liveActivitiesEnabled: data['liveActivitiesEnabled'] as bool? ?? false,
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      updatedAt: _readDate(data['updatedAt']),
     );
-  }
-
-  factory AppSettingsModel.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    return AppSettingsModel.fromMap(doc.data());
   }
 
   Map<String, dynamic> toMap() {
@@ -46,7 +38,7 @@ class AppSettingsModel {
       'animationsEnabled': animationsEnabled,
       'dynamicIslandEnabled': dynamicIslandEnabled,
       'liveActivitiesEnabled': liveActivitiesEnabled,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
@@ -68,5 +60,12 @@ class AppSettingsModel {
           liveActivitiesEnabled ?? this.liveActivitiesEnabled,
       updatedAt: updatedAt,
     );
+  }
+
+  static DateTime? _readDate(Object? value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }

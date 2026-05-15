@@ -1,48 +1,29 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../api/api.dart';
 import '../models/app_settings_model.dart';
-import 'firebase_service.dart';
 
 class AppSettingsService {
   const AppSettingsService({required this.userId});
 
   final String userId;
 
-  Stream<AppSettingsModel> watch() {
-    if (!FirebaseService.isAvailable) {
-      return Stream.fromFuture(loadCached());
-    }
-    return FirebaseService.appSettings(userId).snapshots().map((doc) {
-      final settings = doc.exists
-          ? AppSettingsModel.fromFirestore(doc)
-          : const AppSettingsModel();
-      _cache(settings);
-      return settings;
-    });
-  }
-
   Future<AppSettingsModel> load() async {
-    if (!FirebaseService.isAvailable) return loadCached();
-    final doc = await FirebaseService.appSettings(userId).get();
-    if (!doc.exists) return const AppSettingsModel();
-    final settings = AppSettingsModel.fromFirestore(doc);
-    await _cache(settings);
-    return settings;
+    try {
+      final data = await Api.call('settings.get');
+      final settings = AppSettingsModel.fromMap(
+        Map<String, dynamic>.from(data['settings'] as Map),
+      );
+      await _cache(settings);
+      return settings;
+    } catch (_) {
+      return loadCached();
+    }
   }
 
   Future<void> save(AppSettingsModel settings) async {
     await _cache(settings);
-    if (!FirebaseService.isAvailable) return;
-    await FirebaseService.appSettings(
-      userId,
-    ).set(settings.toMap(), SetOptions(merge: true));
-    await FirebaseService.userDoc(userId).set({
-      'themeMode': settings.themeMode,
-      'accentColor': settings.accentColor,
-      'updatedAt': FieldValue.serverTimestamp(),
-      'lastSyncedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await Api.call('settings.update', data: settings.toMap());
   }
 
   Future<AppSettingsModel> loadCached() async {

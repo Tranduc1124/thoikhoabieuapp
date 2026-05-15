@@ -58,9 +58,9 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
-                sliver: const SliverToBoxAdapter(
+              const SliverPadding(
+                padding: EdgeInsets.fromLTRB(20, 22, 20, 0),
+                sliver: SliverToBoxAdapter(
                   child: SectionHeader(
                     title: 'Hôm nay',
                     subtitle: 'Lịch học, trạng thái và các lớp sắp tới',
