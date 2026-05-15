@@ -247,18 +247,18 @@ class PremiumScheduleCard extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xóa lịch học?'),
+        title: const Text('Xoá lịch học?'),
         content: Text(
-          'Môn ${schedule.subjectName} sẽ bị xóa khỏi lịch của bạn.',
+          'Môn ${schedule.subjectName} sẽ được xoá khỏi thời khóa biểu của bạn.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy'),
+            child: const Text('Huỷ'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xóa'),
+            child: const Text('Xoá'),
           ),
         ],
       ),
@@ -290,7 +290,7 @@ class PremiumScheduleCard extends StatelessWidget {
         colors: [Color(0xFF94A3B8), Color(0xFFCBD5E1)],
       ),
       _ClassStatus.cancelled => const _StatusData(
-        label: 'Hủy',
+        label: 'Huỷ',
         icon: Icons.cancel_rounded,
         colors: [Color(0xFFF87171), Color(0xFFFB7185)],
       ),
@@ -439,7 +439,7 @@ class _MoreMenu extends StatelessWidget {
                 children: [
                   Icon(Icons.delete_outline_rounded),
                   SizedBox(width: 10),
-                  Text('Xóa'),
+                  Text('Xoá'),
                 ],
               ),
             ),

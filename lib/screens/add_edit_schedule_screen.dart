@@ -41,16 +41,16 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
   bool _saving = false;
 
   static const _palettes = [
-    _ColorChoice('Blue', 0xFF5B8CFF),
-    _ColorChoice('Purple', 0xFF7C5CFF),
-    _ColorChoice('Pink', 0xFFFF6FAE),
-    _ColorChoice('Orange', 0xFFFF9F5A),
-    _ColorChoice('Teal', 0xFF14B8A6),
-    _ColorChoice('Green', 0xFF22C55E),
-    _ColorChoice('Red', 0xFFF87171),
-    _ColorChoice('Indigo', 0xFF6366F1),
-    _ColorChoice('Cyan', 0xFF06B6D4),
-    _ColorChoice('Amber', 0xFFF59E0B),
+    _ColorChoice('Xanh dương', 0xFF5B8CFF),
+    _ColorChoice('Tím', 0xFF7C5CFF),
+    _ColorChoice('Hồng', 0xFFFF6FAE),
+    _ColorChoice('Cam', 0xFFFF9F5A),
+    _ColorChoice('Ngọc', 0xFF14B8A6),
+    _ColorChoice('Xanh lá', 0xFF22C55E),
+    _ColorChoice('Đỏ', 0xFFF87171),
+    _ColorChoice('Chàm', 0xFF6366F1),
+    _ColorChoice('Lam', 0xFF06B6D4),
+    _ColorChoice('Vàng', 0xFFF59E0B),
   ];
 
   @override
@@ -108,7 +108,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(isEditing ? 'Sửa môn học' : 'Thêm môn học'),
+        title: Text(isEditing ? 'Sửa môn học' : 'Tạo lịch học mới'),
         actions: [
           if (isEditing)
             IconButton(
@@ -167,7 +167,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                               const SizedBox(height: 6),
                               Text(
                                 isEditing
-                                    ? 'Điều chỉnh môn học, thời gian, màu sắc, nhắc nhở hoặc vị trí lớp học trong một flow gọn gàng.'
+                                    ? 'Điều chỉnh môn học, thời gian, màu sắc, nhắc nhở hoặc vị trí lớp học trong một luồng thật gọn gàng.'
                                     : 'Lên lịch học, chọn màu môn, đặt nhắc nhở và lưu vị trí lớp học chỉ trong vài bước.',
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(
@@ -186,7 +186,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                 const SectionHeader(
                   title: 'Chi tiết lịch học',
                   subtitle:
-                      'Điền đầy đủ thông tin để app theo dõi buổi học chính xác hơn.',
+                      'Điền đầy đủ thông tin để ứng dụng theo dõi buổi học chính xác hơn.',
                 ),
                 const SizedBox(height: 14),
                 _Section(
@@ -290,7 +290,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                               signed: true,
                             ),
                             decoration: const InputDecoration(
-                              labelText: 'Latitude',
+                              labelText: 'Vĩ độ',
                               prefixIcon: Icon(Icons.pin_drop_outlined),
                             ),
                           ),
@@ -304,7 +304,7 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
                               signed: true,
                             ),
                             decoration: const InputDecoration(
-                              labelText: 'Longitude',
+                              labelText: 'Kinh độ',
                               prefixIcon: Icon(Icons.explore_outlined),
                             ),
                           ),
@@ -511,18 +511,18 @@ class _AddEditScheduleScreenState extends ConsumerState<AddEditScheduleScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xóa lịch học?'),
+        title: const Text('Xoá lịch học?'),
         content: const Text(
-          'Môn học này sẽ bị xóa khỏi cloud, widget và hệ thống thông báo.',
+          'Môn học này sẽ được xoá khỏi thời khóa biểu của bạn.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy'),
+            child: const Text('Huỷ'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xóa'),
+            child: const Text('Xoá'),
           ),
         ],
       ),

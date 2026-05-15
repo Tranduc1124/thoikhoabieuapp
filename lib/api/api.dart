@@ -12,7 +12,7 @@ import '../services/api_error_translator.dart';
 class Api {
   Api._();
 
-  static const baseUrl = 'http://minhduc.huutien.store/api.php';
+  static const baseUrl = 'https://minhduc.huutien.store/api.php';
   static const appKey = 'thoikhoabieuapp_public_key';
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'auth.token';

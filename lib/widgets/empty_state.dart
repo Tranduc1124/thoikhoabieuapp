@@ -135,7 +135,7 @@ class EmptyStateView extends StatelessWidget {
       return 'Hệ thống đang chuẩn bị dữ liệu. Vui lòng thử lại sau vài phút.';
     }
     if (lower.contains('permission-denied')) {
-      return 'Bạn chưa có quyền đọc dữ liệu này.';
+      return 'Bạn chưa có quyền xem nội dung này.';
     }
     if (lower.contains('network') ||
         lower.contains('unavailable') ||

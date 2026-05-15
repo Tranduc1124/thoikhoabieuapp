@@ -9,7 +9,7 @@ class ApiErrorTranslator {
     final normalized = raw.toLowerCase();
 
     if (error is TimeoutException || normalized.contains('timeout')) {
-      return 'Máy chủ phản hồi quá chậm. Vui lòng thử lại.';
+      return 'Kết nối đang chậm. Vui lòng thử lại.';
     }
     if (error is SocketException ||
         normalized.contains('socketexception') ||
@@ -18,24 +18,26 @@ class ApiErrorTranslator {
       return 'Không có kết nối mạng. Vui lòng thử lại.';
     }
     if (normalized.contains('token_expired') ||
-        normalized.contains('unauthorized')) {
+        normalized.contains('unauthorized') ||
+        normalized.contains('invalid token')) {
       return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     }
     if (normalized.contains('forbidden') ||
-        normalized.contains('permission_denied')) {
+        normalized.contains('permission_denied') ||
+        normalized.contains('permission-denied')) {
       return 'Bạn chưa có quyền thực hiện thao tác này.';
     }
     if (normalized.contains('invalid_credentials')) {
-      return 'Email hoặc mật khẩu không đúng.';
+      return 'Email hoặc mật khẩu chưa đúng.';
     }
     if (normalized.contains('not_found')) {
-      return 'Không tìm thấy dữ liệu cần truy cập.';
+      return 'Không tìm thấy dữ liệu bạn cần.';
     }
     if (normalized.contains('upload')) {
-      return 'Tải tệp lên không thành công. Vui lòng thử lại.';
+      return 'Không thể cập nhật dữ liệu lúc này. Vui lòng thử lại.';
     }
     if (normalized.contains('server_error') || normalized.contains('500')) {
-      return 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.';
+      return 'Hệ thống đang bận. Vui lòng thử lại sau.';
     }
 
     if (raw.startsWith('Exception: ')) {

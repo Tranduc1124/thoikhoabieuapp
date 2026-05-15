@@ -23,7 +23,7 @@ class BackupService {
   Future<void> importUserDataFromJson(String rawJson) async {
     final decoded = jsonDecode(rawJson);
     if (decoded is! Map<String, dynamic>) {
-      throw ArgumentError('File backup không hợp lệ.');
+      throw ArgumentError('Bản sao lưu này không hợp lệ.');
     }
     await Api.call('backup.import', data: {'backup': decoded});
   }

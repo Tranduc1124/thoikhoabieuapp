@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
+import '../services/app_feedback_service.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/soft_gradient_background.dart';
 
@@ -88,13 +89,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 26),
                     Text(
-                      _isRegister ? 'Tạo tài khoản' : 'Chào mừng trở lại',
+                      _isRegister ? 'Tạo tài khoản mới' : 'Chào mừng trở lại',
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Đồng bộ lịch học, ghi chú và nhắc nhở qua API PHP/MySQL gọn nhẹ.',
+                      _isRegister
+                          ? 'Tạo tài khoản để đồng bộ lịch học của bạn và tiếp tục trên mọi thiết bị.'
+                          : 'Tiếp tục với thời khóa biểu, ghi chú và nhắc nhở của bạn.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         height: 1.4,
@@ -119,7 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 controller: _nameController,
                                 textInputAction: TextInputAction.next,
                                 decoration: const InputDecoration(
-                                  labelText: 'Họ tên',
+                                  labelText: 'Họ và tên',
                                   prefixIcon: Icon(
                                     Icons.person_outline_rounded,
                                   ),
@@ -127,7 +130,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 validator: (value) =>
                                     _isRegister &&
                                         (value?.trim().isEmpty ?? true)
-                                    ? 'Nhập họ tên'
+                                    ? 'Vui lòng nhập họ và tên'
                                     : null,
                               )
                             : const SizedBox.shrink(),
@@ -143,9 +146,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Nhập email';
+                            return 'Vui lòng nhập email';
                           }
-                          if (!value.contains('@')) return 'Email không hợp lệ';
+                          if (!value.contains('@')) {
+                            return 'Email chưa hợp lệ';
+                          }
                           return null;
                         },
                       ),
@@ -159,7 +164,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         validator: (value) {
                           if (value == null || value.length < 6) {
-                            return 'Mật khẩu tối thiểu 6 ký tự';
+                            return 'Mật khẩu cần ít nhất 6 ký tự';
                           }
                           return null;
                         },
@@ -174,7 +179,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : Text(_isRegister ? 'Đăng ký' : 'Đăng nhập'),
+                            : Text(_isRegister ? 'Tạo tài khoản' : 'Đăng nhập'),
                       ),
                       if (!_isRegister)
                         TextButton(
@@ -191,13 +196,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Text(
                   _isRegister
                       ? 'Đã có tài khoản? Đăng nhập'
-                      : 'Chưa có tài khoản? Đăng ký',
+                      : 'Chưa có tài khoản? Tạo ngay',
                 ),
               ),
               if (auth.hasError) ...[
                 const SizedBox(height: 12),
                 Text(
-                  auth.error.toString().replaceFirst('Exception: ', ''),
+                  AppFeedbackService.messageFor(auth.error!),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: colorScheme.error),
                 ),
@@ -229,12 +234,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      _showMessage('Nhập email trước khi đặt lại mật khẩu.');
+      _showMessage('Hãy nhập email trước khi tiếp tục.');
       return;
     }
     await ref.read(authControllerProvider.notifier).resetPassword(email);
     _showMessage(
-      'Nếu email tồn tại, hệ thống sẽ gửi hướng dẫn đặt lại mật khẩu.',
+      'Nếu email này hợp lệ, hướng dẫn khôi phục sẽ sớm được gửi đến bạn.',
     );
   }
 

@@ -93,7 +93,7 @@ class ProfileService {
       final message = error.toString();
       if (message.contains('Chưa cấu hình lưu ảnh đại diện')) {
         return const AvatarUploadResult(
-          warningMessage: 'Chưa cấu hình lưu ảnh đại diện.',
+          warningMessage: 'Ảnh đại diện chưa sẵn sàng lúc này.',
         );
       }
       throw AppUserMessageException(

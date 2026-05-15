@@ -2,38 +2,36 @@ import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../api/api.dart';
+import 'app_feedback_service.dart';
 
 class BackendDiagnosticsResult {
   const BackendDiagnosticsResult({
-    required this.reachable,
-    required this.endpoint,
+    required this.isConnected,
     required this.platform,
-    required this.runtimePackageName,
-    this.currentUserId,
-    this.serverTime,
-    this.message,
+    required this.versionLabel,
+    required this.isSignedIn,
+    this.updatedAt,
+    this.note,
     this.error,
   });
 
-  final bool reachable;
-  final String endpoint;
+  final bool isConnected;
   final String platform;
-  final String runtimePackageName;
-  final String? currentUserId;
-  final String? serverTime;
-  final String? message;
+  final String versionLabel;
+  final bool isSignedIn;
+  final String? updatedAt;
+  final String? note;
   final Object? error;
 
-  List<String> toLogLines() {
+  List<String> toDisplayLines() {
     return [
-      'Backend reachable: $reachable',
-      'Endpoint: $endpoint',
-      'Platform: $platform',
-      'Runtime package/bundle id: $runtimePackageName',
-      'Current user: ${currentUserId ?? "none"}',
-      if (serverTime != null) 'Server time: $serverTime',
-      if (message != null) 'Message: $message',
-      if (error != null) 'Error: $error',
+      isConnected ? 'Kết nối ổn định' : 'Chưa thể kết nối lúc này',
+      'Thiết bị: $platform',
+      'Phiên bản ứng dụng: $versionLabel',
+      isSignedIn ? 'Bạn đang đăng nhập' : 'Bạn chưa đăng nhập',
+      if (updatedAt != null) 'Cập nhật gần nhất: $updatedAt',
+      if (note != null && note!.trim().isNotEmpty) note!,
+      if (error != null) AppFeedbackService.messageFor(error!),
     ];
   }
 }
@@ -42,41 +40,47 @@ class BackendDiagnosticsService {
   const BackendDiagnosticsService._();
 
   static Future<BackendDiagnosticsResult> checkBackendStatus() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final versionLabel = '${packageInfo.version} (${packageInfo.buildNumber})';
+
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
       final data = await Api.call(
         'system.ping',
         authenticated: false,
         data: const {},
       );
       final result = BackendDiagnosticsResult(
-        reachable: true,
-        endpoint: Api.baseUrl,
+        isConnected: true,
         platform: _platformName(),
-        runtimePackageName: packageInfo.packageName,
-        currentUserId: Api.currentSession?.uid,
-        serverTime: data['serverTime']?.toString(),
-        message: data['message']?.toString(),
+        versionLabel: versionLabel,
+        isSignedIn: Api.currentSession?.uid.isNotEmpty == true,
+        updatedAt: data['serverTime']?.toString(),
+        note: 'Mọi thứ đang hoạt động bình thường.',
       );
-      debugPrint(result.toLogLines().join('\n'));
+      debugPrint(result.toDisplayLines().join('\n'));
       return result;
     } catch (error) {
-      final packageInfo = await PackageInfo.fromPlatform();
       final result = BackendDiagnosticsResult(
-        reachable: false,
-        endpoint: Api.baseUrl,
+        isConnected: false,
         platform: _platformName(),
-        runtimePackageName: packageInfo.packageName,
-        currentUserId: Api.currentSession?.uid,
+        versionLabel: versionLabel,
+        isSignedIn: Api.currentSession?.uid.isNotEmpty == true,
         error: error,
       );
-      debugPrint(result.toLogLines().join('\n'));
+      debugPrint(result.toDisplayLines().join('\n'));
       return result;
     }
   }
 
   static String _platformName() {
-    if (kIsWeb) return 'web';
-    return defaultTargetPlatform.name;
+    if (kIsWeb) return 'Web';
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.iOS => 'iPhone',
+      TargetPlatform.android => 'Android',
+      TargetPlatform.macOS => 'macOS',
+      TargetPlatform.windows => 'Windows',
+      TargetPlatform.linux => 'Linux',
+      _ => 'Thiết bị của bạn',
+    };
   }
 }

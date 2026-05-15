@@ -56,7 +56,7 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
             icon: const Icon(Icons.folder_shared_rounded),
           ),
           IconButton(
-            tooltip: 'Nhập lịch chia sẻ',
+            tooltip: 'Nhập lịch được chia sẻ',
             onPressed: () => context.push('/shared'),
             icon: const Icon(Icons.download_rounded),
           ),
@@ -68,7 +68,7 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
               ? const EmptyState(
                   title: 'Chưa có lịch để chia sẻ',
                   message:
-                      'Hãy thêm ít nhất một môn học trước khi tạo link hoặc QR.',
+                      'Hãy thêm ít nhất một môn học trước khi tạo liên kết hoặc mã QR.',
                 )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
@@ -79,7 +79,7 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Chia sẻ lịch học theo cách gọn và an toàn.',
+                            'Chia sẻ lịch học theo cách gọn gàng và dễ dùng.',
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(
                                   fontWeight: FontWeight.w900,
@@ -88,7 +88,7 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'App sẽ tạo snapshot public, QR code và deep link để người nhận xem hoặc import.',
+                            'Tạo một bản xem trước thật đẹp để bạn bè mở nhanh, quét mã hoặc lưu lại chỉ trong vài chạm.',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: colorScheme.textSecondary,
@@ -109,9 +109,9 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
                                 icon: Icons.category_rounded,
                                 label: '$subjectCount môn học',
                               ),
-                              _MetricPill(
+                              const _MetricPill(
                                 icon: Icons.link_rounded,
-                                label: 'Link + QR + import',
+                                label: 'Liên kết và mã QR',
                               ),
                             ],
                           ),
@@ -174,14 +174,14 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
                     SectionHeader(
                       title: 'Bản xem trước',
                       subtitle:
-                          '${selected.length} buổi học sẽ được đưa vào snapshot chia sẻ.',
+                          '${selected.length} buổi học sẽ xuất hiện trong nội dung chia sẻ.',
                     ),
                     const SizedBox(height: 12),
                     if (selected.isEmpty)
                       const EmptyState(
-                        title: 'Không có môn phù hợp',
+                        title: 'Không có môn học phù hợp',
                         message:
-                            'Thử đổi loại chia sẻ hoặc chọn một môn khác để tiếp tục.',
+                            'Thử đổi phạm vi chia sẻ hoặc chọn một môn khác để tiếp tục.',
                       )
                     else ...[
                       for (final schedule in selected.take(8))
@@ -200,8 +200,8 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
                           : const Icon(Icons.ios_share_rounded),
                       label: Text(
                         _creating
-                            ? 'Đang tạo link chia sẻ...'
-                            : 'Tạo link + QR',
+                            ? 'Đang chuẩn bị nội dung chia sẻ...'
+                            : 'Tạo liên kết chia sẻ',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -210,7 +210,7 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
                           ? null
                           : () => context.push('/shared'),
                       icon: const Icon(Icons.download_rounded),
-                      label: const Text('Mở màn import lịch chia sẻ'),
+                      label: const Text('Mở màn nhập lịch chia sẻ'),
                     ),
                     if (_nfcSupported) ...[
                       const SizedBox(height: 10),
@@ -220,15 +220,6 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
                         label: const Text('Chia sẻ nhanh qua NFC'),
                       ),
                     ],
-                    const SizedBox(height: 22),
-                    Text(
-                      'make by minhduc',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colorScheme.textSecondary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
                   ],
                 ),
         ),
@@ -289,10 +280,8 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
         schedules: selected,
       );
       if (!mounted) return;
-      AppFeedbackService.success(context, 'Đã tạo link chia sẻ');
-      if (mounted) {
-        context.push('/share/preview', extra: share);
-      }
+      AppFeedbackService.success(context, 'Đã tạo liên kết chia sẻ');
+      context.push('/share/preview', extra: share);
     } catch (error) {
       if (!mounted) return;
       AppFeedbackService.error(context, error);

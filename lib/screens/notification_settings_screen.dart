@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/notification_settings_model.dart';
 import '../providers/pro_feature_providers.dart';
+import '../services/app_feedback_service.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/loading_skeleton.dart';
@@ -42,7 +43,7 @@ class _NotificationSettingsScreenState
             ),
             error: (error, _) => EmptyState(
               title: 'Không tải được cài đặt',
-              message: error.toString(),
+              message: AppFeedbackService.messageFor(error),
               action: FilledButton.tonalIcon(
                 onPressed: () => ref.invalidate(notificationSettingsProvider),
                 icon: const Icon(Icons.refresh_rounded),
@@ -53,15 +54,16 @@ class _NotificationSettingsScreenState
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
               children: [
                 const SectionHeader(
-                  title: 'Nhắc lịch học',
-                  subtitle: 'Tự cập nhật khi thêm, sửa hoặc xóa lịch học.',
+                  title: 'Đừng bỏ lỡ tiết học quan trọng',
+                  subtitle:
+                      'Tự động cập nhật nhắc nhở khi bạn thêm, sửa hoặc xoá lịch học.',
                 ),
                 const SizedBox(height: 16),
                 GlassCard(
                   child: Column(
                     children: [
                       _SwitchRow(
-                        title: 'Bật thông báo toàn app',
+                        title: 'Bật thông báo',
                         subtitle: _permissionText(value.permissionStatus),
                         icon: Icons.notifications_active_outlined,
                         value: value.enabled,
@@ -73,7 +75,7 @@ class _NotificationSettingsScreenState
                       const Divider(height: 18),
                       _SwitchRow(
                         title: 'Nhắc trước môn học tiếp theo',
-                        subtitle: 'Gửi thông báo trước giờ học đã chọn.',
+                        subtitle: 'Gửi lời nhắc trước giờ học bạn đã chọn.',
                         icon: Icons.school_rounded,
                         value: value.nextClassReminderEnabled,
                         onChanged: (enabled) => _save(
@@ -83,7 +85,7 @@ class _NotificationSettingsScreenState
                       const Divider(height: 18),
                       _SwitchRow(
                         title: 'Âm báo',
-                        subtitle: 'Phát âm thanh khi nhắc lịch học.',
+                        subtitle: 'Phát âm thanh khi có lời nhắc mới.',
                         icon: Icons.volume_up_rounded,
                         value: value.soundEnabled,
                         onChanged: (enabled) =>
@@ -122,7 +124,7 @@ class _NotificationSettingsScreenState
                         controller: _customController,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
-                          labelText: 'Tùy chỉnh phút',
+                          labelText: 'Tùy chỉnh số phút',
                           suffixIcon: IconButton(
                             onPressed: () {
                               final parsed = int.tryParse(
@@ -141,7 +143,7 @@ class _NotificationSettingsScreenState
                       if (_customMinutes != null) ...[
                         const SizedBox(height: 8),
                         Text(
-                          'Đang dùng tùy chỉnh: ${_reminderLabel(_customMinutes!)}',
+                          'Đang dùng: ${_reminderLabel(_customMinutes!)}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -154,7 +156,7 @@ class _NotificationSettingsScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Debug thông báo',
+                        'Kiểm tra nhanh',
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w900),
                       ),
@@ -167,18 +169,14 @@ class _NotificationSettingsScreenState
                                 await ref
                                     .read(notificationSettingsActionsProvider)
                                     .sendTestNotification();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Đã hẹn thông báo test sau 10 giây.',
-                                      ),
-                                    ),
-                                  );
-                                }
+                                if (!context.mounted) return;
+                                AppFeedbackService.success(
+                                  context,
+                                  'Đã tạo thông báo thử trong giây lát.',
+                                );
                               },
                               icon: const Icon(Icons.bolt_rounded),
-                              label: const Text('Test 10 giây'),
+                              label: const Text('Thử ngay'),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -188,21 +186,14 @@ class _NotificationSettingsScreenState
                                 await ref
                                     .read(notificationSettingsActionsProvider)
                                     .rescheduleAll();
-                                final count = await ref
-                                    .read(notificationSettingsActionsProvider)
-                                    .logPendingNotifications();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Đã lên lịch lại. Pending: $count',
-                                      ),
-                                    ),
-                                  );
-                                }
+                                if (!context.mounted) return;
+                                AppFeedbackService.success(
+                                  context,
+                                  'Đã cập nhật lại lời nhắc.',
+                                );
                               },
                               icon: const Icon(Icons.refresh_rounded),
-                              label: const Text('Lên lịch lại'),
+                              label: const Text('Làm mới nhắc nhở'),
                             ),
                           ),
                         ],
@@ -215,8 +206,9 @@ class _NotificationSettingsScreenState
                   child: Column(
                     children: [
                       _SwitchRow(
-                        title: 'Nhắc bài tập/deadline',
-                        subtitle: 'Đã sẵn sàng để nối vào màn bài tập.',
+                        title: 'Nhắc bài tập',
+                        subtitle:
+                            'Luôn sẵn sàng cho những việc cần hoàn thành.',
                         icon: Icons.assignment_rounded,
                         value: value.homeworkReminderEnabled,
                         onChanged: (enabled) => _save(
@@ -226,7 +218,8 @@ class _NotificationSettingsScreenState
                       const Divider(height: 18),
                       _SwitchRow(
                         title: 'Nhắc ôn thi',
-                        subtitle: 'Đã sẵn sàng để nối vào lịch ôn thi.',
+                        subtitle:
+                            'Giữ nhịp học đều đặn trước các kỳ thi quan trọng.',
                         icon: Icons.event_available_rounded,
                         value: value.examReminderEnabled,
                         onChanged: (enabled) =>
@@ -261,9 +254,10 @@ class _NotificationSettingsScreenState
 
   String _permissionText(String status) {
     return switch (status) {
-      'granted' => 'Đã bật thông báo',
-      'denied' => 'Chưa cấp quyền. Vào iOS Settings để bật lại.',
-      _ => 'Sẽ hỏi quyền khi bạn bật thông báo.',
+      'granted' => 'Thông báo đang được bật.',
+      'denied' =>
+        'Bạn chưa cho phép thông báo. Hãy bật lại trong cài đặt thiết bị.',
+      _ => 'Ứng dụng sẽ xin quyền khi bạn bật thông báo.',
     };
   }
 }

@@ -33,7 +33,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
     final qrValid = ShareDebugService.validateQrPayload(widget.share.qrData);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Preview chia sẻ')),
+      appBar: AppBar(title: const Text('Xem trước chia sẻ')),
       body: SoftGradientBackground(
         child: SafeArea(
           child: ListView(
@@ -45,7 +45,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Mọi thứ đã sẵn sàng để gửi.',
+                      'Mọi thứ đã sẵn sàng để gửi đi.',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w900,
                         color: colorScheme.textPrimary,
@@ -53,7 +53,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Link public, QR và ảnh poster đều được tạo từ cùng một snapshot để tránh lệch dữ liệu.',
+                      'Bạn có thể chia sẻ bằng đường dẫn, mã QR hoặc lưu lại thành ảnh thật gọn gàng.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: colorScheme.textSecondary,
                         fontWeight: FontWeight.w600,
@@ -67,14 +67,16 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                       children: [
                         _PreviewPill(
                           icon: Icons.verified_rounded,
-                          label: qrValid ? 'QR hợp lệ' : 'QR cần kiểm tra',
+                          label: qrValid
+                              ? 'Mã QR sẵn sàng'
+                              : 'Kiểm tra lại mã QR',
                           color: qrValid
                               ? colorScheme.primary
                               : colorScheme.error,
                         ),
                         _PreviewPill(
                           icon: Icons.visibility_rounded,
-                          label: '${widget.share.viewCount} lượt mở',
+                          label: '${widget.share.viewCount} lượt xem',
                           color: colorScheme.primary,
                         ),
                         _PreviewPill(
@@ -104,7 +106,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.ios_share_rounded),
-                      label: const Text('Mở share sheet'),
+                      label: const Text('Chia sẻ ngay'),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -112,7 +114,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _busy || service == null ? null : _copyLink,
                       icon: const Icon(Icons.copy_rounded),
-                      label: const Text('Copy link'),
+                      label: const Text('Sao chép liên kết'),
                     ),
                   ),
                 ],
@@ -124,7 +126,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _busy || service == null ? null : _shareImage,
                       icon: const Icon(Icons.image_outlined),
-                      label: const Text('Share ảnh QR'),
+                      label: const Text('Chia sẻ ảnh'),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -132,7 +134,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _busy || service == null ? null : _saveImage,
                       icon: const Icon(Icons.download_rounded),
-                      label: const Text('Lưu poster'),
+                      label: const Text('Lưu ảnh'),
                     ),
                   ),
                 ],
@@ -145,7 +147,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                       onPressed: () =>
                           context.push('/shared/${widget.share.id}'),
                       icon: const Icon(Icons.visibility_rounded),
-                      label: const Text('Xem public'),
+                      label: const Text('Xem liên kết'),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -153,19 +155,10 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => context.push('/shared-links'),
                       icon: const Icon(Icons.folder_open_rounded),
-                      label: const Text('Quản lý link'),
+                      label: const Text('Quản lý chia sẻ'),
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 22),
-              Text(
-                'make by minhduc',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: colorScheme.textSecondary,
-                  fontWeight: FontWeight.w700,
-                ),
               ),
             ],
           ),
@@ -184,7 +177,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
       );
       await service.shareImage(file, text: widget.share.deepLink);
       if (!mounted) return;
-      AppFeedbackService.success(context, 'Đã mở bảng chia sẻ');
+      AppFeedbackService.success(context, 'Đã mở bảng chia sẻ.');
     });
   }
 
@@ -194,7 +187,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
     await _runBusyTask(() async {
       await service.shareLink(widget.share);
       if (!mounted) return;
-      AppFeedbackService.success(context, 'Đã mở bảng chia sẻ');
+      AppFeedbackService.success(context, 'Đã mở bảng chia sẻ.');
     });
   }
 
@@ -204,7 +197,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
     try {
       await service.copyLink(widget.share.qrData);
       if (!mounted) return;
-      AppFeedbackService.success(context, 'Đã sao chép link');
+      AppFeedbackService.success(context, 'Đã sao chép liên kết.');
     } catch (error) {
       if (!mounted) return;
       AppFeedbackService.error(context, error);
@@ -220,7 +213,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
         filename: 'thoikhoabieu_poster_${widget.share.id}',
       );
       if (!mounted) return;
-      AppFeedbackService.success(context, 'Đã lưu poster chia sẻ');
+      AppFeedbackService.success(context, 'Đã lưu ảnh chia sẻ.');
     });
   }
 
@@ -302,7 +295,7 @@ class _SharePoster extends StatelessWidget {
           const SizedBox(height: 18),
           QrShareBox(
             data: share.qrData,
-            label: 'Quét để xem hoặc import',
+            label: 'Quét để xem hoặc thêm vào lịch của bạn',
             subtitle: share.id,
           ),
           const SizedBox(height: 18),
@@ -319,14 +312,6 @@ class _SharePoster extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: 8),
-          Text(
-            'make by minhduc',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: colorScheme.textSecondary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
         ],
       ),
     );

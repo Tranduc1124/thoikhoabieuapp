@@ -66,7 +66,7 @@ class _SharedScheduleViewScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Mở link, QR hoặc share ID để xem trước.',
+                      'Mở liên kết để xem trước lịch học.',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w900,
                         color: colorScheme.textPrimary,
@@ -74,7 +74,7 @@ class _SharedScheduleViewScreenState
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Bạn có thể import toàn bộ hoặc chỉ chọn vài môn vào tài khoản hiện tại. App sẽ tự tránh trùng lịch.',
+                      'Bạn có thể thêm toàn bộ hoặc chỉ chọn những môn học cần thiết vào thời khóa biểu của mình.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: colorScheme.textSecondary,
                         fontWeight: FontWeight.w600,
@@ -85,7 +85,7 @@ class _SharedScheduleViewScreenState
                     TextField(
                       controller: _controller,
                       decoration: InputDecoration(
-                        labelText: 'Dán link hoặc share ID',
+                        labelText: 'Dán liên kết chia sẻ',
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.search_rounded),
                           onPressed: _open,
@@ -99,9 +99,9 @@ class _SharedScheduleViewScreenState
               const SizedBox(height: 18),
               if (share == null)
                 const EmptyState(
-                  title: 'Chưa mở lịch nào',
+                  title: 'Chưa có lịch nào được mở',
                   message:
-                      'Dán link chia sẻ, deep link hoặc share ID để xem trước thời khóa biểu.',
+                      'Dán liên kết hoặc quét mã để xem trước thời khóa biểu.',
                 )
               else
                 share.when(
@@ -118,15 +118,6 @@ class _SharedScheduleViewScreenState
                   ),
                   data: (data) => _buildShareData(context, data, shareId!),
                 ),
-              const SizedBox(height: 22),
-              Text(
-                'make by minhduc',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: colorScheme.textSecondary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
             ],
           ),
         ),
@@ -141,14 +132,14 @@ class _SharedScheduleViewScreenState
   ) {
     if (data == null) {
       return const EmptyState(
-        title: 'Không tìm thấy lịch',
-        message: 'Link chia sẻ đã bị xoá hoặc không còn hoạt động.',
+        title: 'Không tìm thấy lịch học',
+        message: 'Liên kết này không còn hoạt động hoặc đã được xoá.',
       );
     }
     if (!data.isActive) {
       return const EmptyState(
-        title: 'Link không còn hoạt động',
-        message: 'Link chia sẻ đã bị xoá hoặc không còn hoạt động.',
+        title: 'Liên kết không còn hoạt động',
+        message: 'Lịch học này hiện không thể mở được nữa.',
       );
     }
 
@@ -176,7 +167,7 @@ class _SharedScheduleViewScreenState
                 children: [
                   _InfoPill(
                     icon: Icons.category_rounded,
-                    label: '${data.subjects.length} môn',
+                    label: '${data.subjects.length} môn học',
                   ),
                   _InfoPill(
                     icon: Icons.auto_stories_rounded,
@@ -191,7 +182,7 @@ class _SharedScheduleViewScreenState
               const SizedBox(height: 16),
               QrShareBox(
                 data: data.qrData,
-                label: 'QR của liên kết công khai',
+                label: 'Mã QR của lịch học này',
                 subtitle: data.id,
               ),
             ],
@@ -199,7 +190,7 @@ class _SharedScheduleViewScreenState
         ),
         const SizedBox(height: 18),
         SectionHeader(
-          title: 'Chọn môn để import',
+          title: 'Chọn môn học muốn thêm',
           subtitle:
               '${selectedSchedules.length} / ${schedules.length} buổi học đang được chọn.',
         ),
@@ -259,8 +250,8 @@ class _SharedScheduleViewScreenState
               : const Icon(Icons.download_rounded),
           label: Text(
             _importing
-                ? 'Đang import lịch...'
-                : 'Import ${selectedSchedules.length} buổi học',
+                ? 'Đang thêm vào lịch của bạn…'
+                : 'Thêm ${selectedSchedules.length} buổi học',
           ),
         ),
       ],
@@ -276,7 +267,7 @@ class _SharedScheduleViewScreenState
       AppFeedbackService.error(
         context,
         const AppUserMessageException(
-          'Bạn cần đăng nhập để import lịch vào tài khoản.',
+          'Bạn cần đăng nhập để thêm lịch học này.',
         ),
       );
       return;
@@ -284,7 +275,7 @@ class _SharedScheduleViewScreenState
     if (schedules.isEmpty) {
       AppFeedbackService.info(
         context,
-        'Hãy chọn ít nhất một buổi học để import.',
+        'Hãy chọn ít nhất một buổi học để tiếp tục.',
       );
       return;
     }
@@ -299,8 +290,8 @@ class _SharedScheduleViewScreenState
       AppFeedbackService.success(
         context,
         imported == 0
-            ? 'Không có môn học mới để thêm'
-            : 'Đã thêm $imported buổi học',
+            ? 'Không có môn học mới để thêm.'
+            : 'Đã thêm $imported buổi học vào thời khóa biểu.',
       );
     } catch (error) {
       if (!mounted) return;
@@ -317,9 +308,7 @@ class _SharedScheduleViewScreenState
     if (normalized == null || normalized.isEmpty) {
       AppFeedbackService.error(
         context,
-        const AppUserMessageException(
-          'Hãy nhập share ID hoặc link chia sẻ hợp lệ.',
-        ),
+        const AppUserMessageException('Liên kết chia sẻ này chưa hợp lệ.'),
       );
       return;
     }

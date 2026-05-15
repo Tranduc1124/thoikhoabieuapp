@@ -29,7 +29,7 @@ class _ProfileCardPreviewScreenState
   Widget build(BuildContext context) {
     final shareService = ref.watch(shareServiceProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile Card')),
+      appBar: AppBar(title: const Text('Thẻ hồ sơ')),
       body: SoftGradientBackground(
         child: SafeArea(
           child: ListView(
@@ -48,7 +48,7 @@ class _ProfileCardPreviewScreenState
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.ios_share_rounded),
-                label: const Text('Share profile card'),
+                label: const Text('Chia sẻ thẻ hồ sơ'),
               ),
             ],
           ),
@@ -142,14 +142,14 @@ class _ProfilePoster extends StatelessWidget {
           const SizedBox(height: 18),
           Row(
             children: [
-              _Metric(label: 'Streak', value: '${card.studyStreak}d'),
+              _Metric(label: 'Chuỗi học', value: '${card.studyStreak} ngày'),
               const SizedBox(width: 10),
               _Metric(
-                label: 'Hours',
+                label: 'Giờ học',
                 value: card.weeklyHours.toStringAsFixed(1),
               ),
               const SizedBox(width: 10),
-              _Metric(label: 'Classes', value: '${card.totalClasses}'),
+              _Metric(label: 'Buổi học', value: '${card.totalClasses}'),
             ],
           ),
           const SizedBox(height: 18),
@@ -163,8 +163,8 @@ class _ProfilePoster extends StatelessWidget {
           const SizedBox(height: 16),
           QrShareBox(
             data: card.qrLink ?? 'thoikhoabieu://profile/${card.id}',
-            label: 'Quét để mở profile',
-            subtitle: 'make by minhduc',
+            label: 'Quét để mở hồ sơ',
+            subtitle: 'Chia sẻ để kết nối cùng bạn bè học tập',
           ),
         ],
       ),

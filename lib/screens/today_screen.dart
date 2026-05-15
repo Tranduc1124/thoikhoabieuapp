@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../models/study_log_model.dart';
 import '../providers/schedule_provider.dart';
+import '../services/app_feedback_service.dart';
 import '../widgets/app_navigation_shell.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_floating_button.dart';
@@ -48,9 +49,9 @@ class TodayScreen extends ConsumerWidget {
             data: (items) {
               if (items.isEmpty) {
                 return EmptyState(
-                  title: 'Hôm nay trống lịch',
+                  title: 'Chưa có lịch học nào hôm nay',
                   message:
-                      'Bạn có thể thêm môn học hoặc tận dụng ngày này để ôn tập.',
+                      'Thêm môn học đầu tiên để bắt đầu hoặc dành ngày này cho việc ôn tập.',
                   action: FilledButton.icon(
                     onPressed: () => context.push('/schedule/new'),
                     icon: const Icon(Icons.add_rounded),
@@ -64,7 +65,7 @@ class TodayScreen extends ConsumerWidget {
                   const SectionHeader(
                     title: 'Lịch hôm nay',
                     subtitle:
-                        'Theo dõi tiến độ từng buổi và ghi chú nhanh sau lớp',
+                        'Theo dõi tiến độ từng buổi học và ghi chú nhanh sau giờ lên lớp',
                   ),
                   const SizedBox(height: 18),
                   for (var index = 0; index < items.length; index++)
@@ -82,7 +83,7 @@ class TodayScreen extends ConsumerWidget {
                         if (context.mounted) {
                           _showMessage(
                             context,
-                            'Đã bắt đầu học ${items[index].subjectName}',
+                            'Đã bắt đầu ${items[index].subjectName}',
                           );
                         }
                       },
@@ -123,7 +124,7 @@ class TodayScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
+            child: const Text('Huỷ'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
@@ -137,8 +138,6 @@ class TodayScreen extends ConsumerWidget {
   }
 
   void _showMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    AppFeedbackService.success(context, message);
   }
 }

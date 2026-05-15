@@ -18,7 +18,7 @@ class PublicProfileCardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final card = ref.watch(publicProfileCardProvider(cardId));
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile Card')),
+      appBar: AppBar(title: const Text('Thẻ hồ sơ')),
       body: SoftGradientBackground(
         child: SafeArea(
           child: Padding(
@@ -26,15 +26,15 @@ class PublicProfileCardScreen extends ConsumerWidget {
             child: card.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => EmptyState(
-                title: 'Không mở được profile card',
+                title: 'Không mở được thẻ hồ sơ',
                 message: AppFeedbackService.messageFor(error),
               ),
               data: (data) {
                 if (data == null) {
                   return const EmptyState(
-                    title: 'Không tìm thấy profile card',
+                    title: 'Không tìm thấy thẻ hồ sơ',
                     message:
-                        'Thẻ hồ sơ này có thể đã bị xoá hoặc không còn tồn tại.',
+                        'Thẻ hồ sơ này có thể đã bị xoá hoặc không còn hoạt động.',
                   );
                 }
                 return Container(
@@ -98,8 +98,8 @@ class PublicProfileCardScreen extends ConsumerWidget {
                       QrShareBox(
                         data:
                             data.qrLink ?? 'thoikhoabieu://profile/${data.id}',
-                        label: 'make by minhduc',
-                        subtitle: '${data.studyStreak} ngày streak',
+                        label: 'Quét để mở hồ sơ',
+                        subtitle: '${data.studyStreak} ngày học liên tục',
                       ),
                     ],
                   ),

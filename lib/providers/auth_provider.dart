@@ -59,15 +59,11 @@ class AuthController extends AsyncNotifier<AuthSession?> {
   }
 
   Future<void> signInWithGoogle() {
-    throw const AppUserMessageException(
-      'Đăng nhập Google chưa được bật trên bản backend này.',
-    );
+    throw const AppUserMessageException('Tính năng này sẽ sớm được hỗ trợ.');
   }
 
   Future<void> signInWithApple() {
-    throw const AppUserMessageException(
-      'Đăng nhập Apple chưa được bật trên bản backend này.',
-    );
+    throw const AppUserMessageException('Tính năng này sẽ sớm được hỗ trợ.');
   }
 
   Future<void> resetPassword(String email) async {

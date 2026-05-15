@@ -16,7 +16,7 @@ class AppUserMessageException implements Exception {
   final AppFeedbackType type;
 
   @override
-  String toString() => debugMessage ?? userMessage;
+  String toString() => userMessage;
 }
 
 class AppFeedbackService {
@@ -30,8 +30,7 @@ class AppFeedbackService {
       return error.userMessage;
     }
     final message = ApiErrorTranslator.readable(error).trim();
-    if (message.isEmpty) return fallback;
-    return message;
+    return message.isEmpty ? fallback : message;
   }
 
   static AppFeedbackType typeFor(Object error) {

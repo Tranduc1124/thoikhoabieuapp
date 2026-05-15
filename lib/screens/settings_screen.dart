@@ -37,7 +37,8 @@ class SettingsScreen extends ConsumerWidget {
             children: [
               const SectionHeader(
                 title: 'Cài đặt',
-                subtitle: 'Giao diện, thông báo, widget và đồng bộ dữ liệu.',
+                subtitle:
+                    'Điều chỉnh giao diện, thông báo và các tiện ích theo cách bạn muốn.',
               ),
               GlassCard(
                 onTap: () => context.push('/profile'),
@@ -59,7 +60,7 @@ class SettingsScreen extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   subtitle: Text(
-                    user?.email ?? auth?.email ?? 'Đã đăng nhập qua API',
+                    user?.email ?? auth?.email ?? 'Quản lý hồ sơ của bạn',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -104,9 +105,9 @@ class SettingsScreen extends ConsumerWidget {
                 title: 'Thông báo',
                 child: _SettingTile(
                   icon: Icons.notifications_active_outlined,
-                  title: 'Cài đặt thông báo',
+                  title: 'Nhắc lịch học',
                   subtitle:
-                      'Nhắc trước ${notificationSettings?.reminderMinutesBefore ?? 15} phút, quyền truy cập và âm báo.',
+                      'Nhắc trước ${notificationSettings?.reminderMinutesBefore ?? 15} phút cùng âm báo phù hợp.',
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/notifications'),
                 ),
@@ -117,10 +118,10 @@ class SettingsScreen extends ConsumerWidget {
                   title: 'Dynamic Island',
                   child: _SettingTile(
                     icon: Icons.dynamic_feed_rounded,
-                    title: 'Hiển thị lịch học trên Dynamic Island',
+                    title: 'Hiển thị môn học tiếp theo',
                     subtitle: liveActivitySystemEnabled
-                        ? 'Xem môn đang học, môn tiếp theo và thời gian còn lại ngay trên Dynamic Island.'
-                        : 'Live Activities đang tắt trong iOS Settings. Bật lại trong Settings > App > Live Activities.',
+                        ? 'Theo dõi môn đang học và thời gian còn lại ngay trên màn hình.'
+                        : 'Tính năng này đang tắt trong cài đặt thiết bị. Hãy bật lại để tiếp tục.',
                     trailing: Switch(
                       value: appSettings?.dynamicIslandEnabled ?? false,
                       onChanged: liveActivitySystemEnabled
@@ -137,9 +138,9 @@ class SettingsScreen extends ConsumerWidget {
                 title: 'Widget iPhone',
                 child: _SettingTile(
                   icon: Icons.widgets_rounded,
-                  title: 'Preview và sync widget',
+                  title: 'Xem trước widget',
                   subtitle:
-                      'Xem nhanh small, medium và large widget cho màn hình chính.',
+                      'Xem nhanh lịch học ngay trên màn hình chính mà không cần mở app.',
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/widget-preview'),
                 ),
@@ -152,15 +153,16 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingTile(
                       icon: Icons.ios_share_rounded,
                       title: 'Chia sẻ thời khóa biểu',
-                      subtitle: 'Tạo ảnh, QR và public link chỉ xem.',
+                      subtitle:
+                          'Tạo ảnh, mã QR và đường dẫn để gửi cho bạn bè.',
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/share'),
                     ),
                     const SizedBox(height: 10),
                     _SettingTile(
                       icon: Icons.link_rounded,
-                      title: 'Các link đã chia sẻ',
-                      subtitle: 'Bật, tắt hoặc xóa public link.',
+                      title: 'Các liên kết đã chia sẻ',
+                      subtitle: 'Quản lý những lịch học bạn đã gửi đi.',
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/shared-links'),
                     ),
@@ -168,7 +170,7 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingTile(
                       icon: Icons.qr_code_scanner_rounded,
                       title: 'Nhập lịch được chia sẻ',
-                      subtitle: 'Nhập link hoặc mã chia sẻ.',
+                      subtitle: 'Mở nhanh lịch học từ đường dẫn hoặc mã QR.',
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/shared'),
                     ),
@@ -177,31 +179,33 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
               _SettingsSection(
-                title: 'Đồng bộ và sao lưu',
+                title: 'Dữ liệu của bạn',
                 child: Column(
                   children: [
                     _SettingTile(
-                      icon: Icons.cloud_done_outlined,
-                      title: 'Profile và backup',
-                      subtitle: 'Tên, avatar, trạng thái sync và export JSON.',
+                      icon: Icons.person_outline_rounded,
+                      title: 'Hồ sơ và bản sao lưu',
+                      subtitle:
+                          'Cập nhật ảnh đại diện, thông tin cá nhân và lưu lại dữ liệu khi cần.',
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/profile'),
                     ),
                     const SizedBox(height: 10),
                     _SettingTile(
-                      icon: Icons.sync_rounded,
-                      title: 'Sync widget ngay',
-                      subtitle: 'Cập nhật dữ liệu local cho iOS widget.',
-                      trailing: const Icon(Icons.refresh_rounded),
+                      icon: Icons.refresh_rounded,
+                      title: 'Cập nhật widget',
+                      subtitle:
+                          'Làm mới thông tin để widget hiển thị lịch học mới nhất.',
+                      trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () =>
                           ref.read(widgetSyncActionsProvider).syncNow(),
                     ),
                     const SizedBox(height: 10),
                     _SettingTile(
-                      icon: Icons.bug_report_outlined,
-                      title: 'Backend diagnostics',
+                      icon: Icons.wifi_tethering_rounded,
+                      title: 'Kiểm tra kết nối',
                       subtitle:
-                          'Kiểm tra kết nối API, phiên đăng nhập và trạng thái backend.',
+                          'Xem nhanh trạng thái kết nối và tình trạng đăng nhập của bạn.',
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/backend-diagnostics'),
                     ),

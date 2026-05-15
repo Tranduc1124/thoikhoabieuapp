@@ -47,7 +47,7 @@ class StatisticsScreen extends ConsumerWidget {
                 return const EmptyState(
                   title: 'Chưa có dữ liệu thống kê',
                   message:
-                      'Thêm thời khóa biểu để xem tổng số giờ học và môn học nổi bật.',
+                      'Thêm thời khóa biểu để xem tổng số giờ học và những môn học nổi bật trong tuần.',
                 );
               }
               final completion = scheduleCount == 0
@@ -58,7 +58,7 @@ class StatisticsScreen extends ConsumerWidget {
                 children: [
                   const SectionHeader(
                     title: 'Thống kê tuần',
-                    subtitle: 'Tổng quan thời lượng và tiến độ học tập',
+                    subtitle: 'Tổng quan thời lượng và tiến độ học tập của bạn',
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -89,13 +89,13 @@ class StatisticsScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Tuần này bạn học nhiều nhất môn ${value.topSubject}',
+                          'Tuần này bạn dành nhiều thời gian nhất cho môn ${value.topSubject}',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Bạn đã hoàn thành ${(completion * 100).round()}% lịch học trong tuần.',
+                          'Bạn đã hoàn thành ${(completion * 100).round()}% lịch học trong tuần này.',
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.textSecondary,
                             fontWeight: FontWeight.w700,

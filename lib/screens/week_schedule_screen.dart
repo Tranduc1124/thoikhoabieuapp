@@ -37,7 +37,8 @@ class WeekScheduleScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
                 child: SectionHeader(
                   title: 'Thời khóa biểu tuần',
-                  subtitle: 'Chọn ngày để xem timeline sáng, chiều và tối',
+                  subtitle:
+                      'Chọn từng ngày để xem lịch học buổi sáng, chiều và tối',
                   trailing: IconButton.filledTonal(
                     onPressed: () =>
                         ref.read(selectedDayProvider.notifier).state =
@@ -108,12 +109,11 @@ class WeekScheduleScreen extends ConsumerWidget {
                     if (filtered.isEmpty) {
                       return EmptyState(
                         title: 'Chưa có lịch cho ${dayName(selectedDay)}',
-                        message:
-                            'Thêm môn học hoặc đổi bộ lọc để xem timeline.',
+                        message: 'Thêm môn học hoặc đổi bộ lọc để tiếp tục.',
                         action: FilledButton.icon(
                           onPressed: () => context.push('/schedule/new'),
                           icon: const Icon(Icons.add_rounded),
-                          label: const Text('Thêm lịch'),
+                          label: const Text('Thêm lịch học'),
                         ),
                       );
                     }

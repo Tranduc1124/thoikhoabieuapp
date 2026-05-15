@@ -24,7 +24,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  bool _syncing = false;
+  bool _refreshing = false;
   bool _saving = false;
 
   @override
@@ -38,15 +38,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (user == null) {
       return const Scaffold(
         body: EmptyState(
-          title: 'Chưa có profile',
-          message: 'Đăng nhập để đồng bộ hồ sơ và dữ liệu học tập lên cloud.',
+          title: 'Chưa có hồ sơ',
+          message:
+              'Đăng nhập để lưu lại thông tin cá nhân và tiếp tục việc học của bạn.',
         ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: const Text('Hồ sơ'),
         actions: [
           IconButton(
             onPressed: () => context.push('/friends'),
@@ -73,17 +74,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: [
                     _InfoRow(label: 'Email', value: user.email),
                     const Divider(height: 22),
-                    _InfoRow(label: 'Username', value: user.username),
+                    _InfoRow(label: 'Tên hiển thị', value: user.username),
                     const Divider(height: 22),
                     _InfoRow(
-                      label: 'Yêu thích',
+                      label: 'Môn học yêu thích',
                       value: user.favoriteSubject.isEmpty
-                          ? 'Chưa đặt'
+                          ? 'Chưa thiết lập'
                           : user.favoriteSubject,
                     ),
                     const Divider(height: 22),
                     _InfoRow(
-                      label: 'Tạo tài khoản',
+                      label: 'Ngày tham gia',
                       value:
                           user.createdAt
                               ?.toLocal()
@@ -97,23 +98,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(height: 16),
               const SectionHeader(
-                title: 'Cloud & Social',
+                title: 'Cá nhân hoá trải nghiệm học tập của bạn',
                 subtitle:
-                    'Đồng bộ profile, tạo profile card và quản lý các tuỳ chọn riêng tư.',
+                    'Làm mới dữ liệu, chia sẻ hồ sơ và lưu lại thông tin quan trọng khi cần.',
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: _syncing ? null : _syncNow,
-                      icon: _syncing
+                      onPressed: _refreshing ? null : _refreshNow,
+                      icon: _refreshing
                           ? const SizedBox.square(
                               dimension: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.cloud_sync_rounded),
-                      label: const Text('Đồng bộ'),
+                          : const Icon(Icons.refresh_rounded),
+                      label: const Text('Cập nhật dữ liệu'),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -121,7 +122,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _createProfileCard,
                       icon: const Icon(Icons.badge_rounded),
-                      label: const Text('Profile Card'),
+                      label: const Text('Thẻ hồ sơ'),
                     ),
                   ),
                 ],
@@ -133,7 +134,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _exportBackup,
                       icon: const Icon(Icons.backup_rounded),
-                      label: const Text('Backup JSON'),
+                      label: const Text('Tạo bản sao lưu'),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -141,7 +142,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => context.push('/friends'),
                       icon: const Icon(Icons.people_alt_rounded),
-                      label: const Text('Friends'),
+                      label: const Text('Bạn bè'),
                     ),
                   ),
                 ],
@@ -184,7 +185,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         hideStreak: user.hideStreak,
       );
       if (!mounted) return;
-      AppFeedbackService.success(context, 'Đã cập nhật ảnh đại diện');
+      AppFeedbackService.success(context, 'Đã cập nhật ảnh đại diện.');
     } catch (error) {
       if (!mounted) return;
       AppFeedbackService.error(context, error);
@@ -212,7 +213,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              title: const Text('Chỉnh sửa profile'),
+              title: const Text('Chỉnh sửa hồ sơ'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -226,14 +227,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: 10),
                     TextField(
                       controller: usernameController,
-                      decoration: const InputDecoration(labelText: 'Username'),
+                      decoration: const InputDecoration(labelText: 'Tên ngắn'),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: bioController,
                       minLines: 2,
                       maxLines: 4,
-                      decoration: const InputDecoration(labelText: 'Bio'),
+                      decoration: const InputDecoration(
+                        labelText: 'Giới thiệu ngắn',
+                      ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
@@ -246,13 +249,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       value: isPublic,
                       onChanged: (value) =>
                           setStateDialog(() => isPublic = value),
-                      title: const Text('Profile công khai'),
+                      title: const Text('Hiển thị hồ sơ công khai'),
                     ),
                     SwitchListTile(
                       value: allowTimetable,
                       onChanged: (value) =>
                           setStateDialog(() => allowTimetable = value),
-                      title: const Text('Cho bạn bè xem thời khóa biểu'),
+                      title: const Text('Cho phép bạn bè xem lịch học'),
                     ),
                     SwitchListTile(
                       value: hideStats,
@@ -264,7 +267,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       value: hideStreak,
                       onChanged: (value) =>
                           setStateDialog(() => hideStreak = value),
-                      title: const Text('Ẩn streak'),
+                      title: const Text('Ẩn chuỗi học tập'),
                     ),
                   ],
                 ),
@@ -295,7 +298,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             Navigator.pop(context);
                             AppFeedbackService.success(
                               this.context,
-                              'Đã cập nhật hồ sơ',
+                              'Đã cập nhật hồ sơ.',
                             );
                           } catch (error) {
                             if (!mounted) return;
@@ -314,17 +317,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Future<void> _syncNow() async {
-    setState(() => _syncing = true);
+  Future<void> _refreshNow() async {
+    setState(() => _refreshing = true);
     try {
       await ref.read(widgetSyncActionsProvider).syncNow();
       if (!mounted) return;
-      AppFeedbackService.success(context, 'Đã đồng bộ dữ liệu');
+      AppFeedbackService.success(context, 'Dữ liệu của bạn đã được cập nhật.');
     } catch (error) {
       if (!mounted) return;
       AppFeedbackService.error(context, error);
     } finally {
-      if (mounted) setState(() => _syncing = false);
+      if (mounted) setState(() => _refreshing = false);
     }
   }
 
@@ -333,7 +336,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (service == null) return;
     final file = await service.exportUserDataToJson();
     await SharePlus.instance.share(
-      ShareParams(files: [XFile(file.path)], text: 'Backup Thời Khóa Biểu'),
+      ShareParams(
+        files: [XFile(file.path)],
+        text: 'Bản sao lưu Thời Khóa Biểu',
+      ),
     );
   }
 
@@ -431,16 +437,18 @@ class _ProfileHeroCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _Metric(
-                  label: 'Streak',
-                  value: user.hideStreak ? 'Ẩn' : '${user.studyStreak} ngày',
+                  label: 'Chuỗi học tập',
+                  value: user.hideStreak
+                      ? 'Đang ẩn'
+                      : '${user.studyStreak} ngày',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _Metric(
-                  label: 'Giờ tuần',
+                  label: 'Giờ mỗi tuần',
                   value: user.hideStatistics
-                      ? 'Ẩn'
+                      ? 'Đang ẩn'
                       : weeklyHours.toStringAsFixed(1),
                 ),
               ),

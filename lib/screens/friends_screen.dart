@@ -40,7 +40,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     final searchResults = ref.watch(friendSearchProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Friends')),
+      appBar: AppBar(title: const Text('Bạn bè')),
       body: SoftGradientBackground(
         child: SafeArea(
           child: ListView(
@@ -52,13 +52,13 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Xây nhóm học tập riêng của bạn.',
+                      'Kết nối cùng bạn bè học tập.',
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Tìm bạn, gửi lời mời, so streak và chia sẻ lịch học với một giao diện nhẹ như iOS.',
+                      'Tìm bạn, gửi lời mời và chia sẻ nhịp học mỗi tuần trong một không gian thật gọn gàng.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.textSecondary,
@@ -68,7 +68,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     TextField(
                       controller: _searchController,
                       decoration: const InputDecoration(
-                        labelText: 'Tìm theo tên, username hoặc email',
+                        labelText: 'Tìm theo tên, tên người dùng hoặc email',
                         prefixIcon: Icon(Icons.search_rounded),
                       ),
                       onChanged: (value) =>
@@ -83,9 +83,9 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-              _SectionTitle(
+              const _SectionTitle(
                 title: 'Lời mời đến',
-                subtitle: 'Chấp nhận để mở so sánh streak và lịch học chung.',
+                subtitle: 'Chấp nhận để kết nối và cùng theo dõi lịch học.',
               ),
               const SizedBox(height: 12),
               requests.when(
@@ -97,8 +97,9 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                 data: (items) {
                   if (items.isEmpty) {
                     return const EmptyState(
-                      title: 'Chưa có lời mời',
-                      message: 'Khi ai đó thêm bạn, lời mời sẽ hiện tại đây.',
+                      title: 'Chưa có lời mời nào',
+                      message:
+                          'Khi ai đó gửi lời mời kết bạn, bạn sẽ thấy tại đây.',
                     );
                   }
                   return Column(
@@ -109,15 +110,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                 },
               ),
               const SizedBox(height: 18),
-              _SectionTitle(
+              const _SectionTitle(
                 title: 'Kết quả tìm kiếm',
-                subtitle: 'Gửi lời mời với một chạm.',
+                subtitle: 'Gửi lời mời chỉ với một chạm.',
               ),
               const SizedBox(height: 12),
               searchResults.when(
                 loading: () => const LoadingSkeleton(itemCount: 2),
                 error: (error, _) => EmptyState(
-                  title: 'Không tìm được người dùng',
+                  title: 'Không tìm thấy người dùng',
                   message: AppFeedbackService.messageFor(error),
                 ),
                 data: (items) {
@@ -127,7 +128,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   if (items.isEmpty) {
                     return const EmptyState(
                       title: 'Không có kết quả phù hợp',
-                      message: 'Thử tìm bằng username hoặc email đầy đủ hơn.',
+                      message:
+                          'Thử tìm bằng tên người dùng hoặc email đầy đủ hơn.',
                     );
                   }
                   return Column(
@@ -138,15 +140,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                 },
               ),
               const SizedBox(height: 18),
-              _SectionTitle(
+              const _SectionTitle(
                 title: 'Bạn bè của bạn',
-                subtitle: 'Theo dõi nhịp học và các môn giao nhau.',
+                subtitle: 'Theo dõi nhịp học và những môn đang học cùng nhau.',
               ),
               const SizedBox(height: 12),
               friends.when(
                 loading: () => const LoadingSkeleton(itemCount: 2),
                 error: (error, _) => EmptyState(
-                  title: 'Không tải được danh sách bạn',
+                  title: 'Không tải được danh sách bạn bè',
                   message: AppFeedbackService.messageFor(error),
                 ),
                 data: (items) {
@@ -154,7 +156,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     return const EmptyState(
                       title: 'Chưa có bạn học nào',
                       message:
-                          'Hãy gửi lời mời đầu tiên để bắt đầu hệ social của app.',
+                          'Hãy gửi lời mời đầu tiên để bắt đầu kết nối cùng bạn bè.',
                     );
                   }
                   return Column(
@@ -233,7 +235,7 @@ class _QrProfileInvite extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'QR kết bạn của bạn',
+                  'Mã kết nối của bạn',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w900,
                   ),
@@ -433,12 +435,12 @@ class _FriendTile extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  '${friend.studyStreak} ngày streak • ${friend.weeklyHours.toStringAsFixed(1)} giờ/tuần',
+                  '${friend.studyStreak} ngày liên tục • ${friend.weeklyHours.toStringAsFixed(1)} giờ/tuần',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 if (friend.sharedSubjects.isNotEmpty)
                   Text(
-                    'Môn chung: ${friend.sharedSubjects.take(3).join(', ')}',
+                    'Môn học chung: ${friend.sharedSubjects.take(3).join(', ')}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
               ],

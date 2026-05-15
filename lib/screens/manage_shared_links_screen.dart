@@ -31,7 +31,7 @@ class _ManageSharedLinksScreenState
     final service = ref.watch(shareServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Các link đã chia sẻ')),
+      appBar: AppBar(title: const Text('Liên kết đã chia sẻ')),
       body: SoftGradientBackground(
         child: SafeArea(
           child: shares.when(
@@ -42,7 +42,7 @@ class _ManageSharedLinksScreenState
             error: (error, _) => Padding(
               padding: const EdgeInsets.all(20),
               child: EmptyState(
-                title: 'Không tải được danh sách link',
+                title: 'Không tải được danh sách',
                 message: AppFeedbackService.messageFor(error),
                 action: FilledButton.tonalIcon(
                   onPressed: () => ref.invalidate(mySharesProvider),
@@ -56,9 +56,9 @@ class _ManageSharedLinksScreenState
                 return const Padding(
                   padding: EdgeInsets.all(20),
                   child: EmptyState(
-                    title: 'Chưa có link nào',
+                    title: 'Chưa có liên kết nào',
                     message:
-                        'Khi bạn tạo chia sẻ, link public sẽ xuất hiện tại đây để quản lý.',
+                        'Khi bạn chia sẻ thời khóa biểu, liên kết sẽ xuất hiện tại đây để tiện quản lý.',
                   ),
                 );
               }
@@ -67,9 +67,9 @@ class _ManageSharedLinksScreenState
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 children: [
                   const SectionHeader(
-                    title: 'Quản lý snapshot đã chia sẻ',
+                    title: 'Quản lý lịch đã chia sẻ',
                     subtitle:
-                        'Bật/tắt link, mở preview lại hoặc gửi share sheet từ cùng một nơi.',
+                        'Bật hoặc tắt liên kết, xem lại lịch và chia sẻ lại bất cứ lúc nào.',
                   ),
                   const SizedBox(height: 12),
                   for (final share in data)
@@ -84,7 +84,7 @@ class _ManageSharedLinksScreenState
                           : () => _runShareAction(
                               share.id,
                               () => service.shareLink(share),
-                              successMessage: 'Đã mở bảng chia sẻ',
+                              successMessage: 'Đã mở bảng chia sẻ.',
                             ),
                       onToggle: service == null
                           ? null
@@ -92,22 +92,13 @@ class _ManageSharedLinksScreenState
                               share.id,
                               () => service.setActive(share.id, value),
                               successMessage: value
-                                  ? 'Đã bật link chia sẻ'
-                                  : 'Đã tắt link chia sẻ',
+                                  ? 'Liên kết đã được bật.'
+                                  : 'Liên kết đã được tắt.',
                             ),
                       onDelete: service == null
                           ? null
                           : () => _confirmDelete(service, share),
                     ),
-                  const SizedBox(height: 22),
-                  Text(
-                    'make by minhduc',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.textSecondary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
                 ],
               );
             },
@@ -124,9 +115,9 @@ class _ManageSharedLinksScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xóa link chia sẻ?'),
+        title: const Text('Xoá liên kết chia sẻ?'),
         content: Text(
-          'Link "${share.title}" sẽ bị tắt và không còn mở được từ link công khai nữa.',
+          'Liên kết của "${share.title}" sẽ ngừng hoạt động và không thể mở lại từ bên ngoài.',
         ),
         actions: [
           TextButton(
@@ -135,7 +126,7 @@ class _ManageSharedLinksScreenState
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xóa'),
+            child: const Text('Xoá'),
           ),
         ],
       ),
@@ -144,7 +135,7 @@ class _ManageSharedLinksScreenState
     await _runShareAction(
       share.id,
       () => service.deleteShare(share.id),
-      successMessage: 'Đã xoá link chia sẻ',
+      successMessage: 'Đã xoá liên kết chia sẻ.',
     );
   }
 
@@ -156,7 +147,7 @@ class _ManageSharedLinksScreenState
     setState(() => _busyIds.add(shareId));
     final loading = AppFeedbackService.loading(
       context,
-      'Đang cập nhật link chia sẻ...',
+      'Đang cập nhật thay đổi…',
     );
     try {
       await action();
@@ -243,12 +234,12 @@ class _SharedLinkTile extends StatelessWidget {
               FilledButton.tonalIcon(
                 onPressed: busy ? null : onOpen,
                 icon: const Icon(Icons.remove_red_eye_rounded),
-                label: const Text('Preview'),
+                label: const Text('Xem trước'),
               ),
               FilledButton.tonalIcon(
                 onPressed: busy ? null : onPublicView,
                 icon: const Icon(Icons.public_rounded),
-                label: const Text('Public'),
+                label: const Text('Mở liên kết'),
               ),
               FilledButton.tonalIcon(
                 onPressed: busy || onShare == null ? null : () => onShare!(),
@@ -258,12 +249,12 @@ class _SharedLinkTile extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.ios_share_rounded),
-                label: const Text('Share'),
+                label: const Text('Chia sẻ lại'),
               ),
               FilledButton.tonalIcon(
                 onPressed: busy || onDelete == null ? null : () => onDelete!(),
                 icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('Xóa'),
+                label: const Text('Xoá'),
               ),
             ],
           ),

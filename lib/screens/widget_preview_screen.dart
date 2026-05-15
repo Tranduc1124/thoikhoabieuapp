@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/schedule_model.dart';
 import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
+import '../services/app_feedback_service.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
@@ -24,8 +25,9 @@ class WidgetPreviewScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
               const SectionHeader(
-                title: 'Home Screen Widget',
-                subtitle: 'Dữ liệu được sync local để WidgetKit đọc nhanh',
+                title: 'Xem nhanh lịch học',
+                subtitle:
+                    'Theo dõi lịch học ngay trên màn hình chính mà không cần mở app.',
               ),
               const SizedBox(height: 16),
               _SmallWidgetPreview(next: next),
@@ -37,14 +39,14 @@ class WidgetPreviewScreen extends ConsumerWidget {
               FilledButton.icon(
                 onPressed: () async {
                   await ref.read(widgetSyncActionsProvider).syncNow();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Đã sync dữ liệu widget.')),
-                    );
-                  }
+                  if (!context.mounted) return;
+                  AppFeedbackService.success(
+                    context,
+                    'Widget đã được cập nhật.',
+                  );
                 },
-                icon: const Icon(Icons.sync_rounded),
-                label: const Text('Sync widget ngay'),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Cập nhật widget'),
               ),
             ],
           ),
@@ -80,7 +82,7 @@ class _SmallWidgetPreview extends StatelessWidget {
             Icon(Icons.calendar_month_rounded, color: color),
             const Spacer(),
             Text(
-              next?.subjectName ?? 'Không có lịch hôm nay',
+              next?.subjectName ?? 'Chưa có lịch học hôm nay',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(
@@ -120,7 +122,7 @@ class _MediumWidgetPreview extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (items.isEmpty)
-            const Text('Không có lịch hôm nay')
+            const Text('Chưa có lịch học hôm nay')
           else
             for (final item in items)
               Padding(
@@ -150,7 +152,7 @@ class _LargeWidgetPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Timeline',
+            'Trong ngày',
             style: Theme.of(
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),

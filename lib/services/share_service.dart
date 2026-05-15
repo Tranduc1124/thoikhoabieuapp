@@ -157,7 +157,7 @@ class ShareService {
     await SharePlus.instance.share(
       ShareParams(
         text:
-            '${share.title}\n${buildWebLink(share.id)}\nMở trực tiếp trong app: ${share.deepLink}\nShare ID: ${share.id}',
+            '${share.title}\n${buildWebLink(share.id)}\nMở trực tiếp trong app: ${share.deepLink}',
       ),
     );
   }

@@ -25,7 +25,7 @@ class _BackendDiagnosticsScreenState extends State<BackendDiagnosticsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Backend diagnostics')),
+      appBar: AppBar(title: const Text('Kiểm tra kết nối')),
       body: SoftGradientBackground(
         child: SafeArea(
           child: FutureBuilder<BackendDiagnosticsResult>(
@@ -35,11 +35,11 @@ class _BackendDiagnosticsScreenState extends State<BackendDiagnosticsScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                 children: [
                   SectionHeader(
-                    title: 'Kiểm tra API chung',
+                    title: 'Trạng thái hiện tại',
                     subtitle:
                         snapshot.connectionState == ConnectionState.waiting
-                        ? 'Đang kiểm tra kết nối máy chủ...'
-                        : 'Không hiển thị token hoặc thông tin nhạy cảm.',
+                        ? 'Đang kiểm tra kết nối…'
+                        : 'Xem nhanh tình trạng ứng dụng và phiên đăng nhập của bạn.',
                     trailing: IconButton.filledTonal(
                       onPressed: () => setState(() {
                         _future =
@@ -56,7 +56,7 @@ class _BackendDiagnosticsScreenState extends State<BackendDiagnosticsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          for (final line in snapshot.data!.toLogLines())
+                          for (final line in snapshot.data!.toDisplayLines())
                             Padding(
                               padding: const EdgeInsets.only(bottom: 10),
                               child: Text(line),
