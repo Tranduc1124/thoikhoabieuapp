@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
+import '../providers/schedule_provider.dart';
 import '../theme/app_colors.dart';
 import 'animated_pressable.dart';
 import 'glass_card.dart';
 
-class ScheduleCard extends StatelessWidget {
+class ScheduleCard extends ConsumerWidget {
   const ScheduleCard({
     super.key,
     required this.schedule,
@@ -29,7 +31,12 @@ class ScheduleCard extends StatelessWidget {
   final VoidCallback? onDelete;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final completedExpanded = ref.watch(
+      expandedCompletedCardsProvider.select(
+        (value) => value[schedule.id] ?? false,
+      ),
+    );
     return PremiumScheduleCard(
       schedule: schedule,
       log: log,
@@ -38,6 +45,9 @@ class ScheduleCard extends StatelessWidget {
       onStart: onStart,
       onComplete: onComplete,
       onDelete: onDelete,
+      isExpandedByUser: completedExpanded,
+      onToggleCompletedCard: () =>
+          ref.read(expandedCompletedCardsProvider.notifier).toggle(schedule.id),
     );
   }
 }
@@ -52,6 +62,8 @@ class PremiumScheduleCard extends StatelessWidget {
     this.onStart,
     this.onComplete,
     this.onDelete,
+    required this.isExpandedByUser,
+    required this.onToggleCompletedCard,
   });
 
   final ScheduleModel schedule;
@@ -61,6 +73,8 @@ class PremiumScheduleCard extends StatelessWidget {
   final VoidCallback? onStart;
   final VoidCallback? onComplete;
   final VoidCallback? onDelete;
+  final bool isExpandedByUser;
+  final VoidCallback onToggleCompletedCard;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +82,8 @@ class PremiumScheduleCard extends StatelessWidget {
     final status = _status();
     final statusData = _statusData(status, context);
     final isDark = Theme.of(context).colorScheme.isDark;
+    final canCollapse = status == _ClassStatus.done;
+    final isCollapsed = canCollapse && !isExpandedByUser;
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
@@ -84,7 +100,13 @@ class PremiumScheduleCard extends StatelessWidget {
       },
       child: AnimatedPressable(
         scale: 0.985,
-        onTap: () => context.push('/schedule/${schedule.id}', extra: schedule),
+        onTap: () {
+          if (canCollapse) {
+            onToggleCompletedCard();
+            return;
+          }
+          context.push('/schedule/${schedule.id}', extra: schedule);
+        },
         child: Hero(
           tag: 'schedule-hero-${schedule.id}',
           child: GlassCard(
@@ -136,85 +158,100 @@ class PremiumScheduleCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: EdgeInsets.all(compact ? 16 : 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _Header(
-                          schedule: schedule,
-                          palette: palette,
-                          onDelete: onDelete,
-                          onConfirmDelete: () => _confirmDelete(context),
-                        ),
-                        SizedBox(height: compact ? 14 : 16),
-                        Wrap(
-                          spacing: 9,
-                          runSpacing: 9,
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: isCollapsed ? (compact ? 96 : 104) : 0,
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(compact ? 16 : 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            GlassPill(
-                              icon: Icons.access_time_rounded,
-                              label:
-                                  '${formatMinutes(schedule.startTime)} - ${formatMinutes(schedule.endTime)}',
+                            _Header(
+                              schedule: schedule,
                               palette: palette,
+                              onDelete: onDelete,
+                              onConfirmDelete: () => _confirmDelete(context),
                             ),
-                            ScheduleStatusPill(
-                              label: statusData.label,
-                              icon: statusData.icon,
-                              colors: statusData.colors,
-                              active: status == _ClassStatus.active,
-                              muted: status == _ClassStatus.done,
-                            ),
+                            if (!isCollapsed) ...[
+                              SizedBox(height: compact ? 14 : 16),
+                              Wrap(
+                                spacing: 9,
+                                runSpacing: 9,
+                                children: [
+                                  GlassPill(
+                                    icon: Icons.access_time_rounded,
+                                    label:
+                                        '${formatMinutes(schedule.startTime)} - ${formatMinutes(schedule.endTime)}',
+                                    palette: palette,
+                                  ),
+                                  ScheduleStatusPill(
+                                    label: statusData.label,
+                                    icon: statusData.icon,
+                                    colors: statusData.colors,
+                                    active: status == _ClassStatus.active,
+                                    muted: status == _ClassStatus.done,
+                                  ),
+                                ],
+                              ),
+                              if (!compact && _hasInfo) ...[
+                                const SizedBox(height: 16),
+                                Wrap(
+                                  spacing: 9,
+                                  runSpacing: 9,
+                                  children: [
+                                    if (schedule.teacher.trim().isNotEmpty)
+                                      ScheduleInfoChip(
+                                        icon: Icons.school_rounded,
+                                        label: schedule.teacher.trim(),
+                                        palette: palette,
+                                      ),
+                                    if (schedule.room.trim().isNotEmpty)
+                                      ScheduleInfoChip(
+                                        icon: Icons.location_on_rounded,
+                                        label: schedule.room.trim(),
+                                        palette: palette,
+                                      ),
+                                    if (schedule.note.trim().isNotEmpty)
+                                      ScheduleInfoChip(
+                                        icon: Icons.sticky_note_2_rounded,
+                                        label: schedule.note.trim(),
+                                        palette: palette,
+                                      ),
+                                    if (schedule.hasMapLocation)
+                                      _MapChip(
+                                        label: 'Apple Maps',
+                                        palette: palette,
+                                        onTap: () =>
+                                            _openMap(schedule.appleMapsUrl),
+                                      ),
+                                    if (schedule.hasMapLocation)
+                                      _MapChip(
+                                        label: 'Google Maps',
+                                        palette: palette,
+                                        onTap: () =>
+                                            _openMap(schedule.googleMapsUrl),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                              if (onStart != null || onComplete != null) ...[
+                                const SizedBox(height: 18),
+                                _Actions(
+                                  palette: palette,
+                                  onStart: onStart,
+                                  onComplete: onComplete,
+                                ),
+                              ],
+                            ],
                           ],
                         ),
-                        if (!compact && _hasInfo) ...[
-                          const SizedBox(height: 16),
-                          Wrap(
-                            spacing: 9,
-                            runSpacing: 9,
-                            children: [
-                              if (schedule.teacher.trim().isNotEmpty)
-                                ScheduleInfoChip(
-                                  icon: Icons.school_rounded,
-                                  label: schedule.teacher.trim(),
-                                  palette: palette,
-                                ),
-                              if (schedule.room.trim().isNotEmpty)
-                                ScheduleInfoChip(
-                                  icon: Icons.location_on_rounded,
-                                  label: schedule.room.trim(),
-                                  palette: palette,
-                                ),
-                              if (schedule.note.trim().isNotEmpty)
-                                ScheduleInfoChip(
-                                  icon: Icons.sticky_note_2_rounded,
-                                  label: schedule.note.trim(),
-                                  palette: palette,
-                                ),
-                              if (schedule.hasMapLocation)
-                                _MapChip(
-                                  label: 'Apple Maps',
-                                  palette: palette,
-                                  onTap: () => _openMap(schedule.appleMapsUrl),
-                                ),
-                              if (schedule.hasMapLocation)
-                                _MapChip(
-                                  label: 'Google Maps',
-                                  palette: palette,
-                                  onTap: () => _openMap(schedule.googleMapsUrl),
-                                ),
-                            ],
-                          ),
-                        ],
-                        if (onStart != null || onComplete != null) ...[
-                          const SizedBox(height: 18),
-                          _Actions(
-                            palette: palette,
-                            onStart: onStart,
-                            onComplete: onComplete,
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                   ),
                 ],
@@ -229,17 +266,38 @@ class PremiumScheduleCard extends StatelessWidget {
   bool get _hasInfo =>
       schedule.teacher.trim().isNotEmpty ||
       schedule.room.trim().isNotEmpty ||
-      schedule.note.trim().isNotEmpty;
+      schedule.note.trim().isNotEmpty ||
+      schedule.hasMapLocation;
 
   _ClassStatus _status() {
-    if (log?.status == StudyStatus.completed) return _ClassStatus.done;
-    if (log?.status == StudyStatus.started) return _ClassStatus.active;
+    if (_isCompletedStatus(log?.status.name)) return _ClassStatus.done;
+    if (_isActiveStatus(log?.status.name)) return _ClassStatus.active;
     final now = DateTime.now();
     if (now.weekday != schedule.dayOfWeek) return _ClassStatus.upcoming;
     final minutes = now.hour * 60 + now.minute;
-    if (minutes >= schedule.endTime) return _ClassStatus.done;
+    if (minutes > schedule.endTime) return _ClassStatus.done;
     if (minutes >= schedule.startTime) return _ClassStatus.active;
     return _ClassStatus.upcoming;
+  }
+
+  bool _isCompletedStatus(String? value) {
+    if (value == null) return false;
+    return const {
+      'completed',
+      'done',
+      'finished',
+      'đã xong',
+    }.contains(value.trim().toLowerCase());
+  }
+
+  bool _isActiveStatus(String? value) {
+    if (value == null) return false;
+    return const {
+      'started',
+      'active',
+      'in_progress',
+      'đang học',
+    }.contains(value.trim().toLowerCase());
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
@@ -247,18 +305,18 @@ class PremiumScheduleCard extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xoá lịch học?'),
+        title: const Text('Xóa lịch học?'),
         content: Text(
-          'Môn ${schedule.subjectName} sẽ được xoá khỏi thời khóa biểu của bạn.',
+          'Môn ${schedule.subjectName} sẽ được xóa khỏi thời khóa biểu của bạn.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Huỷ'),
+            child: const Text('Hủy'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xoá'),
+            child: const Text('Xóa'),
           ),
         ],
       ),
@@ -290,7 +348,7 @@ class PremiumScheduleCard extends StatelessWidget {
         colors: [Color(0xFF94A3B8), Color(0xFFCBD5E1)],
       ),
       _ClassStatus.cancelled => const _StatusData(
-        label: 'Huỷ',
+        label: 'Hủy',
         icon: Icons.cancel_rounded,
         colors: [Color(0xFFF87171), Color(0xFFFB7185)],
       ),
@@ -404,7 +462,7 @@ class _MoreMenu extends StatelessWidget {
       radius: 18,
       padding: EdgeInsets.zero,
       child: PopupMenuButton<String>(
-        tooltip: 'Tuỳ chọn',
+        tooltip: 'Tùy chọn',
         icon: Icon(
           Icons.more_horiz_rounded,
           color: colorScheme.textSecondary,
@@ -439,7 +497,7 @@ class _MoreMenu extends StatelessWidget {
                 children: [
                   Icon(Icons.delete_outline_rounded),
                   SizedBox(width: 10),
-                  Text('Xoá'),
+                  Text('Xóa'),
                 ],
               ),
             ),

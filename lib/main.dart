@@ -8,7 +8,6 @@ import 'api/api.dart';
 import 'models/profile_card_model.dart';
 import 'models/schedule_model.dart';
 import 'models/share_schedule_model.dart';
-import 'providers/auth_provider.dart';
 import 'providers/pro_feature_providers.dart';
 import 'providers/schedule_provider.dart';
 import 'screens/add_edit_schedule_screen.dart';
@@ -40,10 +39,10 @@ import 'theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Api.initialize();
-  await BackendDiagnosticsService.checkBackendStatus();
-  await NotificationService.initialize();
-  await WidgetSyncService.initialize();
   runApp(const ProviderScope(child: ThoiKhoaBieuApp()));
+  unawaited(BackendDiagnosticsService.checkBackendStatus());
+  unawaited(NotificationService.initialize());
+  unawaited(WidgetSyncService.initialize());
 }
 
 final _routerProvider = Provider<GoRouter>((ref) {
@@ -219,7 +218,7 @@ class ThoiKhoaBieuApp extends ConsumerWidget {
     ref.listen(schedulesProvider, (previous, next) {
       next.whenData((schedules) {
         final theme =
-            ref.read(appUserProvider).valueOrNull?.themeMode ?? 'system';
+            ref.read(appSettingsProvider).valueOrNull?.themeMode ?? 'system';
         WidgetSyncService.syncSchedules(schedules: schedules, themeMode: theme);
         ref.read(liveActivityActionsProvider).refresh();
         final notificationSettings = ref
@@ -247,9 +246,9 @@ class ThoiKhoaBieuApp extends ConsumerWidget {
     });
 
     final themeMode = ref
-        .watch(appUserProvider)
+        .watch(appSettingsProvider)
         .maybeWhen(
-          data: (user) => _themeModeFromString(user?.themeMode),
+          data: (settings) => _themeModeFromString(settings.themeMode),
           orElse: () => ThemeMode.system,
         );
 

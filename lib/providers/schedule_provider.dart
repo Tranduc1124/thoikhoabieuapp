@@ -82,7 +82,7 @@ class ScheduleActions {
   ScheduleRepository get _repository {
     final repository = ref.read(scheduleRepositoryProvider);
     if (repository == null) {
-      throw StateError('Bạn cần đăng nhập và kết nối máy chủ trước.');
+      throw StateError('Bạn cần đăng nhập trước khi tiếp tục.');
     }
     return repository;
   }
@@ -176,3 +176,21 @@ final weeklyStatsProvider = Provider<AsyncValue<WeeklyStats>>((ref) {
     ),
   );
 });
+
+final expandedCompletedCardsProvider =
+    StateNotifierProvider<CompletedCardExpansionController, Map<String, bool>>(
+      (ref) => CompletedCardExpansionController(),
+    );
+
+class CompletedCardExpansionController
+    extends StateNotifier<Map<String, bool>> {
+  CompletedCardExpansionController() : super(const {});
+
+  void toggle(String scheduleId) {
+    state = {...state, scheduleId: !(state[scheduleId] ?? false)};
+  }
+
+  void setExpanded(String scheduleId, bool value) {
+    state = {...state, scheduleId: value};
+  }
+}

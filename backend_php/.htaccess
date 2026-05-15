@@ -1,0 +1,72 @@
+Options -Indexes
+RewriteEngine On
+
+# Force HTTPS
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# CORS
+<IfModule mod_headers.c>
+  Header always set Access-Control-Allow-Origin "*"
+  Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-App-Key"
+  Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Handle OPTIONS
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^ - [R=204,L]
+
+# Public share routes
+RewriteRule ^shared/([A-Za-z0-9_-]+)/?$ /share/$1 [R=302,L,NC]
+RewriteRule ^share/([A-Za-z0-9_-]+)/?$ share.php?id=$1 [QSA,L,NC]
+RewriteRule ^share/?$ share.php [QSA,L,NC]
+
+# Protect sensitive files
+<FilesMatch "^(config\.php|config\.example\.php|database\.php|install\.php|\.env)$">
+  Require all denied
+</FilesMatch>
+
+# Block backup/source files
+<FilesMatch "\.(sql|bak|backup|log|ini|sh|md|env|yml|yaml|lock|txt)$">
+  Require all denied
+</FilesMatch>
+
+# Prevent hidden file access, but keep /.well-known available for future app-link files
+RewriteRule "(^|/)\.(?!well-known(?:/|$))" - [F,L]
+
+# Disable PHP execution in uploads
+RewriteRule ^uploads/.*\.(php|phtml|php3|php4|php5|phar)$ - [F,L]
+
+# API should not download
+<Files "api.php">
+  <IfModule mod_headers.c>
+    Header set Content-Type "application/json; charset=utf-8"
+    Header unset Content-Disposition
+  </IfModule>
+</Files>
+
+# Share page should render as HTML
+<Files "share.php">
+  <IfModule mod_headers.c>
+    Header set Content-Type "text/html; charset=utf-8"
+  </IfModule>
+</Files>
+
+# Block POST to api.php without app key
+RewriteCond %{REQUEST_URI} ^/api\.php$
+RewriteCond %{REQUEST_METHOD} POST
+RewriteCond %{HTTP:X-App-Key} ^$
+RewriteRule ^ - [F,L]
+
+# Upload limits
+php_value upload_max_filesize 20M
+php_value post_max_size 25M
+php_value max_execution_time 120
+php_value max_input_time 120
+
+ErrorDocument 403 /share.php?status=403
+ErrorDocument 404 /share.php?status=404
+ErrorDocument 500 /share.php?status=500

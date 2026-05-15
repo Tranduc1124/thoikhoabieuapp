@@ -80,8 +80,8 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                           color: colorScheme.primary,
                         ),
                         _PreviewPill(
-                          icon: Icons.folder_shared_rounded,
-                          label: widget.share.shareType.name,
+                          icon: Icons.public_rounded,
+                          label: 'Link web thật',
                           color: colorScheme.secondary,
                         ),
                       ],
@@ -114,7 +114,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _busy || service == null ? null : _copyLink,
                       icon: const Icon(Icons.copy_rounded),
-                      label: const Text('Sao chép liên kết'),
+                      label: const Text('Sao chép link'),
                     ),
                   ),
                 ],
@@ -144,10 +144,9 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () =>
-                          context.push('/shared/${widget.share.id}'),
-                      icon: const Icon(Icons.visibility_rounded),
-                      label: const Text('Xem liên kết'),
+                      onPressed: _busy || service == null ? null : _openWebLink,
+                      icon: const Icon(Icons.public_rounded),
+                      label: const Text('Mở liên kết'),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -175,7 +174,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
         controller: _controller,
         filename: 'thoikhoabieu_${widget.share.id}',
       );
-      await service.shareImage(file, text: widget.share.deepLink);
+      await service.shareImage(file, text: widget.share.publicUrl);
       if (!mounted) return;
       AppFeedbackService.success(context, 'Đã mở bảng chia sẻ.');
     });
@@ -195,9 +194,9 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
     final service = ref.read(shareServiceProvider);
     if (service == null) return;
     try {
-      await service.copyLink(widget.share.qrData);
+      await service.copyLink(widget.share.publicUrl);
       if (!mounted) return;
-      AppFeedbackService.success(context, 'Đã sao chép liên kết.');
+      AppFeedbackService.success(context, 'Đã sao chép link.');
     } catch (error) {
       if (!mounted) return;
       AppFeedbackService.error(context, error);
@@ -215,6 +214,19 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
       if (!mounted) return;
       AppFeedbackService.success(context, 'Đã lưu ảnh chia sẻ.');
     });
+  }
+
+  Future<void> _openWebLink() async {
+    final service = ref.read(shareServiceProvider);
+    if (service == null) return;
+    try {
+      await service.openPublicLink(widget.share.id);
+      if (!mounted) return;
+      AppFeedbackService.success(context, 'Đã mở liên kết chia sẻ.');
+    } catch (error) {
+      if (!mounted) return;
+      AppFeedbackService.error(context, error);
+    }
   }
 
   Future<void> _runBusyTask(Future<void> Function() task) async {
@@ -294,7 +306,7 @@ class _SharePoster extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           QrShareBox(
-            data: share.qrData,
+            data: share.publicUrl,
             label: 'Quét để xem hoặc thêm vào lịch của bạn',
             subtitle: share.id,
           ),

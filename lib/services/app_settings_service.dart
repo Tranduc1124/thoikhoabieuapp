@@ -8,21 +8,29 @@ class AppSettingsService {
 
   final String userId;
 
+  Future<AppSettingsModel> loadRemote() async {
+    final data = await Api.call('settings.get');
+    final settings = AppSettingsModel.fromMap(
+      Map<String, dynamic>.from((data['settings'] as Map?) ?? const {}),
+    );
+    await cache(settings);
+    return settings;
+  }
+
   Future<AppSettingsModel> load() async {
     try {
-      final data = await Api.call('settings.get');
-      final settings = AppSettingsModel.fromMap(
-        Map<String, dynamic>.from(data['settings'] as Map),
-      );
-      await _cache(settings);
-      return settings;
+      return await loadRemote();
     } catch (_) {
       return loadCached();
     }
   }
 
   Future<void> save(AppSettingsModel settings) async {
-    await _cache(settings);
+    await cache(settings);
+    await sync(settings);
+  }
+
+  Future<void> sync(AppSettingsModel settings) async {
     await Api.call('settings.update', data: settings.toMap());
   }
 
@@ -40,7 +48,7 @@ class AppSettingsService {
     );
   }
 
-  Future<void> _cache(AppSettingsModel settings) async {
+  Future<void> cache(AppSettingsModel settings) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key('themeMode'), settings.themeMode);
     await prefs.setInt(_key('accentColor'), settings.accentColor);

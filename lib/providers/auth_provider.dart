@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api.dart';
+import '../api/api_exception.dart';
 import '../models/auth_session.dart';
 import '../models/user_model.dart';
 import '../services/app_feedback_service.dart';
@@ -8,12 +10,70 @@ import '../services/app_feedback_service.dart';
 final authControllerProvider =
     AsyncNotifierProvider<AuthController, AuthSession?>(AuthController.new);
 
-final appUserProvider = FutureProvider<AppUser?>((ref) async {
-  final session = ref.watch(authControllerProvider).valueOrNull;
-  if (session == null || session.uid.isEmpty) return null;
-  final data = await Api.call('profile.get');
-  return AppUser.fromMap(Map<String, dynamic>.from(data['user'] as Map));
-});
+final appUserProvider = AsyncNotifierProvider<AppUserController, AppUser?>(
+  AppUserController.new,
+);
+
+class AppUserController extends AsyncNotifier<AppUser?> {
+  @override
+  Future<AppUser?> build() async {
+    final session = await ref.watch(authControllerProvider.future);
+    final hasToken = Api.isAuthenticated;
+    _debug('auth token exists: ${hasToken ? 'true' : 'false'}');
+    if (session == null && !hasToken) {
+      return null;
+    }
+    return _loadUser();
+  }
+
+  Future<AppUser?> refresh() => _loadUser(updateState: true);
+
+  Future<AppUser?> _loadUser({bool updateState = false}) async {
+    if (!Api.isAuthenticated) {
+      if (updateState) {
+        state = const AsyncData(null);
+      }
+      return null;
+    }
+
+    Future<Map<String, dynamic>> profileCall() => Api.profileGet();
+
+    try {
+      final data = await profileCall();
+      final userJson = Api.userPayloadFromData(data);
+      _debug('profile.get response has user ${userJson != null}');
+      if (userJson == null) {
+        throw const AppUserMessageException(
+          'Không thể tải hồ sơ của bạn lúc này.',
+        );
+      }
+      final user = AppUser.fromMap(userJson);
+      await Api.mergeUserIntoSession(user.toMap());
+      await ref.read(authControllerProvider.notifier).syncSessionWithUser(user);
+      _debug(
+        'current user id/name/email: ${user.id} / ${user.displayName} / ${user.email}',
+      );
+      if (updateState) {
+        state = AsyncData(user);
+      }
+      return user;
+    } on ApiException catch (error) {
+      _debug('API error code/message: ${error.code} / ${error.message}');
+      if (error.code == 'token_expired' ||
+          error.code == 'invalid_token' ||
+          error.statusCode == 401) {
+        await ref.read(authControllerProvider.notifier).handleSessionExpired();
+      }
+      rethrow;
+    }
+  }
+
+  void _debug(String message) {
+    if (kDebugMode) {
+      debugPrint('[AppUserController] $message');
+    }
+  }
+}
 
 class AuthController extends AsyncNotifier<AuthSession?> {
   @override
@@ -74,9 +134,30 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     );
   }
 
-  Future<void> updateThemeMode(String themeMode) async {
-    await Api.call('settings.update', data: {'themeMode': themeMode});
+  Future<void> syncSessionWithUser(AppUser user) async {
+    final current = Api.currentSession;
+    if (current == null) return;
+    final next = AuthSession(
+      uid: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.avatarUrl,
+      token: current.token,
+    );
+    final unchanged =
+        current.uid == next.uid &&
+        current.email == next.email &&
+        current.displayName == next.displayName &&
+        current.photoURL == next.photoURL;
+    if (unchanged) return;
+    await Api.mergeUserIntoSession(user.toMap());
+    state = AsyncData(next);
+  }
+
+  Future<void> handleSessionExpired() async {
+    await Api.clearSession();
     ref.invalidate(appUserProvider);
+    state = const AsyncData(null);
   }
 
   Future<void> signOut() async {

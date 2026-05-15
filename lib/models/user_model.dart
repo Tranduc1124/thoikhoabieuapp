@@ -41,19 +41,38 @@ class AppUser {
   final DateTime? updatedAt;
   final DateTime? lastSyncedAt;
 
+  String get emailPrefix {
+    final trimmed = email.trim();
+    if (trimmed.isEmpty) return '';
+    final index = trimmed.indexOf('@');
+    return index <= 0 ? trimmed : trimmed.substring(0, index);
+  }
+
+  String get displayName {
+    final candidates = [name, username, emailPrefix, 'Sinh viên'];
+    for (final item in candidates) {
+      if (item.trim().isNotEmpty) return item.trim();
+    }
+    return 'Sinh viên';
+  }
+
+  String get subtitleText {
+    if (email.trim().isNotEmpty) return email.trim();
+    if (username.trim().isNotEmpty) return username.trim();
+    return 'Sinh viên';
+  }
+
   factory AppUser.fromMap(Map<String, dynamic> data) {
     final id = (data['id'] ?? data['uid'] ?? '').toString();
-    final name = (data['name'] as String?)?.trim();
-    final username = (data['username'] as String?)?.trim();
+    final name = (data['name'] ?? data['displayName'] ?? '').toString().trim();
+    final username = (data['username'] ?? '').toString().trim();
     final rawSocialLinks =
         data['socialLinks'] as Map<String, dynamic>? ?? const {};
     return AppUser(
       id: id,
-      name: name?.isNotEmpty == true ? name! : 'Sinh viên',
-      email: (data['email'] ?? '').toString(),
-      username: username?.isNotEmpty == true
-          ? username!
-          : '@${id.padRight(6, '0').substring(0, 6)}',
+      name: name,
+      email: (data['email'] ?? '').toString().trim(),
+      username: username,
       bio: (data['bio'] ?? '').toString(),
       avatarUrl: data['avatarUrl']?.toString(),
       themeMode: (data['themeMode'] ?? 'system').toString(),
@@ -79,6 +98,7 @@ class AppUser {
     return {
       'id': id,
       'name': name,
+      'displayName': displayName,
       'email': email,
       'username': username,
       'bio': bio,

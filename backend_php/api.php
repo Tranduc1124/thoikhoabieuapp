@@ -49,6 +49,14 @@ main();
 
 function main(): void
 {
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+        $legacyAction = trim((string)($_GET['action'] ?? ''));
+        $legacyShareId = trim((string)($_GET['shareId'] ?? $_GET['id'] ?? ''));
+        if ($legacyAction === 'share.get' && $legacyShareId !== '') {
+            header('Location: ' . buildPublicShareUrl($legacyShareId), true, 302);
+            exit;
+        }
+    }
     // Browser/Safari health check.
     // This returns JSON instead of downloading the PHP file, and does not expose source code.
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
@@ -90,172 +98,232 @@ function main(): void
                 'serverTime' => gmdate(DATE_ATOM),
                 'baseUrl' => APP_BASE_URL,
             ]);
+            return;
 
         case 'auth.register':
             handleAuthRegister($pdo, $data);
-            break;
+            return;
         case 'auth.login':
             handleAuthLogin($pdo, $data);
-            break;
+            return;
         case 'auth.logout':
             handleAuthLogout($pdo);
-            break;
+            return;
         case 'auth.me':
             ok(['user' => serializeUser(requireAuth($pdo))]);
+            return;
         case 'auth.resetPassword':
             ok([], 'Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.');
+            return;
 
         case 'profile.get':
             ok(['user' => serializeUser(requireAuth($pdo))]);
+            return;
         case 'profile.update':
             handleProfileUpdate($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'profile.uploadAvatar':
             handleAvatarUpload($pdo, requireAuth($pdo));
-            break;
+            return;
 
-        case 'schedule.list':
-            ok(['schedules' => listSchedules($pdo, requireAuth($pdo)['id'])]);
-        case 'schedule.today':
-            ok(['schedules' => listSchedules($pdo, requireAuth($pdo)['id'], (int)date('N'))]);
-        case 'schedule.week':
-            ok(['schedules' => listSchedules($pdo, requireAuth($pdo)['id'])]);
+        case 'schedule.list': {
+            $user = requireAuth($pdo);
+            ok(['schedules' => listSchedules($pdo, (int)$user['id'])]);
+            return;
+        }
+        case 'schedule.today': {
+            $user = requireAuth($pdo);
+            ok(['schedules' => listSchedules($pdo, (int)$user['id'], (int)date('N'))]);
+            return;
+        }
+        case 'schedule.week': {
+            $user = requireAuth($pdo);
+            ok(['schedules' => listSchedules($pdo, (int)$user['id'])]);
+            return;
+        }
         case 'schedule.create':
             handleScheduleCreate($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'schedule.update':
             handleScheduleUpdate($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'schedule.delete':
             handleScheduleDelete($pdo, requireAuth($pdo), $data);
-            break;
+            return;
 
-        case 'task.list':
-            ok(['tasks' => listTaskRows($pdo, requireAuth($pdo)['id'])]);
+        case 'task.list': {
+            $user = requireAuth($pdo);
+            ok(['tasks' => listTaskRows($pdo, (int)$user['id'])]);
+            return;
+        }
         case 'task.create':
             handleTaskUpsert($pdo, requireAuth($pdo), $data, false);
-            break;
+            return;
         case 'task.update':
             handleTaskUpsert($pdo, requireAuth($pdo), $data, true);
-            break;
+            return;
         case 'task.delete':
             handleTaskDelete($pdo, requireAuth($pdo), $data);
-            break;
+            return;
 
-        case 'exam.list':
-            ok(['exams' => listExamRows($pdo, requireAuth($pdo)['id'])]);
+        case 'exam.list': {
+            $user = requireAuth($pdo);
+            ok(['exams' => listExamRows($pdo, (int)$user['id'])]);
+            return;
+        }
         case 'exam.create':
             handleExamUpsert($pdo, requireAuth($pdo), $data, false);
-            break;
+            return;
         case 'exam.update':
             handleExamUpsert($pdo, requireAuth($pdo), $data, true);
-            break;
+            return;
         case 'exam.delete':
             handleExamDelete($pdo, requireAuth($pdo), $data);
-            break;
+            return;
 
         case 'studyLog.list':
             handleStudyLogList($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'studyLog.create':
         case 'studyLog.update':
             handleStudyLogUpsert($pdo, requireAuth($pdo), $data);
-            break;
+            return;
 
-        case 'settings.get':
-            ok(['settings' => getSettingsSection($pdo, requireAuth($pdo)['id'], 'app_settings_json')]);
+        case 'settings.get': {
+            $user = requireAuth($pdo);
+            ok(['settings' => getSettingsSection($pdo, (int)$user['id'], 'app_settings_json')]);
+            return;
+        }
         case 'settings.update':
             handleSettingsUpdate($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'notification.settings':
             handleSettingsSection($pdo, requireAuth($pdo), $data, 'notification_settings_json', 'settings');
-            break;
+            return;
         case 'widget.settings':
             handleSettingsSection($pdo, requireAuth($pdo), $data, 'widget_settings_json', 'settings');
-            break;
+            return;
         case 'widget.sync':
             ok(['syncedAt' => gmdate(DATE_ATOM)], 'Đã đồng bộ widget.');
+            return;
         case 'dynamicIsland.settings':
             handleSettingsSection($pdo, requireAuth($pdo), $data, 'dynamic_island_settings_json', 'settings');
-            break;
+            return;
         case 'dynamicIsland.sync':
             ok(['syncedAt' => gmdate(DATE_ATOM)], 'Đã đồng bộ Dynamic Island.');
+            return;
         case 'notification.sync':
             ok(['syncedAt' => gmdate(DATE_ATOM)], 'Đã đồng bộ thông báo.');
+            return;
+
+        case 'stats.summary':
+        case 'stats.week': {
+            $user = requireAuth($pdo);
+            $schedules = listSchedules($pdo, (int)$user['id']);
+            $totalMinutes = 0;
+            $subjectStats = [];
+            $dailyMinutes = array_fill(1, 7, 0);
+            foreach ($schedules as $schedule) {
+                $minutes = max(0, (int)$schedule['endTime'] - (int)$schedule['startTime']);
+                $totalMinutes += $minutes;
+                $day = max(1, min(7, (int)$schedule['dayOfWeek']));
+                $dailyMinutes[$day] += $minutes;
+                $subject = (string)$schedule['subjectName'];
+                if (!isset($subjectStats[$subject])) {
+                    $subjectStats[$subject] = [
+                        'subjectName' => $subject,
+                        'minutes' => 0,
+                        'classCount' => 0,
+                    ];
+                }
+                $subjectStats[$subject]['minutes'] += $minutes;
+                $subjectStats[$subject]['classCount']++;
+            }
+            ok([
+                'totalHours' => round($totalMinutes / 60, 1),
+                'totalMinutes' => $totalMinutes,
+                'completedPercent' => 0,
+                'todayClassCount' => count(listSchedules($pdo, (int)$user['id'], (int)date('N'))),
+                'weekClassCount' => count($schedules),
+                'subjectStats' => array_values($subjectStats),
+                'dailyMinutes' => array_values($dailyMinutes),
+            ]);
+            return;
+        }
 
         case 'share.create':
             handleShareCreate($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'share.get':
             handleShareGet($pdo, $data, $viewer);
-            break;
+            return;
         case 'share.update':
             handleShareUpdate($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'share.delete':
             handleShareDelete($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'share.import':
             handleShareImport($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'share.myLinks':
             handleMyShares($pdo, requireAuth($pdo));
-            break;
+            return;
 
         case 'friend.list':
             handleFriendList($pdo, requireAuth($pdo));
-            break;
+            return;
         case 'friend.requests':
             handleFriendRequests($pdo, requireAuth($pdo));
-            break;
+            return;
         case 'friend.search':
             handleFriendSearch($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'friend.request':
             handleFriendRequest($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'friend.accept':
             handleFriendAccept($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'friend.reject':
             handleFriendReject($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'friend.remove':
             handleFriendRemove($pdo, requireAuth($pdo), $data);
-            break;
+            return;
 
         case 'location.list':
             handleLocationList($pdo, requireAuth($pdo));
-            break;
+            return;
         case 'location.create':
         case 'location.update':
             handleLocationUpsert($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'location.delete':
             handleLocationDelete($pdo, requireAuth($pdo), $data);
-            break;
+            return;
 
         case 'profileCard.create':
             handleProfileCardCreate($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         case 'profileCard.list':
             handleProfileCardList($pdo, requireAuth($pdo));
-            break;
+            return;
         case 'profileCard.get':
             handleProfileCardGet($pdo, $data);
-            break;
+            return;
 
         case 'backup.export':
             handleBackupExport($pdo, requireAuth($pdo));
-            break;
+            return;
         case 'backup.import':
             handleBackupImport($pdo, requireAuth($pdo), $data);
-            break;
+            return;
         default:
             fail('invalid_action', 'Action API không được hỗ trợ.', 404);
+            return;
     }
 }
-
 function parseRequest(): array
 {
     $contentType = strtolower((string)($_SERVER['CONTENT_TYPE'] ?? ''));
@@ -853,18 +921,39 @@ function serializeStudyLog(array $row): array
     ];
 }
 
+function buildPublicShareUrl(string $shareId): string
+{
+    return rtrim((string)APP_BASE_URL, '/') . '/share/' . rawurlencode($shareId);
+}
+
+function buildAppShareUrl(string $shareId): string
+{
+    return 'thoikhoabieu://share/' . rawurlencode($shareId);
+}
+
+function isShareExpired(array $row): bool
+{
+    if (empty($row['expires_at'])) {
+        return false;
+    }
+    $expiresAt = strtotime((string)$row['expires_at']);
+    return $expiresAt !== false && $expiresAt <= time();
+}
+
 function serializeShare(array $row): array
 {
+    $shareId = (string)$row['share_id'];
     return [
-        'id' => (string)$row['share_id'],
+        'id' => $shareId,
         'ownerId' => (string)$row['owner_uid'],
         'ownerName' => (string)$row['owner_name'],
         'title' => (string)$row['title'],
         'shareType' => (string)$row['share_type'],
         'schedules' => decodeJsonList((string)$row['schedules_json']),
         'subjects' => decodeJsonList((string)$row['subjects_json']),
-        'deepLink' => (string)$row['deep_link'],
-        'qrData' => (string)$row['qr_data'],
+        'deepLink' => buildAppShareUrl($shareId),
+        'qrData' => buildPublicShareUrl($shareId),
+        'publicUrl' => buildPublicShareUrl($shareId),
         'isActive' => (int)$row['is_active'] === 1,
         'theme' => (string)$row['theme'],
         'viewCount' => (int)$row['view_count'],
@@ -1503,6 +1592,8 @@ function handleShareCreate(PDO $pdo, array $user, array $data): void
             expires_at = VALUES(expires_at),
             updated_at = NOW()'
     );
+    $data['ownerName'] = trim((string)($data['ownerName'] ?? $user['name'])) ?: 'Sinh viên';
+    $data['title'] = trim((string)($data['title'] ?? 'Thời khóa biểu')) ?: 'Thời khóa biểu';
     $stmt->execute([
         'share_id' => $shareId,
         'owner_id' => $user['id'],
@@ -1511,8 +1602,8 @@ function handleShareCreate(PDO $pdo, array $user, array $data): void
         'title' => trim((string)($data['title'] ?? 'Thời khóa biểu')) ?: 'Thời khóa biểu',
         'share_type' => trim((string)($data['shareType'] ?? 'week')) ?: 'week',
         'theme' => trim((string)($data['theme'] ?? 'liquidGlass')) ?: 'liquidGlass',
-        'deep_link' => trim((string)($data['deepLink'] ?? ('thoikhoabieu://share/' . $shareId))),
-        'qr_data' => trim((string)($data['qrData'] ?? (rtrim(APP_BASE_URL, '/') . '/shared/' . $shareId))),
+        'deep_link' => buildAppShareUrl($shareId),
+        'qr_data' => buildPublicShareUrl($shareId),
         'subjects_json' => jsonEncode(is_array($data['subjects'] ?? null) ? $data['subjects'] : []),
         'schedules_json' => jsonEncode(is_array($data['schedules'] ?? null) ? $data['schedules'] : []),
         'timetable_data_json' => jsonEncode(is_array($data['timetableData'] ?? null) ? $data['timetableData'] : []),
@@ -1533,7 +1624,7 @@ function handleShareGet(PDO $pdo, array $data, ?array $viewer): void
     }
     $row = findShareRow($pdo, $shareId);
     $ownerView = $viewer && (int)$row['owner_id'] === (int)$viewer['id'];
-    if (!$ownerView && ((int)$row['is_active'] !== 1 || !empty($row['deleted_at']))) {
+    if (!$ownerView && ((int)$row['is_active'] !== 1 || !empty($row['deleted_at']) || isShareExpired($row))) {
         fail('not_found', 'Link chia sẻ đã bị xoá hoặc không còn hoạt động.', 404);
     }
     if (!$ownerView) {
@@ -1556,7 +1647,7 @@ function handleShareUpdate(PDO $pdo, array $user, array $data): void
     }
     $fields = [];
     $params = ['share_id' => $shareId];
-    foreach (['title' => 'title', 'theme' => 'theme', 'deepLink' => 'deep_link', 'qrData' => 'qr_data', 'profilePhoto' => 'profile_photo'] as $key => $column) {
+    foreach (['title' => 'title', 'theme' => 'theme', 'profilePhoto' => 'profile_photo'] as $key => $column) {
         if (array_key_exists($key, $data)) {
             $fields[] = $column . ' = :' . $key;
             $params[$key] = nullableString($data[$key]);
@@ -1601,6 +1692,14 @@ function handleShareDelete(PDO $pdo, array $user, array $data): void
 
 function handleShareImport(PDO $pdo, array $user, array $data): void
 {
+    $shareId = trim((string)($data['shareId'] ?? ''));
+    if ($shareId === '') {
+        fail('invalid_input', 'Thiếu mã chia sẻ.');
+    }
+    $share = findShareRow($pdo, $shareId);
+    if ((int)($share['is_active'] ?? 0) !== 1 || !empty($share['deleted_at']) || isShareExpired($share)) {
+        fail('not_found', 'Link chia sẻ đã bị xóa hoặc không còn hoạt động.', 404);
+    }
     $schedules = is_array($data['schedules'] ?? null) ? $data['schedules'] : [];
     $importedCount = 0;
     foreach ($schedules as $item) {
@@ -1609,6 +1708,31 @@ function handleShareImport(PDO $pdo, array $user, array $data): void
         }
         $scheduleId = 'import_' . bin2hex(random_bytes(8));
         $payload = normalizeSchedulePayload($item, $scheduleId);
+        $duplicateCheck = $pdo->prepare(
+            'SELECT id
+             FROM schedules
+             WHERE user_id = :user_id
+               AND subject_name = :subject_name
+               AND day_of_week = :day_of_week
+               AND start_time = :start_time
+               AND end_time = :end_time
+               AND room = :room
+               AND teacher = :teacher
+               AND deleted_at IS NULL
+             LIMIT 1'
+        );
+        $duplicateCheck->execute([
+            'user_id' => $user['id'],
+            'subject_name' => $payload['subject_name'],
+            'day_of_week' => $payload['day_of_week'],
+            'start_time' => $payload['start_time'],
+            'end_time' => $payload['end_time'],
+            'room' => $payload['room'],
+            'teacher' => $payload['teacher'],
+        ]);
+        if ($duplicateCheck->fetch()) {
+            continue;
+        }
         $stmt = $pdo->prepare(
             'INSERT INTO schedules (
                 schedule_id, user_id, subject_name, day_of_week, start_time, end_time, room,

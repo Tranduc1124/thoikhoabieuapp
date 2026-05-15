@@ -1,8 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../models/auth_session.dart';
 import '../providers/auth_provider.dart';
+import '../providers/pro_feature_providers.dart';
+import '../providers/schedule_provider.dart';
+import '../providers/weather_provider.dart';
+import '../theme/app_colors.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/soft_gradient_background.dart';
 
@@ -16,6 +23,8 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  String _status = 'Đang chuẩn bị lịch học…';
+  double _progress = 0.12;
 
   @override
   void initState() {
@@ -28,11 +37,64 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _route() async {
-    await Future<void>.delayed(const Duration(milliseconds: 1250));
+    final session = await _runStep<AuthSession?>(
+      'Đang đồng bộ hồ sơ…',
+      0.34,
+      () => ref.read(authControllerProvider.future),
+      fallback: null,
+      timeout: const Duration(seconds: 2),
+    );
+
+    await _runStep<void>(
+      'Đang chuẩn bị giao diện…',
+      0.52,
+      () => ref.read(appSettingsProvider.future),
+      timeout: const Duration(seconds: 2),
+    );
+
+    if (session != null) {
+      await _runStep<void>('Đang chuẩn bị lịch học…', 0.72, () async {
+        await ref.read(appUserProvider.future);
+        await ref.read(schedulesProvider.future);
+      }, timeout: const Duration(seconds: 3));
+    }
+
+    await _runStep<void>(
+      'Đang tải thời tiết hôm nay…',
+      0.88,
+      () => ref.read(homeWeatherProvider.future),
+      timeout: const Duration(seconds: 2),
+    );
+
+    await _runStep<void>(
+      'Sẵn sàng!',
+      1,
+      () => Future<void>.delayed(const Duration(milliseconds: 260)),
+      timeout: const Duration(seconds: 1),
+    );
+
     if (!mounted) return;
-    final user = await ref.read(authControllerProvider.future);
-    if (!mounted) return;
-    context.go(user != null ? '/home' : '/login');
+    context.go(session != null ? '/home' : '/login');
+  }
+
+  Future<T?> _runStep<T>(
+    String status,
+    double progress,
+    Future<T> Function() task, {
+    T? fallback,
+    Duration timeout = const Duration(seconds: 2),
+  }) async {
+    if (mounted) {
+      setState(() {
+        _status = status;
+        _progress = progress;
+      });
+    }
+    try {
+      return await task().timeout(timeout);
+    } catch (_) {
+      return fallback;
+    }
   }
 
   @override
@@ -98,11 +160,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      'Lịch học gọn gàng, đồng bộ qua API chung',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      child: Text(
+                        _status,
+                        key: ValueKey(_status),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      ),
                     ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: 180,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: _progress,
+                          minHeight: 8,
+                          backgroundColor: colorScheme.tileSurface,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const _LoadingDots(),
                   ],
                 ),
               ),
@@ -110,6 +190,67 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LoadingDots extends StatefulWidget {
+  const _LoadingDots();
+
+  @override
+  State<_LoadingDots> createState() => _LoadingDotsState();
+}
+
+class _LoadingDotsState extends State<_LoadingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 980),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (index) {
+            final delay = index * 0.18;
+            final progress = ((_controller.value - delay) % 1).clamp(0.0, 1.0);
+            final scale = 0.82 + (1 - (progress - 0.5).abs() * 2) * 0.32;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorScheme.primary.withValues(
+                      alpha: 0.46 + scale * 0.28,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

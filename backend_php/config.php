@@ -10,4 +10,5 @@ const APP_KEY = 'thoikhoabieuapp_public_key';
 const JWT_SECRET = 'change_this_random_secret';
 const INSTALL_KEY = 'change_this_install_key';
 
-const APP_BASE_URL = 'http://minhduc.huutien.store';
+const APP_BASE_URL = 'https://minhduc.huutien.store';
+const APP_DOWNLOAD_URL = APP_BASE_URL;

@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
+import '../models/weather_now_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/schedule_provider.dart';
+import '../providers/weather_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_navigation_shell.dart';
 import '../widgets/empty_state.dart';
@@ -26,6 +28,7 @@ class HomeScreen extends ConsumerWidget {
         const <StudyLogModel>[];
     final logBySchedule = {for (final log in logs) log.scheduleId: log};
     final user = ref.watch(appUserProvider).valueOrNull;
+    final weather = ref.watch(homeWeatherProvider).valueOrNull;
 
     return AppNavigationShell(
       currentIndex: 0,
@@ -42,8 +45,9 @@ class HomeScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
                 sliver: SliverToBoxAdapter(
                   child: _Header(
-                    name: user?.name,
+                    name: user?.displayName,
                     schedules: schedules.valueOrNull ?? const [],
+                    weather: weather,
                   ),
                 ),
               ),
@@ -76,7 +80,7 @@ class HomeScreen extends ConsumerWidget {
                   error: (error, _) => SliverFillRemaining(
                     child: EmptyState(
                       title: 'Không tải được lịch',
-                      message: error.toString(),
+                      message: 'Vui lòng thử lại sau ít phút.',
                       action: FilledButton.tonalIcon(
                         onPressed: () => ref.invalidate(schedulesProvider),
                         icon: const Icon(Icons.refresh_rounded),
@@ -91,7 +95,7 @@ class HomeScreen extends ConsumerWidget {
                         child: EmptyState(
                           title: 'Hôm nay chưa có lịch học',
                           message:
-                              'Tạo môn học đầu tiên để theo dõi giờ học, phòng học, bản đồ và nhắc nhở.',
+                              'Thêm môn học đầu tiên để theo dõi giờ học, phòng học và lời nhắc thật gọn gàng.',
                           action: FilledButton.icon(
                             onPressed: () => context.push('/schedule/new'),
                             icon: const Icon(Icons.add_rounded),
@@ -123,10 +127,15 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.name, required this.schedules});
+  const _Header({
+    required this.name,
+    required this.schedules,
+    required this.weather,
+  });
 
   final String? name;
   final List<ScheduleModel> schedules;
+  final WeatherNowModel? weather;
 
   @override
   Widget build(BuildContext context) {
@@ -203,6 +212,8 @@ class _Header extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 14),
+          _WeatherBadge(weather: weather, scheduleCount: schedules.length),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -265,6 +276,82 @@ class _Header extends StatelessWidget {
     if (hour < 11) return 'Chào buổi sáng';
     if (hour < 18) return 'Chào buổi chiều';
     return 'Chào buổi tối';
+  }
+}
+
+class _WeatherBadge extends StatelessWidget {
+  const _WeatherBadge({required this.weather, required this.scheduleCount});
+
+  final WeatherNowModel? weather;
+  final int scheduleCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final text = weather?.summary ?? 'Thời tiết chưa sẵn sàng';
+    final support = weather?.supportMessage(scheduleCount);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: colorScheme.tileSurface,
+        border: Border.all(color: colorScheme.glassStrokeSubtle),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            _iconForWeather(weather?.weatherCode),
+            size: 18,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: colorScheme.textPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                if (support != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    support,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _iconForWeather(int? code) {
+    if (code == null) return Icons.wb_cloudy_rounded;
+    if ({51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82}.contains(code)) {
+      return Icons.grain_rounded;
+    }
+    if ({95, 96, 99}.contains(code)) {
+      return Icons.thunderstorm_rounded;
+    }
+    if ({45, 48}.contains(code)) {
+      return Icons.blur_on_rounded;
+    }
+    if (code == 0) return Icons.wb_sunny_rounded;
+    return Icons.cloud_queue_rounded;
   }
 }
 

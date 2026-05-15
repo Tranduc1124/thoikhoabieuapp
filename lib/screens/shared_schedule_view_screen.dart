@@ -133,7 +133,7 @@ class _SharedScheduleViewScreenState
     if (data == null) {
       return const EmptyState(
         title: 'Không tìm thấy lịch học',
-        message: 'Liên kết này không còn hoạt động hoặc đã được xoá.',
+        message: 'Link chia sẻ đã bị xóa hoặc không còn hoạt động.',
       );
     }
     if (!data.isActive) {
@@ -181,7 +181,7 @@ class _SharedScheduleViewScreenState
               ),
               const SizedBox(height: 16),
               QrShareBox(
-                data: data.qrData,
+                data: data.publicUrl,
                 label: 'Mã QR của lịch học này',
                 subtitle: data.id,
               ),

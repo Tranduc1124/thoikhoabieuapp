@@ -36,17 +36,27 @@ class DeepLinkService {
     final value = raw.trim();
     if (value.isEmpty) return null;
     final uri = Uri.tryParse(value);
-    if (uri != null && uri.pathSegments.isNotEmpty) {
-      final segments = uri.pathSegments;
-      final shareIndex = segments.indexWhere(
-        (item) => item == 'share' || item == 'shared',
-      );
-      if (shareIndex >= 0 && shareIndex + 1 < segments.length) {
-        return segments[shareIndex + 1];
+    if (uri != null) {
+      final queryShareId =
+          uri.queryParameters['shareId'] ?? uri.queryParameters['id'];
+      if (queryShareId != null && queryShareId.trim().isNotEmpty) {
+        return queryShareId.trim();
       }
-      return segments.last;
+      if (uri.pathSegments.isNotEmpty) {
+        final segments = uri.pathSegments;
+        final shareIndex = segments.indexWhere(
+          (item) => item == 'share' || item == 'shared',
+        );
+        if (shareIndex >= 0 && shareIndex + 1 < segments.length) {
+          return segments[shareIndex + 1];
+        }
+        final last = segments.last;
+        if (!last.endsWith('.php') && last != 'api.php') {
+          return last;
+        }
+      }
     }
-    return value;
+    return value.contains('/') ? null : value;
   }
 
   static void _openUri(GoRouter router, Uri uri, {required String source}) {

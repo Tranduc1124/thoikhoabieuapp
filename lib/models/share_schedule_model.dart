@@ -42,7 +42,8 @@ class ShareScheduleModel {
   final DateTime? deletedAt;
 
   List<ScheduleModel> get schedulesSnapshot => schedules;
-  String get link => deepLink;
+  String get publicUrl => qrData;
+  String get link => qrData;
   bool get isDeleted => deletedAt != null;
 
   factory ShareScheduleModel.fromMap(Map<String, dynamic> data) {
@@ -50,6 +51,13 @@ class ShareScheduleModel {
         (data['schedules'] ?? data['schedulesSnapshot']) as List?;
     final rawSubjects = data['subjects'] as List?;
     final id = (data['id'] ?? data['share_id'] ?? '').toString();
+    final publicUrl =
+        (data['publicUrl'] ??
+                data['public_url'] ??
+                data['qrData'] ??
+                data['qr_data'])
+            ?.toString() ??
+        'https://minhduc.huutien.store/share/$id';
     final deepLink =
         (data['deepLink'] ?? data['deep_link'])?.toString() ??
         'thoikhoabieu://share/$id';
@@ -76,7 +84,7 @@ class ShareScheduleModel {
           ? const []
           : rawSubjects.map((item) => item.toString()).toList(growable: false),
       deepLink: deepLink,
-      qrData: (data['qrData'] ?? data['qr_data'] ?? deepLink).toString(),
+      qrData: publicUrl,
       isActive: data['isActive'] as bool? ?? data['is_active'] as bool? ?? true,
       theme: (data['theme'] ?? 'liquidGlass').toString(),
       viewCount:
@@ -109,6 +117,7 @@ class ShareScheduleModel {
       },
       'qrData': qrData,
       'deepLink': deepLink,
+      'publicUrl': qrData,
       'profilePhoto': profilePhoto,
       'viewCount': viewCount,
       'expiresAt': expiresAt?.toIso8601String(),

@@ -215,7 +215,9 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
                     if (_nfcSupported) ...[
                       const SizedBox(height: 10),
                       OutlinedButton.icon(
-                        onPressed: _creating ? null : _shareViaNfc,
+                        onPressed: _creating
+                            ? null
+                            : () => _shareViaNfc(selected),
                         icon: const Icon(Icons.nfc_rounded),
                         label: const Text('Chia sẻ nhanh qua NFC'),
                       ),
@@ -251,7 +253,9 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
     }
   }
 
-  Future<void> _createShare(List<ScheduleModel> selected) async {
+  Future<ShareScheduleModel?> _prepareShare(
+    List<ScheduleModel> selected,
+  ) async {
     final service = ref.read(shareServiceProvider);
     if (service == null) {
       AppFeedbackService.error(
@@ -260,7 +264,7 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
           'Bạn cần đăng nhập trước khi chia sẻ thời khóa biểu.',
         ),
       );
-      return;
+      return null;
     }
     if (selected.isEmpty) {
       AppFeedbackService.error(
@@ -269,17 +273,21 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
           'Danh sách môn học đang trống nên chưa thể tạo chia sẻ.',
         ),
       );
-      return;
+      return null;
     }
 
+    return service.createOrUpdateShare(
+      type: _type,
+      title: _shareTitle(),
+      schedules: selected,
+    );
+  }
+
+  Future<void> _createShare(List<ScheduleModel> selected) async {
     setState(() => _creating = true);
     try {
-      final share = await service.createOrUpdateShare(
-        type: _type,
-        title: _shareTitle(),
-        schedules: selected,
-      );
-      if (!mounted) return;
+      final share = await _prepareShare(selected);
+      if (share == null || !mounted) return;
       AppFeedbackService.success(context, 'Đã tạo liên kết chia sẻ');
       context.push('/share/preview', extra: share);
     } catch (error) {
@@ -292,16 +300,21 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
     }
   }
 
-  Future<void> _shareViaNfc() async {
-    final service = ref.read(shareServiceProvider);
-    if (service == null) return;
+  Future<void> _shareViaNfc(List<ScheduleModel> selected) async {
+    setState(() => _creating = true);
     try {
-      await NfcQuickShareService.startQuickShare(
-        service.buildDeepLink('preview'),
-      );
+      final share = await _prepareShare(selected);
+      if (share == null) return;
+      await NfcQuickShareService.startQuickShare(share.publicUrl);
+      if (!mounted) return;
+      AppFeedbackService.success(context, 'Đã sẵn sàng chia sẻ qua NFC.');
     } catch (error) {
       if (!mounted) return;
       AppFeedbackService.info(context, AppFeedbackService.messageFor(error));
+    } finally {
+      if (mounted) {
+        setState(() => _creating = false);
+      }
     }
   }
 

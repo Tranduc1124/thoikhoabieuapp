@@ -35,6 +35,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     ref.listen(authControllerProvider, (previous, next) {
+      if (next.hasError &&
+          next.error != null &&
+          previous?.error != next.error &&
+          mounted) {
+        AppFeedbackService.error(context, next.error!);
+      }
       if (next.hasValue && next.value != null && mounted) {
         context.go('/home');
       }
@@ -183,7 +189,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       if (!_isRegister)
                         TextButton(
-                          onPressed: _resetPassword,
+                          onPressed: auth.isLoading ? null : _resetPassword,
                           child: const Text('Quên mật khẩu?'),
                         ),
                     ],
@@ -192,21 +198,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () => setState(() => _isRegister = !_isRegister),
+                onPressed: auth.isLoading
+                    ? null
+                    : () => setState(() => _isRegister = !_isRegister),
                 child: Text(
                   _isRegister
                       ? 'Đã có tài khoản? Đăng nhập'
                       : 'Chưa có tài khoản? Tạo ngay',
                 ),
               ),
-              if (auth.hasError) ...[
-                const SizedBox(height: 12),
-                Text(
-                  AppFeedbackService.messageFor(auth.error!),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: colorScheme.error),
-                ),
-              ],
             ],
           ),
         ),
@@ -234,19 +234,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      _showMessage('Hãy nhập email trước khi tiếp tục.');
+      AppFeedbackService.info(context, 'Hãy nhập email trước khi tiếp tục.');
       return;
     }
-    await ref.read(authControllerProvider.notifier).resetPassword(email);
-    _showMessage(
-      'Nếu email này hợp lệ, hướng dẫn khôi phục sẽ sớm được gửi đến bạn.',
-    );
-  }
-
-  void _showMessage(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    try {
+      await ref.read(authControllerProvider.notifier).resetPassword(email);
+      if (!mounted) return;
+      AppFeedbackService.success(
+        context,
+        'Nếu email này hợp lệ, hướng dẫn khôi phục sẽ sớm được gửi đến bạn.',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      AppFeedbackService.error(context, error);
+    }
   }
 }

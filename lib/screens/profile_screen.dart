@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../api/api.dart';
 import '../models/schedule_model.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
@@ -29,20 +30,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(appUserProvider).valueOrNull;
+    final userState = ref.watch(appUserProvider);
     final auth = ref.watch(authControllerProvider).valueOrNull;
     final schedules =
         ref.watch(schedulesProvider).valueOrNull ?? const <ScheduleModel>[];
     final stats = ref.watch(weeklyStatsProvider).valueOrNull;
+    final hasToken = Api.isAuthenticated;
 
-    if (user == null) {
+    if (userState.isLoading && hasToken) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (userState.hasError) {
+      return Scaffold(
+        body: EmptyState(
+          title: 'Không tải được hồ sơ',
+          message: AppFeedbackService.messageFor(userState.error!),
+          action: FilledButton.icon(
+            onPressed: () => ref.read(appUserProvider.notifier).refresh(),
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Thử lại'),
+          ),
+        ),
+      );
+    }
+
+    final user = userState.valueOrNull;
+    if (!hasToken && user == null) {
       return const Scaffold(
         body: EmptyState(
-          title: 'Chưa có hồ sơ',
+          title: 'Chưa đăng nhập',
           message:
               'Đăng nhập để lưu lại thông tin cá nhân và tiếp tục việc học của bạn.',
         ),
       );
+    }
+
+    if (hasToken && user == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -61,7 +86,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
               _ProfileHeroCard(
-                user: user,
+                user: user!,
                 schedules: schedules,
                 weeklyHours: stats?.totalHours ?? 0,
                 authPhotoUrl: auth?.photoURL,
@@ -74,7 +99,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: [
                     _InfoRow(label: 'Email', value: user.email),
                     const Divider(height: 22),
-                    _InfoRow(label: 'Tên hiển thị', value: user.username),
+                    _InfoRow(label: 'Tên hiển thị', value: user.displayName),
                     const Divider(height: 22),
                     _InfoRow(
                       label: 'Môn học yêu thích',
@@ -184,6 +209,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         hideStatistics: user.hideStatistics,
         hideStreak: user.hideStreak,
       );
+      await ref.read(appUserProvider.notifier).refresh();
       if (!mounted) return;
       AppFeedbackService.success(context, 'Đã cập nhật ảnh đại diện.');
     } catch (error) {
@@ -294,6 +320,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               hideStatistics: hideStats,
                               hideStreak: hideStreak,
                             );
+                            await ref.read(appUserProvider.notifier).refresh();
                             if (!context.mounted || !mounted) return;
                             Navigator.pop(context);
                             AppFeedbackService.success(
@@ -320,6 +347,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _refreshNow() async {
     setState(() => _refreshing = true);
     try {
+      await ref.read(appUserProvider.notifier).refresh();
       await ref.read(widgetSyncActionsProvider).syncNow();
       if (!mounted) return;
       AppFeedbackService.success(context, 'Dữ liệu của bạn đã được cập nhật.');
@@ -396,7 +424,7 @@ class _ProfileHeroCard extends StatelessWidget {
                 child: GestureDetector(
                   onTap: onAvatarTap,
                   child: AppAvatar(
-                    name: user.name,
+                    name: user.displayName,
                     primaryUrl: user.avatarUrl,
                     secondaryUrl: authPhotoUrl,
                     radius: 38,
@@ -410,12 +438,12 @@ class _ProfileHeroCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      user.name,
+                      user.displayName,
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 4),
-                    Text(user.username),
+                    Text(user.subtitleText),
                     if (user.bio.trim().isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(

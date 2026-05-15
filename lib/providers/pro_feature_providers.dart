@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api.dart';
@@ -9,6 +12,7 @@ import '../models/notification_settings_model.dart';
 import '../models/profile_card_model.dart';
 import '../models/share_schedule_model.dart';
 import '../models/user_model.dart';
+import '../services/app_feedback_service.dart';
 import '../services/app_settings_service.dart';
 import '../services/backup_service.dart';
 import '../services/classroom_location_service.dart';
@@ -24,15 +28,79 @@ import 'schedule_provider.dart';
 
 final appSettingsServiceProvider = Provider<AppSettingsService?>((ref) {
   final user = ref.watch(authControllerProvider).valueOrNull;
-  if (user == null) return null;
+  if (user == null || user.uid.isEmpty) return null;
   return AppSettingsService(userId: user.uid);
 });
 
-final appSettingsProvider = FutureProvider<AppSettingsModel>((ref) async {
-  final service = ref.watch(appSettingsServiceProvider);
-  if (service == null) return const AppSettingsModel();
-  return service.load();
-});
+final appSettingsProvider =
+    AsyncNotifierProvider<AppSettingsController, AppSettingsModel>(
+      AppSettingsController.new,
+    );
+
+class AppSettingsController extends AsyncNotifier<AppSettingsModel> {
+  @override
+  Future<AppSettingsModel> build() async {
+    final service = ref.watch(appSettingsServiceProvider);
+    if (service == null) return const AppSettingsModel();
+    final cached = await service.loadCached();
+    unawaited(_refreshRemote(service));
+    return cached;
+  }
+
+  Future<void> _refreshRemote(AppSettingsService service) async {
+    try {
+      final remote = await service.loadRemote();
+      state = AsyncData(remote);
+    } catch (_) {}
+  }
+
+  Future<void> setThemeMode(String themeMode) async {
+    final service = ref.read(appSettingsServiceProvider);
+    if (service == null) return;
+    final current = state.valueOrNull ?? await service.loadCached();
+    final next = current.copyWith(themeMode: themeMode);
+    _debug('settings theme selected: $themeMode');
+    state = AsyncData(next);
+    await service.cache(next);
+    try {
+      await service.sync(next);
+    } catch (error) {
+      throw AppUserMessageException(
+        'Đã đổi giao diện trên máy. Đồng bộ sẽ thử lại sau.',
+        debugMessage: 'sync theme failed: $error',
+        type: AppFeedbackType.warning,
+      );
+    }
+  }
+
+  Future<void> setDynamicIslandEnabled(bool enabled) async {
+    final service = ref.read(appSettingsServiceProvider);
+    if (service == null) return;
+    final current = state.valueOrNull ?? await service.loadCached();
+    final next = current.copyWith(
+      dynamicIslandEnabled: enabled,
+      liveActivitiesEnabled: enabled,
+    );
+    _debug('dynamic island selected value: $enabled');
+    state = AsyncData(next);
+    await service.cache(next);
+    try {
+      await service.sync(next);
+    } catch (error) {
+      throw AppUserMessageException(
+        'Không đồng bộ được Dynamic Island. Vui lòng thử lại.',
+        debugMessage: 'sync dynamic island failed: $error',
+        type: AppFeedbackType.warning,
+      );
+    }
+  }
+
+  void _debug(String message) {
+    if (kDebugMode) {
+      debugPrint('[AppSettingsController] $message');
+    }
+  }
+}
 
 final liveActivitySupportProvider = FutureProvider<bool>((ref) {
   return LiveActivityService.isLiveActivitySupported();
@@ -52,17 +120,13 @@ class LiveActivityActions {
   final Ref ref;
 
   Future<void> setEnabled(bool enabled) async {
-    final service = ref.read(appSettingsServiceProvider);
-    if (service == null) return;
-    final current =
-        ref.read(appSettingsProvider).valueOrNull ?? const AppSettingsModel();
-    final settings = current.copyWith(
-      dynamicIslandEnabled: enabled,
-      liveActivitiesEnabled: enabled,
-    );
-    await service.save(settings);
-    ref.invalidate(appSettingsProvider);
-    await refresh();
+    try {
+      await ref
+          .read(appSettingsProvider.notifier)
+          .setDynamicIslandEnabled(enabled);
+    } finally {
+      await refresh();
+    }
   }
 
   Future<void> refresh() async {
@@ -79,7 +143,7 @@ class LiveActivityActions {
 final notificationSettingsServiceProvider =
     Provider<NotificationSettingsService?>((ref) {
       final user = ref.watch(authControllerProvider).valueOrNull;
-      if (user == null) return null;
+      if (user == null || user.uid.isEmpty) return null;
       return NotificationSettingsService(userId: user.uid);
     });
 
@@ -145,19 +209,19 @@ class NotificationSettingsActions {
 
 final profileServiceProvider = Provider<ProfileService?>((ref) {
   final user = ref.watch(authControllerProvider).valueOrNull;
-  if (user == null) return null;
+  if (user == null || user.uid.isEmpty) return null;
   return ProfileService(userId: user.uid);
 });
 
 final backupServiceProvider = Provider<BackupService?>((ref) {
   final user = ref.watch(authControllerProvider).valueOrNull;
-  if (user == null) return null;
+  if (user == null || user.uid.isEmpty) return null;
   return BackupService(userId: user.uid);
 });
 
 final friendServiceProvider = Provider<FriendService?>((ref) {
   final user = ref.watch(authControllerProvider).valueOrNull;
-  if (user == null) return null;
+  if (user == null || user.uid.isEmpty) return null;
   return FriendService(userId: user.uid);
 });
 
@@ -165,17 +229,17 @@ final classroomLocationServiceProvider = Provider<ClassroomLocationService?>((
   ref,
 ) {
   final user = ref.watch(authControllerProvider).valueOrNull;
-  if (user == null) return null;
+  if (user == null || user.uid.isEmpty) return null;
   return ClassroomLocationService(userId: user.uid);
 });
 
 final shareServiceProvider = Provider<ShareService?>((ref) {
   final user = ref.watch(authControllerProvider).valueOrNull;
   final appUser = ref.watch(appUserProvider).valueOrNull;
-  if (user == null) return null;
+  if (user == null || user.uid.isEmpty) return null;
   return ShareService(
     userId: user.uid,
-    ownerName: appUser?.name ?? user.displayName,
+    ownerName: appUser?.displayName ?? user.displayName,
     profilePhoto: appUser?.avatarUrl ?? user.photoURL,
   );
 });
@@ -267,7 +331,8 @@ class WidgetSyncActions {
 
   Future<void> syncNow() async {
     final schedules = ref.read(schedulesProvider).valueOrNull ?? const [];
-    final theme = ref.read(appUserProvider).valueOrNull?.themeMode ?? 'system';
+    final theme =
+        ref.read(appSettingsProvider).valueOrNull?.themeMode ?? 'system';
     await WidgetSyncService.syncSchedules(
       schedules: schedules,
       themeMode: theme,

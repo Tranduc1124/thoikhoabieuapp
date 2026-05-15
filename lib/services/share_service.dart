@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
 import '../api/api.dart';
@@ -155,10 +156,7 @@ class ShareService {
 
   Future<void> shareLink(ShareScheduleModel share) async {
     await SharePlus.instance.share(
-      ShareParams(
-        text:
-            '${share.title}\n${buildWebLink(share.id)}\nMở trực tiếp trong app: ${share.deepLink}',
-      ),
+      ShareParams(text: '${share.title}\n${share.publicUrl}'),
     );
   }
 
@@ -166,9 +164,21 @@ class ShareService {
     await SharePlus.instance.share(ShareParams(files: [file], text: text));
   }
 
+  Future<void> openPublicLink(String shareIdOrLink) async {
+    final normalized = normalizeShareId(shareIdOrLink);
+    if (normalized == null) {
+      throw const AppUserMessageException('Liên kết chia sẻ không hợp lệ.');
+    }
+    final uri = Uri.parse(buildWebLink(normalized));
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened) {
+      throw const AppUserMessageException('Không thể mở liên kết chia sẻ.');
+    }
+  }
+
   String buildDeepLink(String shareId) => '$_shareScheme://share/$shareId';
 
-  String buildWebLink(String shareId) => 'http://$_shareHost/shared/$shareId';
+  String buildWebLink(String shareId) => 'https://$_shareHost/share/$shareId';
 
   static String? normalizeShareId(String input) {
     return DeepLinkService.extractShareId(input);

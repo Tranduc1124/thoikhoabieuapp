@@ -78,7 +78,20 @@ class _ManageSharedLinksScreenState
                       busy: _busyIds.contains(share.id),
                       onOpen: () =>
                           context.push('/share/preview', extra: share),
-                      onPublicView: () => context.push('/shared/${share.id}'),
+                      onPublicView: service == null
+                          ? null
+                          : () => _runShareAction(
+                              share.id,
+                              () => service.openPublicLink(share.id),
+                              successMessage: 'Đã mở liên kết chia sẻ.',
+                            ),
+                      onCopy: service == null
+                          ? null
+                          : () => _runShareAction(
+                              share.id,
+                              () => service.copyLink(share.publicUrl),
+                              successMessage: 'Đã sao chép link.',
+                            ),
                       onShare: service == null
                           ? null
                           : () => _runShareAction(
@@ -115,18 +128,18 @@ class _ManageSharedLinksScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xoá liên kết chia sẻ?'),
+        title: const Text('Xóa liên kết chia sẻ?'),
         content: Text(
           'Liên kết của "${share.title}" sẽ ngừng hoạt động và không thể mở lại từ bên ngoài.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Huỷ'),
+            child: const Text('Hủy'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xoá'),
+            child: const Text('Xóa'),
           ),
         ],
       ),
@@ -135,7 +148,7 @@ class _ManageSharedLinksScreenState
     await _runShareAction(
       share.id,
       () => service.deleteShare(share.id),
-      successMessage: 'Đã xoá liên kết chia sẻ.',
+      successMessage: 'Đã xóa liên kết chia sẻ.',
     );
   }
 
@@ -173,6 +186,7 @@ class _SharedLinkTile extends StatelessWidget {
     required this.busy,
     required this.onOpen,
     required this.onPublicView,
+    required this.onCopy,
     required this.onShare,
     required this.onToggle,
     required this.onDelete,
@@ -181,7 +195,8 @@ class _SharedLinkTile extends StatelessWidget {
   final ShareScheduleModel share;
   final bool busy;
   final VoidCallback onOpen;
-  final VoidCallback onPublicView;
+  final Future<void> Function()? onPublicView;
+  final Future<void> Function()? onCopy;
   final Future<void> Function()? onShare;
   final ValueChanged<bool>? onToggle;
   final Future<void> Function()? onDelete;
@@ -237,9 +252,16 @@ class _SharedLinkTile extends StatelessWidget {
                 label: const Text('Xem trước'),
               ),
               FilledButton.tonalIcon(
-                onPressed: busy ? null : onPublicView,
+                onPressed: busy || onPublicView == null
+                    ? null
+                    : () => onPublicView!(),
                 icon: const Icon(Icons.public_rounded),
-                label: const Text('Mở liên kết'),
+                label: const Text('Mở link'),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: busy || onCopy == null ? null : () => onCopy!(),
+                icon: const Icon(Icons.copy_rounded),
+                label: const Text('Sao chép'),
               ),
               FilledButton.tonalIcon(
                 onPressed: busy || onShare == null ? null : () => onShare!(),
@@ -254,7 +276,7 @@ class _SharedLinkTile extends StatelessWidget {
               FilledButton.tonalIcon(
                 onPressed: busy || onDelete == null ? null : () => onDelete!(),
                 icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('Xoá'),
+                label: const Text('Xóa'),
               ),
             ],
           ),

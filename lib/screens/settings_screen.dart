@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../api/api.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pro_feature_providers.dart';
+import '../services/app_feedback_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_avatar.dart';
 import '../widgets/app_navigation_shell.dart';
@@ -16,17 +18,29 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(appUserProvider).valueOrNull;
+    final userState = ref.watch(appUserProvider);
     final auth = ref.watch(authControllerProvider).valueOrNull;
-    final themeMode = user?.themeMode ?? 'system';
+    final user = userState.valueOrNull;
+    final appSettings = ref.watch(appSettingsProvider).valueOrNull;
+    final themeMode = appSettings?.themeMode ?? 'system';
     final notificationSettings = ref
         .watch(notificationSettingsProvider)
         .valueOrNull;
-    final appSettings = ref.watch(appSettingsProvider).valueOrNull;
     final liveActivitySupported =
         ref.watch(liveActivitySupportProvider).valueOrNull ?? false;
     final liveActivitySystemEnabled =
         ref.watch(liveActivitySystemEnabledProvider).valueOrNull ?? true;
+
+    final displayName = user?.displayName.isNotEmpty == true
+        ? user!.displayName
+        : auth?.displayName.isNotEmpty == true
+        ? auth!.displayName
+        : 'Sinh viên';
+    final subtitle = user?.subtitleText.isNotEmpty == true
+        ? user!.subtitleText
+        : auth?.email.isNotEmpty == true
+        ? auth!.email
+        : 'Quản lý hồ sơ của bạn';
 
     return AppNavigationShell(
       currentIndex: 4,
@@ -49,21 +63,28 @@ class SettingsScreen extends ConsumerWidget {
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: AppAvatar(
-                    name: user?.name ?? auth?.displayName ?? 'Tài khoản',
+                    name: displayName,
                     primaryUrl: user?.avatarUrl,
                     secondaryUrl: auth?.photoURL,
                     radius: 29,
                   ),
-                  title: Text(
-                    user?.name ?? auth?.email ?? 'Tài khoản',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    user?.email ?? auth?.email ?? 'Quản lý hồ sơ của bạn',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  title: userState.isLoading && Api.isAuthenticated
+                      ? const _LineSkeleton(widthFactor: 0.56)
+                      : Text(
+                          displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                  subtitle: userState.isLoading && Api.isAuthenticated
+                      ? const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: _LineSkeleton(widthFactor: 0.72),
+                        )
+                      : Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                   trailing: Icon(
                     Icons.chevron_right_rounded,
                     color: Theme.of(context).colorScheme.textSecondary,
@@ -74,7 +95,7 @@ class SettingsScreen extends ConsumerWidget {
               _SettingsSection(
                 title: 'Giao diện',
                 child: SegmentedButton<String>(
-                  key: ValueKey(themeMode),
+                  showSelectedIcon: false,
                   segments: const [
                     ButtonSegment(
                       value: 'system',
@@ -93,10 +114,19 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ],
                   selected: {themeMode},
-                  onSelectionChanged: (selection) {
-                    ref
-                        .read(authControllerProvider.notifier)
-                        .updateThemeMode(selection.first);
+                  onSelectionChanged: (selection) async {
+                    try {
+                      await ref
+                          .read(appSettingsProvider.notifier)
+                          .setThemeMode(selection.first);
+                    } catch (error) {
+                      if (context.mounted) {
+                        AppFeedbackService.warning(
+                          context,
+                          AppFeedbackService.messageFor(error),
+                        );
+                      }
+                    }
                   },
                 ),
               ),
@@ -125,9 +155,20 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: Switch(
                       value: appSettings?.dynamicIslandEnabled ?? false,
                       onChanged: liveActivitySystemEnabled
-                          ? (value) => ref
-                                .read(liveActivityActionsProvider)
-                                .setEnabled(value)
+                          ? (value) async {
+                              try {
+                                await ref
+                                    .read(liveActivityActionsProvider)
+                                    .setEnabled(value);
+                              } catch (error) {
+                                if (context.mounted) {
+                                  AppFeedbackService.warning(
+                                    context,
+                                    AppFeedbackService.messageFor(error),
+                                  );
+                                }
+                              }
+                            }
                           : null,
                     ),
                   ),
@@ -153,8 +194,7 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingTile(
                       icon: Icons.ios_share_rounded,
                       title: 'Chia sẻ thời khóa biểu',
-                      subtitle:
-                          'Tạo ảnh, mã QR và đường dẫn để gửi cho bạn bè.',
+                      subtitle: 'Tạo ảnh, mã QR và liên kết để gửi cho bạn bè.',
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/share'),
                     ),
@@ -170,7 +210,7 @@ class SettingsScreen extends ConsumerWidget {
                     _SettingTile(
                       icon: Icons.qr_code_scanner_rounded,
                       title: 'Nhập lịch được chia sẻ',
-                      subtitle: 'Mở nhanh lịch học từ đường dẫn hoặc mã QR.',
+                      subtitle: 'Mở nhanh lịch học từ liên kết hoặc mã QR.',
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/shared'),
                     ),
@@ -197,8 +237,21 @@ class SettingsScreen extends ConsumerWidget {
                       subtitle:
                           'Làm mới thông tin để widget hiển thị lịch học mới nhất.',
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () =>
-                          ref.read(widgetSyncActionsProvider).syncNow(),
+                      onTap: () async {
+                        try {
+                          await ref.read(widgetSyncActionsProvider).syncNow();
+                          if (context.mounted) {
+                            AppFeedbackService.success(
+                              context,
+                              'Widget đã được cập nhật.',
+                            );
+                          }
+                        } catch (error) {
+                          if (context.mounted) {
+                            AppFeedbackService.error(context, error);
+                          }
+                        }
+                      },
                     ),
                     const SizedBox(height: 10),
                     _SettingTile(
@@ -328,6 +381,26 @@ class _SettingTile extends StatelessWidget {
             ),
             if (trailing != null) ...[const SizedBox(width: 10), trailing!],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LineSkeleton extends StatelessWidget {
+  const _LineSkeleton({required this.widthFactor});
+
+  final double widthFactor;
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      widthFactor: widthFactor,
+      child: Container(
+        height: 12,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
       ),
     );

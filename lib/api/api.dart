@@ -2,12 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
+import 'api_exception.dart';
 import '../models/auth_session.dart';
 import '../services/app_feedback_service.dart';
-import '../services/api_error_translator.dart';
 
 class Api {
   Api._();
@@ -36,37 +37,76 @@ class Api {
       } catch (_) {
         await clearSession();
       }
+      _debug('auth token exists: ${isAuthenticated ? 'true' : 'false'}');
       return;
     }
 
-    final token = await _storage.read(key: _tokenKey);
-    if (token?.isNotEmpty == true) {
+    final savedToken = await _storage.read(key: _tokenKey);
+    if (savedToken?.isNotEmpty == true) {
       _session = AuthSession(
         uid: '',
         email: '',
         displayName: 'Sinh viên',
-        token: token!,
+        token: savedToken!,
       );
     }
+    _debug('auth token exists: ${isAuthenticated ? 'true' : 'false'}');
   }
 
   static Future<void> clearSession() async {
+    _debug('Clearing local session');
     _session = null;
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _sessionKey);
   }
 
   static Future<void> applyAuthPayload(Map<String, dynamic> data) async {
-    final token = (data['token'] ?? '').toString();
-    final user = Map<String, dynamic>.from(
-      (data['user'] as Map?)?.cast<String, dynamic>() ?? const {},
-    );
-    _session = AuthSession.fromMap({...user, 'token': token});
+    final resolvedUser = userPayloadFromData(data) ?? const <String, dynamic>{};
+    final tokenValue = (data['token'] ?? token ?? '').toString();
+    _session = AuthSession.fromMap({...resolvedUser, 'token': tokenValue});
+    await _persistSession();
+  }
+
+  static Future<void> mergeUserIntoSession(Map<String, dynamic> user) async {
+    final current = _session;
+    if (current == null) return;
+    _session = AuthSession.fromMap({
+      'uid': current.uid,
+      'id': current.uid,
+      'email': current.email,
+      'displayName': current.displayName,
+      'photoURL': current.photoURL,
+      'avatarUrl': current.photoURL,
+      'token': current.token,
+      ...user,
+    });
+    await _persistSession();
+  }
+
+  static Future<void> _persistSession() async {
+    if (_session == null) return;
     await _storage.write(key: _tokenKey, value: _session!.token);
     await _storage.write(
       key: _sessionKey,
       value: jsonEncode(_session!.toMap()),
     );
+    _debug(
+      'current user id/name/email: ${_session!.uid} / ${_session!.displayName} / ${_session!.email}',
+    );
+  }
+
+  static Map<String, dynamic>? userPayloadFromData(Map<String, dynamic> data) {
+    final directUser = data['user'];
+    if (directUser is Map) {
+      return Map<String, dynamic>.from(directUser);
+    }
+    if (data.containsKey('id') ||
+        data.containsKey('uid') ||
+        data.containsKey('email') ||
+        data.containsKey('name')) {
+      return Map<String, dynamic>.from(data);
+    }
+    return null;
   }
 
   static Future<Map<String, dynamic>> call(
@@ -90,11 +130,10 @@ class Api {
             )
             .timeout(timeout);
         return _parseResponse(response);
-      } on TimeoutException catch (error) {
+      } on TimeoutException {
         if (attempt >= retryCount) rethrow;
         attempt++;
         await Future<void>.delayed(Duration(milliseconds: 250 * attempt));
-        if (error.message == null) {}
       } on SocketException {
         if (attempt >= retryCount) rethrow;
         attempt++;
@@ -149,16 +188,21 @@ class Api {
       );
     }
 
-    if (response.statusCode == 401) {
-      unawaited(clearSession());
-    }
-
     final success = payload['success'] == true;
+    final code = (payload['code'] ?? '').toString();
+    final message = (payload['message'] ?? '').toString();
+
     if (!success) {
-      final code = (payload['code'] ?? '').toString();
-      final message = (payload['message'] ?? '').toString();
-      throw AppUserMessageException(
-        ApiErrorTranslator.readable('$code $message'),
+      _debug('API error code/message: $code / $message');
+      if (response.statusCode == 401 ||
+          code == 'token_expired' ||
+          code == 'invalid_token') {
+        unawaited(clearSession());
+      }
+      throw ApiException(
+        code: code,
+        message: message,
+        statusCode: response.statusCode,
       );
     }
 
@@ -166,6 +210,12 @@ class Api {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return Map<String, dynamic>.from(data);
     return {'result': data};
+  }
+
+  static void _debug(String message) {
+    if (kDebugMode) {
+      debugPrint('[Api] $message');
+    }
   }
 
   static Future<Map<String, dynamic>> login({

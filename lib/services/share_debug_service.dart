@@ -11,8 +11,11 @@ class ShareDebugService {
   }
 
   static bool validateQrPayload(String payload) {
-    if (payload.trim().isEmpty) return false;
-    return Uri.tryParse(payload)?.hasAbsolutePath ?? false;
+    final uri = Uri.tryParse(payload.trim());
+    if (uri == null) return false;
+    if (uri.scheme != 'https' && uri.scheme != 'http') return false;
+    return uri.pathSegments.contains('share') ||
+        uri.pathSegments.contains('shared');
   }
 
   static Future<bool> isNfcQuickShareSupported() {
@@ -29,7 +32,7 @@ class ShareDebugService {
       schedules: schedules,
       subjects: schedules.map((item) => item.subjectName).toSet().toList(),
       deepLink: 'thoikhoabieu://share/debug-preview',
-      qrData: 'https://thoikhoabieuapp.page.link/share/debug-preview',
+      qrData: 'https://minhduc.huutien.store/share/debug-preview',
       isActive: true,
       theme: 'liquidGlass',
       viewCount: 0,

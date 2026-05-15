@@ -63,7 +63,7 @@ class ProfileService {
       await Api.call('profile.update', data: data);
     } catch (error) {
       throw AppUserMessageException(
-        error.toString().replaceFirst('Exception: ', ''),
+        AppFeedbackService.messageFor(error),
         debugMessage: 'updateProfile failed: $error',
       );
     }
@@ -90,14 +90,14 @@ class ProfileService {
         didUpdate: true,
       );
     } catch (error) {
-      final message = error.toString();
+      final message = AppFeedbackService.messageFor(error);
       if (message.contains('Chưa cấu hình lưu ảnh đại diện')) {
         return const AvatarUploadResult(
-          warningMessage: 'Ảnh đại diện chưa sẵn sàng lúc này.',
+          warningMessage: 'Chưa cấu hình lưu ảnh đại diện.',
         );
       }
       throw AppUserMessageException(
-        message.replaceFirst('Exception: ', ''),
+        message,
         debugMessage: 'pickAndUploadAvatar failed: $error',
       );
     }
@@ -113,7 +113,7 @@ class ProfileService {
     final card = ProfileCardModel(
       id: cardId,
       ownerId: userId,
-      displayName: user.name,
+      displayName: user.displayName,
       username: user.username,
       bio: user.bio,
       favoriteSubject: user.favoriteSubject,
