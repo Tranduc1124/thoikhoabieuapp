@@ -1,11 +1,20 @@
+# ===========================================
+# .htaccess cho ThoiKhoaBieu App Backend PHP
+# ===========================================
+
+# Disable directory listing
 Options -Indexes
+
+# Bật rewrite engine
 RewriteEngine On
 
 # Force HTTPS
 RewriteCond %{HTTPS} !=on
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# CORS
+# ===========================================
+# CORS & Headers
+# ===========================================
 <IfModule mod_headers.c>
   Header always set Access-Control-Allow-Origin "*"
   Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-App-Key"
@@ -15,43 +24,42 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# Handle OPTIONS
+# Handle OPTIONS requests
 RewriteCond %{REQUEST_METHOD} OPTIONS
 RewriteRule ^ - [R=204,L]
 
-# Public share routes
-RewriteRule ^shared/([A-Za-z0-9_-]+)/?$ /share/$1 [R=302,L,NC]
-RewriteRule ^share/([A-Za-z0-9_-]+)/?$ share.php?id=$1 [QSA,L,NC]
-RewriteRule ^share/?$ share.php [QSA,L,NC]
-
-# Protect sensitive files
-<FilesMatch "^(config\.php|config\.example\.php|database\.php|install\.php|\.env)$">
+# ===========================================
+# Protect sensitive files (comment install.php nếu cài lần đầu)
+# ===========================================
+<FilesMatch "^(config\.php|config\.example\.php|database\.php|\.env)$">
   Require all denied
 </FilesMatch>
+
+# Nếu muốn chạy install.php lần đầu, comment dòng sau
+# <FilesMatch "install\.php$">
+#   Require all denied
+# </FilesMatch>
 
 # Block backup/source files
 <FilesMatch "\.(sql|bak|backup|log|ini|sh|md|env|yml|yaml|lock|txt)$">
   Require all denied
 </FilesMatch>
 
-# Prevent hidden file access, but keep /.well-known available for future app-link files
-RewriteRule "(^|/)\.(?!well-known(?:/|$))" - [F,L]
+# Prevent hidden files access
+RedirectMatch 403 /\..*$
 
+# ===========================================
 # Disable PHP execution in uploads
+# ===========================================
 RewriteRule ^uploads/.*\.(php|phtml|php3|php4|php5|phar)$ - [F,L]
 
-# API should not download
+# ===========================================
+# API specific rules
+# ===========================================
 <Files "api.php">
   <IfModule mod_headers.c>
     Header set Content-Type "application/json; charset=utf-8"
     Header unset Content-Disposition
-  </IfModule>
-</Files>
-
-# Share page should render as HTML
-<Files "share.php">
-  <IfModule mod_headers.c>
-    Header set Content-Type "text/html; charset=utf-8"
   </IfModule>
 </Files>
 
@@ -61,12 +69,17 @@ RewriteCond %{REQUEST_METHOD} POST
 RewriteCond %{HTTP:X-App-Key} ^$
 RewriteRule ^ - [F,L]
 
+# ===========================================
 # Upload limits
+# ===========================================
 php_value upload_max_filesize 20M
 php_value post_max_size 25M
 php_value max_execution_time 120
 php_value max_input_time 120
 
-ErrorDocument 403 /share.php?status=403
-ErrorDocument 404 /share.php?status=404
-ErrorDocument 500 /share.php?status=500
+# ===========================================
+# Custom error responses
+# ===========================================
+ErrorDocument 403 "{\"success\":false,\"message\":\"Forbidden\"}"
+ErrorDocument 404 "{\"success\":false,\"message\":\"Not found\"}"
+ErrorDocument 500 "{\"success\":false,\"message\":\"Server error\"}"

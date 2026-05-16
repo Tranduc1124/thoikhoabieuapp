@@ -29,10 +29,7 @@ final todaySchedulesProvider = Provider<AsyncValue<List<ScheduleModel>>>((ref) {
   return ref.watch(schedulesProvider).whenData((items) {
     final filtered = items
         .where((item) => item.dayOfWeek == today)
-        .where(
-          (item) =>
-              query.isEmpty || item.subjectName.toLowerCase().contains(query),
-        )
+        .where((item) => query.isEmpty || _matchesScheduleQuery(item, query))
         .toList();
     return _orderedSchedules(filtered, ref.watch(scheduleOrderProvider)[today]);
   });
@@ -46,10 +43,7 @@ final selectedDaySchedulesProvider = Provider<AsyncValue<List<ScheduleModel>>>((
   return ref.watch(schedulesProvider).whenData((items) {
     final filtered = items
         .where((item) => item.dayOfWeek == day)
-        .where(
-          (item) =>
-              query.isEmpty || item.subjectName.toLowerCase().contains(query),
-        )
+        .where((item) => query.isEmpty || _matchesScheduleQuery(item, query))
         .toList();
     return _orderedSchedules(filtered, ref.watch(scheduleOrderProvider)[day]);
   });
@@ -73,6 +67,17 @@ List<ScheduleModel> _orderedSchedules(
     if (bOrder != null) return 1;
     return a.startTime.compareTo(b.startTime);
   });
+}
+
+bool _matchesScheduleQuery(ScheduleModel item, String query) {
+  return [
+    item.subjectName,
+    item.teacher,
+    item.room,
+    item.locationAddress,
+    item.note,
+    dayName(item.dayOfWeek),
+  ].any((value) => value.toLowerCase().contains(query));
 }
 
 final todayStudyLogsProvider = FutureProvider<List<StudyLogModel>>((ref) async {

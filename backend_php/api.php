@@ -40,7 +40,26 @@ set_error_handler(
 
 set_exception_handler(
     static function (Throwable $error): void {
-        error_log('[api.php] ' . $error->getMessage() . ' @ ' . $error->getFile() . ':' . $error->getLine());
+        $details = [
+            'message' => $error->getMessage(),
+            'file' => $error->getFile(),
+            'line' => $error->getLine(),
+            'method' => $_SERVER['REQUEST_METHOD'] ?? '',
+            'uri' => $_SERVER['REQUEST_URI'] ?? '',
+        ];
+        if ($error instanceof PDOException) {
+            $details['pdo_code'] = $error->getCode();
+            $details['pdo_error_info'] = $error->errorInfo ?? [];
+        }
+        $raw = file_get_contents('php://input');
+        if (is_string($raw) && trim($raw) !== '') {
+            $payload = json_decode($raw, true);
+            if (is_array($payload)) {
+                $details['action'] = (string)($payload['action'] ?? '');
+                $details['data_keys'] = array_keys(is_array($payload['data'] ?? null) ? $payload['data'] : []);
+            }
+        }
+        error_log('[api.php] ' . json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         respond(false, [], 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.', 'server_error', 500);
     }
 );
@@ -193,6 +212,24 @@ function main(): void
         case 'studyLog.create':
         case 'studyLog.update':
             handleStudyLogUpsert($pdo, requireAuth($pdo), $data);
+            return;
+
+        case 'comment.list':
+            handleCommentList($pdo, requireAuth($pdo), $data);
+            return;
+        case 'comment.create':
+        case 'comment.update':
+            handleCommentUpsert($pdo, requireAuth($pdo), $data);
+            return;
+        case 'comment.delete':
+            handleCommentDelete($pdo, requireAuth($pdo), $data);
+            return;
+
+        case 'leaderboard.list':
+            handleLeaderboardList($pdo, requireAuth($pdo), $data);
+            return;
+        case 'leaderboard.upsert':
+            handleLeaderboardUpsert($pdo, requireAuth($pdo), $data);
             return;
 
         case 'settings.get': {
@@ -554,8 +591,14 @@ function uniqueUsername(PDO $pdo, string $name, string $email): string
     $candidate = $base;
     $suffix = 1;
     while (true) {
-        $stmt = $pdo->prepare('SELECT id FROM users WHERE username = :username OR id_user = :username LIMIT 1');
-        $stmt->execute(['username' => $candidate]);
+        $stmt = $pdo->prepare(
+            'SELECT id
+             FROM users
+             WHERE username = :username
+                OR id_user = :id_user
+             LIMIT 1'
+        );
+        $stmt->execute(['username' => $candidate, 'id_user' => $candidate]);
         if (!$stmt->fetch()) {
             return $candidate;
         }
@@ -622,6 +665,22 @@ function toSqlDateTime(mixed $value): ?string
         return null;
     }
     return date('Y-m-d H:i:s', $timestamp);
+}
+
+function toSqlDate(mixed $value): ?string
+{
+    if ($value === null) {
+        return null;
+    }
+    $string = trim((string)$value);
+    if ($string === '') {
+        return null;
+    }
+    $timestamp = strtotime($string);
+    if ($timestamp === false) {
+        return null;
+    }
+    return date('Y-m-d', $timestamp);
 }
 
 function normalizeDate(string $value): string
@@ -971,6 +1030,39 @@ function serializeStudyLog(array $row): array
     ];
 }
 
+function serializeComment(array $row): array
+{
+    return [
+        'id' => (string)$row['comment_id'],
+        'scheduleId' => (string)$row['schedule_id'],
+        'weekStart' => isoDate($row['week_start']),
+        'body' => (string)$row['body'],
+        'visibility' => (string)$row['visibility'],
+        'sharedWith' => decodeJsonList((string)($row['shared_with_json'] ?? '[]')),
+        'createdAt' => isoDateTime($row['created_at']),
+        'updatedAt' => isoDateTime($row['updated_at']),
+    ];
+}
+
+function serializeLeaderboardEntry(array $row): array
+{
+    $user = findUserById(db(), (int)$row['user_id']);
+    $idUser = trim((string)($user['id_user'] ?? '')) ?: (string)$user['username'];
+    return [
+        'id' => (string)$row['entry_id'],
+        'userId' => (string)$user['uid'],
+        'idUser' => $idUser,
+        'idProfile' => (int)($user['id_profile'] ?? $user['id']),
+        'displayName' => (string)$user['name'],
+        'avatarUrl' => nullableString($user['avatar_url']),
+        'scope' => (string)$row['scope'],
+        'subjectName' => (string)$row['subject_name'],
+        'points' => (int)$row['points'],
+        'payload' => decodeJsonObject((string)($row['payload_json'] ?? '{}')),
+        'updatedAt' => isoDateTime($row['updated_at']),
+    ];
+}
+
 function buildPublicShareUrl(string $shareId): string
 {
     return rtrim((string)APP_BASE_URL, '/') . '/share/' . rawurlencode($shareId);
@@ -1111,6 +1203,24 @@ function listStudyLogRows(PDO $pdo, int $userId): array
     return array_map('serializeStudyLog', $stmt->fetchAll());
 }
 
+function listCommentRows(PDO $pdo, int $userId, ?string $scheduleId = null, ?string $weekStart = null): array
+{
+    $sql = 'SELECT * FROM schedule_comments WHERE user_id = :user_id AND deleted_at IS NULL';
+    $params = ['user_id' => $userId];
+    if ($scheduleId !== null && $scheduleId !== '') {
+        $sql .= ' AND schedule_id = :schedule_id';
+        $params['schedule_id'] = $scheduleId;
+    }
+    if ($weekStart !== null && $weekStart !== '') {
+        $sql .= ' AND week_start = :week_start';
+        $params['week_start'] = normalizeDate($weekStart);
+    }
+    $sql .= ' ORDER BY created_at DESC';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return array_map('serializeComment', $stmt->fetchAll());
+}
+
 function listMyShareRows(PDO $pdo, int $userId): array
 {
     $stmt = $pdo->prepare('SELECT * FROM public_shares WHERE owner_id = :owner_id ORDER BY created_at DESC');
@@ -1181,8 +1291,17 @@ function handleAuthRegister(PDO $pdo, array $data): void
     $uid = 'u_' . bin2hex(random_bytes(8));
     $requestedIdUser = normalizeUsername((string)($data['idUser'] ?? $data['id_user'] ?? $data['username'] ?? ''));
     if ($requestedIdUser !== '') {
-        $idExists = $pdo->prepare('SELECT id FROM users WHERE username = :id_user OR id_user = :id_user LIMIT 1');
-        $idExists->execute(['id_user' => $requestedIdUser]);
+        $idExists = $pdo->prepare(
+            'SELECT id
+             FROM users
+             WHERE username = :username
+                OR id_user = :id_user
+             LIMIT 1'
+        );
+        $idExists->execute([
+            'username' => $requestedIdUser,
+            'id_user' => $requestedIdUser,
+        ]);
         if ($idExists->fetch()) {
             fail('already_exists', 'ID người dùng này đã được sử dụng.');
         }
@@ -1248,8 +1367,14 @@ function handleAuthLogin(PDO $pdo, array $data): void
         $stmt->execute(['id_profile' => (int)trim($login)]);
     } else {
         $idUser = normalizeUsername($login);
-        $stmt = $pdo->prepare('SELECT * FROM users WHERE id_user = :id_user OR username = :id_user LIMIT 1');
-        $stmt->execute(['id_user' => $idUser]);
+        $stmt = $pdo->prepare(
+            'SELECT *
+             FROM users
+             WHERE id_user = :id_user
+                OR username = :username
+             LIMIT 1'
+        );
+        $stmt->execute(['id_user' => $idUser, 'username' => $idUser]);
     }
     $user = $stmt->fetch();
     if (!$user || !password_verify($password, (string)$user['password_hash'])) {
@@ -1300,11 +1425,15 @@ function handleProfileUpdate(PDO $pdo, array $user, array $data): void
             $exists = $pdo->prepare(
                 'SELECT id
                  FROM users
-                 WHERE (username = :value OR id_user = :value)
+                 WHERE (username = :username OR id_user = :id_user)
                    AND id <> :id
                  LIMIT 1'
             );
-            $exists->execute(['value' => $value, 'id' => $user['id']]);
+            $exists->execute([
+                'username' => $value,
+                'id_user' => $value,
+                'id' => $user['id'],
+            ]);
             if ($exists->fetch()) {
                 fail('already_exists', 'ID người dùng này đã được sử dụng.');
             }
@@ -1654,6 +1783,112 @@ function handleStudyLogUpsert(PDO $pdo, array $user, array $data): void
         'payload_json' => jsonEncode($data),
     ]);
     ok(['studyLog' => serializeStudyLog(findStudyLogRow($pdo, (int)$user['id'], $logId))], 'Đã cập nhật nhật ký học.');
+}
+
+function handleCommentList(PDO $pdo, array $user, array $data): void
+{
+    $scheduleId = nullableString($data['scheduleId'] ?? $data['schedule_id'] ?? null);
+    $weekStart = nullableString($data['weekStart'] ?? $data['week_start'] ?? null);
+    ok(['comments' => listCommentRows($pdo, (int)$user['id'], $scheduleId, $weekStart)]);
+}
+
+function handleCommentUpsert(PDO $pdo, array $user, array $data): void
+{
+    $commentId = trim((string)($data['id'] ?? $data['commentId'] ?? '')) ?: 'comment_' . bin2hex(random_bytes(8));
+    $scheduleId = trim((string)($data['scheduleId'] ?? $data['schedule_id'] ?? 'week'));
+    $body = trim((string)($data['body'] ?? $data['note'] ?? ''));
+    if ($body === '') {
+        fail('invalid_input', 'Nội dung ghi chú không được để trống.');
+    }
+    $visibility = trim((string)($data['visibility'] ?? 'private')) ?: 'private';
+    $sharedWith = is_array($data['sharedWith'] ?? null) ? $data['sharedWith'] : [];
+    $pdo->prepare(
+        'INSERT INTO schedule_comments (
+            comment_id, user_id, schedule_id, week_start, body, visibility,
+            shared_with_json, created_at, updated_at
+         ) VALUES (
+            :comment_id, :user_id, :schedule_id, :week_start, :body, :visibility,
+            :shared_with_json, NOW(), NOW()
+         )
+         ON DUPLICATE KEY UPDATE
+            schedule_id = VALUES(schedule_id),
+            week_start = VALUES(week_start),
+            body = VALUES(body),
+            visibility = VALUES(visibility),
+            shared_with_json = VALUES(shared_with_json),
+            deleted_at = NULL,
+            updated_at = NOW()'
+    )->execute([
+        'comment_id' => $commentId,
+        'user_id' => $user['id'],
+        'schedule_id' => $scheduleId,
+        'week_start' => toSqlDate($data['weekStart'] ?? $data['week_start'] ?? null),
+        'body' => $body,
+        'visibility' => in_array($visibility, ['private', 'friends', 'family'], true) ? $visibility : 'private',
+        'shared_with_json' => jsonEncode($sharedWith),
+    ]);
+    $stmt = $pdo->prepare('SELECT * FROM schedule_comments WHERE comment_id = :comment_id AND user_id = :user_id LIMIT 1');
+    $stmt->execute(['comment_id' => $commentId, 'user_id' => $user['id']]);
+    ok(['comment' => serializeComment($stmt->fetch())], 'Đã lưu ghi chú.');
+}
+
+function handleCommentDelete(PDO $pdo, array $user, array $data): void
+{
+    $commentId = trim((string)($data['id'] ?? $data['commentId'] ?? ''));
+    if ($commentId === '') {
+        fail('invalid_input', 'Thiếu mã ghi chú.');
+    }
+    $stmt = $pdo->prepare(
+        'UPDATE schedule_comments
+         SET deleted_at = NOW(), updated_at = NOW()
+         WHERE comment_id = :comment_id AND user_id = :user_id AND deleted_at IS NULL'
+    );
+    $stmt->execute(['comment_id' => $commentId, 'user_id' => $user['id']]);
+    ok([], 'Đã xoá ghi chú.');
+}
+
+function handleLeaderboardList(PDO $pdo, array $user, array $data): void
+{
+    $scope = trim((string)($data['scope'] ?? 'week')) ?: 'week';
+    $subjectName = trim((string)($data['subjectName'] ?? $data['subject_name'] ?? ''));
+    $sql = 'SELECT * FROM leaderboard_entries WHERE scope = :scope';
+    $params = ['scope' => $scope];
+    if ($subjectName !== '') {
+        $sql .= ' AND subject_name = :subject_name';
+        $params['subject_name'] = $subjectName;
+    }
+    $sql .= ' ORDER BY points DESC, updated_at DESC LIMIT 50';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    ok(['entries' => array_map('serializeLeaderboardEntry', $stmt->fetchAll())]);
+}
+
+function handleLeaderboardUpsert(PDO $pdo, array $user, array $data): void
+{
+    $scope = trim((string)($data['scope'] ?? 'week')) ?: 'week';
+    $subjectName = trim((string)($data['subjectName'] ?? $data['subject_name'] ?? ''));
+    $points = max(0, (int)($data['points'] ?? 0));
+    $entryId = 'lb_' . hash('sha256', (string)$user['id'] . '|' . $scope . '|' . $subjectName);
+    $payload = is_array($data['payload'] ?? null) ? $data['payload'] : [];
+    $pdo->prepare(
+        'INSERT INTO leaderboard_entries (
+            entry_id, user_id, scope, subject_name, points, payload_json, updated_at
+         ) VALUES (
+            :entry_id, :user_id, :scope, :subject_name, :points, :payload_json, NOW()
+         )
+         ON DUPLICATE KEY UPDATE
+            points = VALUES(points),
+            payload_json = VALUES(payload_json),
+            updated_at = NOW()'
+    )->execute([
+        'entry_id' => $entryId,
+        'user_id' => $user['id'],
+        'scope' => $scope,
+        'subject_name' => $subjectName,
+        'points' => $points,
+        'payload_json' => jsonEncode($payload),
+    ]);
+    ok(['entryId' => $entryId], 'Đã cập nhật bảng xếp hạng.');
 }
 
 function handleShareCreate(PDO $pdo, array $user, array $data): void
@@ -2061,8 +2296,16 @@ function handleFriendRemove(PDO $pdo, array $user, array $data): void
         fail('invalid_input', 'Thiếu mã bạn bè.');
     }
     $friend = findUserByPublicIdentifier($pdo, $friendIdentifier);
-    $pdo->prepare('DELETE FROM friends WHERE (user_id = :user_id AND friend_id = :friend_id) OR (user_id = :friend_id AND friend_id = :user_id)')
-        ->execute(['user_id' => $user['id'], 'friend_id' => $friend['id']]);
+    $pdo->prepare(
+        'DELETE FROM friends
+         WHERE (user_id = :user_id AND friend_id = :friend_id)
+            OR (user_id = :reverse_user_id AND friend_id = :reverse_friend_id)'
+    )->execute([
+        'user_id' => $user['id'],
+        'friend_id' => $friend['id'],
+        'reverse_user_id' => $friend['id'],
+        'reverse_friend_id' => $user['id'],
+    ]);
     ok([], 'Đã xoá bạn bè.');
 }
 

@@ -101,8 +101,9 @@ class PremiumScheduleCard extends StatelessWidget {
         label: 'Mở chi tiết môn ${schedule.subjectName}',
         child: AnimatedPressable(
           scale: 0.985,
-          onLongPress: () =>
-              context.push('/schedule/${schedule.id}', extra: schedule),
+          onLongPress: showDragHandle
+              ? null
+              : () => context.push('/schedule/${schedule.id}', extra: schedule),
           onTap: () {
             if (canCollapse) {
               onToggleCompletedCard();

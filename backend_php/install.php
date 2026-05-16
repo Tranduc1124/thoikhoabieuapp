@@ -8,7 +8,34 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/config.php';
 
+set_exception_handler(
+    static function (Throwable $error): void {
+        $details = [
+            'message' => $error->getMessage(),
+            'file' => $error->getFile(),
+            'line' => $error->getLine(),
+            'method' => $_SERVER['REQUEST_METHOD'] ?? '',
+            'uri' => $_SERVER['REQUEST_URI'] ?? '',
+        ];
+        if ($error instanceof PDOException) {
+            $details['pdo_code'] = $error->getCode();
+            $details['pdo_error_info'] = $error->errorInfo ?? [];
+        }
+        error_log('[install.php] ' . json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Cài đặt database thất bại. Vui lòng kiểm tra error_log trên host.',
+            'code' => 'install_failed',
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+);
+
 $providedKey = trim((string)($_GET['key'] ?? ''));
+if ($providedKey === '' && PHP_SAPI === 'cli' && isset($argv[1])) {
+    $providedKey = trim((string)$argv[1]);
+}
 if ($providedKey === '' || !hash_equals(INSTALL_KEY, $providedKey)) {
     http_response_code(403);
     echo json_encode([
@@ -251,6 +278,35 @@ $queries = [
         INDEX idx_app_backups_user_id (user_id),
         CONSTRAINT fk_app_backups_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
+    'CREATE TABLE IF NOT EXISTS schedule_comments (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        comment_id VARCHAR(64) NOT NULL UNIQUE,
+        user_id BIGINT UNSIGNED NOT NULL,
+        schedule_id VARCHAR(64) NOT NULL,
+        week_start DATE NULL,
+        body TEXT NOT NULL,
+        visibility VARCHAR(32) NOT NULL DEFAULT "private",
+        shared_with_json LONGTEXT NULL,
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME NOT NULL,
+        deleted_at DATETIME NULL,
+        INDEX idx_schedule_comments_user_schedule (user_id, schedule_id),
+        INDEX idx_schedule_comments_user_week (user_id, week_start),
+        CONSTRAINT fk_schedule_comments_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
+    'CREATE TABLE IF NOT EXISTS leaderboard_entries (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        entry_id VARCHAR(64) NOT NULL UNIQUE,
+        user_id BIGINT UNSIGNED NOT NULL,
+        scope VARCHAR(32) NOT NULL DEFAULT "week",
+        subject_name VARCHAR(191) NOT NULL DEFAULT "",
+        points INT NOT NULL DEFAULT 0,
+        payload_json LONGTEXT NULL,
+        updated_at DATETIME NOT NULL,
+        UNIQUE KEY uniq_leaderboard_user_scope_subject (user_id, scope, subject_name),
+        INDEX idx_leaderboard_scope_points (scope, points),
+        CONSTRAINT fk_leaderboard_entries_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
 ];
 
 foreach ($queries as $query) {
@@ -345,10 +401,14 @@ function backfillUserPublicIds(PDO $pdo): void
         $idUser = uniqueInstallIdUser($pdo, $base, (int)$row['id']);
         $stmt = $pdo->prepare(
             'UPDATE users
-             SET id_user = :id_user, username = :id_user
+             SET id_user = :id_user, username = :username
              WHERE id = :id'
         );
-        $stmt->execute(['id_user' => $idUser, 'id' => $row['id']]);
+        $stmt->execute([
+            'id_user' => $idUser,
+            'username' => $idUser,
+            'id' => $row['id'],
+        ]);
     }
 }
 

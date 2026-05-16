@@ -284,6 +284,22 @@ class Api {
   static Future<Map<String, dynamic>> studyLogUpdate(
     Map<String, dynamic> data,
   ) => call('studyLog.update', data: data);
+  static Future<Map<String, dynamic>> commentList(Map<String, dynamic> data) =>
+      call('comment.list', data: data);
+  static Future<Map<String, dynamic>> commentCreate(
+    Map<String, dynamic> data,
+  ) => call('comment.create', data: data);
+  static Future<Map<String, dynamic>> commentUpdate(
+    Map<String, dynamic> data,
+  ) => call('comment.update', data: data);
+  static Future<Map<String, dynamic>> commentDelete(String id) =>
+      call('comment.delete', data: {'id': id});
+  static Future<Map<String, dynamic>> leaderboardList(
+    Map<String, dynamic> data,
+  ) => call('leaderboard.list', data: data);
+  static Future<Map<String, dynamic>> leaderboardUpsert(
+    Map<String, dynamic> data,
+  ) => call('leaderboard.upsert', data: data);
   static Future<Map<String, dynamic>> settingsGet() => call('settings.get');
   static Future<Map<String, dynamic>> settingsUpdate(
     Map<String, dynamic> data,

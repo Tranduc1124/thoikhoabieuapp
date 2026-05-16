@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/schedule_model.dart';
 import '../models/share_schedule_model.dart';
@@ -8,6 +9,7 @@ import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
 import '../services/app_feedback_service.dart';
 import '../services/nfc_quick_share_service.dart';
+import '../services/schedule_export_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
@@ -212,6 +214,27 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
                       icon: const Icon(Icons.download_rounded),
                       label: const Text('Mở màn nhập lịch chia sẻ'),
                     ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _creating
+                              ? null
+                              : () => _exportCsv(selected),
+                          icon: const Icon(Icons.table_chart_rounded),
+                          label: const Text('Xuat Excel CSV'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _creating
+                              ? null
+                              : () => _exportICal(selected),
+                          icon: const Icon(Icons.calendar_month_rounded),
+                          label: const Text('Xuat iCal'),
+                        ),
+                      ],
+                    ),
                     if (_nfcSupported) ...[
                       const SizedBox(height: 10),
                       OutlinedButton.icon(
@@ -311,6 +334,54 @@ class _ShareScheduleScreenState extends ConsumerState<ShareScheduleScreen> {
     } catch (error) {
       if (!mounted) return;
       AppFeedbackService.info(context, AppFeedbackService.messageFor(error));
+    } finally {
+      if (mounted) {
+        setState(() => _creating = false);
+      }
+    }
+  }
+
+  Future<void> _exportCsv(List<ScheduleModel> selected) async {
+    if (selected.isEmpty) {
+      AppFeedbackService.info(context, 'Chua co mon hoc de xuat.');
+      return;
+    }
+    setState(() => _creating = true);
+    try {
+      final file = await const ScheduleExportService().exportCsv(selected);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'text/csv')],
+          text: 'Thoi khoa bieu CSV',
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      AppFeedbackService.error(context, error);
+    } finally {
+      if (mounted) {
+        setState(() => _creating = false);
+      }
+    }
+  }
+
+  Future<void> _exportICal(List<ScheduleModel> selected) async {
+    if (selected.isEmpty) {
+      AppFeedbackService.info(context, 'Chua co mon hoc de xuat.');
+      return;
+    }
+    setState(() => _creating = true);
+    try {
+      final file = await const ScheduleExportService().exportICal(selected);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'text/calendar')],
+          text: 'Thoi khoa bieu iCal',
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      AppFeedbackService.error(context, error);
     } finally {
       if (mounted) {
         setState(() => _creating = false);
