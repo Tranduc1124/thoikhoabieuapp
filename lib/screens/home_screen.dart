@@ -11,7 +11,7 @@ import '../providers/weather_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/loading_skeleton.dart';
-import '../widgets/schedule_card.dart';
+import '../widgets/morphing_schedule_list.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
 
@@ -96,16 +96,12 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     );
                   }
-                  return SliverList.builder(
-                    itemCount: items.length,
-                    itemBuilder: (context, index) => ScheduleCard(
-                      schedule: items[index],
-                      log: logBySchedule[items[index].id],
-                      index: index,
-                      onDelete: () => ref
-                          .read(scheduleActionsProvider)
-                          .delete(items[index].id),
-                    ),
+                  return SliverMorphingScheduleList(
+                    schedules: items,
+                    logForSchedule: (schedule) => logBySchedule[schedule.id],
+                    onDelete: (schedule) => ref
+                        .read(scheduleActionsProvider)
+                        .delete(schedule.id),
                   );
                 },
               ),

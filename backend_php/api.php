@@ -1327,7 +1327,7 @@ function handleSettingsSection(PDO $pdo, array $user, array $data, string $colum
 
 function handleScheduleCreate(PDO $pdo, array $user, array $data): void
 {
-    $scheduleId = trim((string)($data['id'] ?? '')) ?: 'sch_' . bin2hex(random_bytes(8));
+    $scheduleId = trim((string)($data['id'] ?? $data['scheduleId'] ?? $data['schedule_id'] ?? '')) ?: 'sch_' . bin2hex(random_bytes(8));
     $payload = normalizeSchedulePayload($data, $scheduleId);
     $stmt = $pdo->prepare(
         'INSERT INTO schedules (
@@ -1352,7 +1352,7 @@ function handleScheduleCreate(PDO $pdo, array $user, array $data): void
 
 function handleScheduleUpdate(PDO $pdo, array $user, array $data): void
 {
-    $scheduleId = trim((string)($data['id'] ?? ''));
+    $scheduleId = trim((string)($data['id'] ?? $data['scheduleId'] ?? $data['schedule_id'] ?? ''));
     if ($scheduleId === '') {
         fail('invalid_input', 'Thiếu mã lịch học.');
     }
@@ -1376,6 +1376,7 @@ function handleScheduleUpdate(PDO $pdo, array $user, array $data): void
             repeat_weekly = :repeat_weekly,
             reminder_enabled = :reminder_enabled,
             reminder_minutes_before = :reminder_minutes_before,
+            status = :status,
             updated_at = NOW()
          WHERE user_id = :user_id AND schedule_id = :schedule_id AND deleted_at IS NULL'
     );

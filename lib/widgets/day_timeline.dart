@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/schedule_model.dart';
+import 'morphing_schedule_list.dart';
 import 'schedule_card.dart';
 
 class DayTimeline extends StatelessWidget {
@@ -142,7 +143,17 @@ class _TimelineRow extends StatelessWidget {
                       ),
                     ),
                   ),
-                ScheduleCard(schedule: schedule, compact: true, index: index),
+                MorphingScheduleCard(
+                  key: ValueKey('timeline-morph-schedule-${schedule.id}'),
+                  scheduleId: schedule.id,
+                  index: index,
+                  child: ScheduleCard(
+                    key: ValueKey('timeline-schedule-card-${schedule.id}'),
+                    schedule: schedule,
+                    compact: true,
+                    index: index,
+                  ),
+                ),
               ],
             ),
           ),

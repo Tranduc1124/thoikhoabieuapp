@@ -7,7 +7,7 @@ import '../providers/schedule_provider.dart';
 import '../services/app_feedback_service.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/loading_skeleton.dart';
-import '../widgets/schedule_card.dart';
+import '../widgets/morphing_schedule_list.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
 
@@ -51,47 +51,38 @@ class TodayScreen extends ConsumerWidget {
                 ),
               );
             }
-            return ListView(
-              key: const PageStorageKey('today-scroll'),
+            return MorphingScheduleList(
+              storageKey: const PageStorageKey('today-scroll'),
+              schedules: items,
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 112),
-              children: [
-                const SectionHeader(
-                  title: 'Lịch hôm nay',
-                  subtitle:
-                      'Theo dõi tiến độ từng buổi học và ghi chú nhanh sau giờ lên lớp',
-                ),
-                const SizedBox(height: 18),
-                for (var index = 0; index < items.length; index++)
-                  ScheduleCard(
-                    schedule: items[index],
-                    log: logBySchedule[items[index].id],
-                    index: index,
-                    onDelete: () => ref
-                        .read(scheduleActionsProvider)
-                        .delete(items[index].id),
-                    onStart: () async {
-                      await ref
-                          .read(scheduleActionsProvider)
-                          .start(items[index]);
-                      if (context.mounted) {
-                        _showMessage(
-                          context,
-                          'Đã bắt đầu ${items[index].subjectName}',
-                        );
-                      }
-                    },
-                    onComplete: () async {
-                      final note = await _noteDialog(context);
-                      if (note == null) return;
-                      await ref
-                          .read(scheduleActionsProvider)
-                          .complete(items[index], note);
-                      if (context.mounted) {
-                        _showMessage(context, 'Đã đánh dấu hoàn thành.');
-                      }
-                    },
+              headerSlivers: const [
+                SliverToBoxAdapter(
+                  child: SectionHeader(
+                    title: 'Lịch hôm nay',
+                    subtitle:
+                        'Theo dõi tiến độ từng buổi học và ghi chú nhanh sau giờ lên lớp',
                   ),
+                ),
+                SliverToBoxAdapter(child: SizedBox(height: 18)),
               ],
+              logForSchedule: (schedule) => logBySchedule[schedule.id],
+              onDelete: (schedule) => ref
+                  .read(scheduleActionsProvider)
+                  .delete(schedule.id),
+              onStart: (schedule) async {
+                await ref.read(scheduleActionsProvider).start(schedule);
+                if (context.mounted) {
+                  _showMessage(context, 'Đã bắt đầu ${schedule.subjectName}');
+                }
+              },
+              onComplete: (schedule) async {
+                final note = await _noteDialog(context);
+                if (note == null) return;
+                await ref.read(scheduleActionsProvider).complete(schedule, note);
+                if (context.mounted) {
+                  _showMessage(context, 'Đã đánh dấu hoàn thành.');
+                }
+              },
             );
           },
         ),

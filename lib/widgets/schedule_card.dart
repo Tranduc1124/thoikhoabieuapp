@@ -87,14 +87,18 @@ class PremiumScheduleCard extends StatelessWidget {
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 380 + index * 45),
+      duration: Duration(milliseconds: 300 + index.clamp(0, 6) * 25),
       curve: Curves.easeOutCubic,
       builder: (context, value, child) {
         return Opacity(
-          opacity: value,
+          opacity: value.clamp(0.0, 1.0),
           child: Transform.translate(
-            offset: Offset(0, 18 * (1 - value)),
-            child: child,
+            offset: Offset(0, 12 * (1 - value)),
+            child: Transform.scale(
+              scale: 0.98 + (0.02 * value),
+              alignment: Alignment.topCenter,
+              child: child,
+            ),
           ),
         );
       },
@@ -108,7 +112,26 @@ class PremiumScheduleCard extends StatelessWidget {
           context.push('/schedule/${schedule.id}', extra: schedule);
         },
         child: Hero(
-          tag: 'schedule-hero-${schedule.id}',
+          tag: 'schedule-card-${schedule.id}',
+          transitionOnUserGestures: true,
+          flightShuttleBuilder:
+              (context, animation, direction, fromContext, toContext) {
+                final curved = CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                  reverseCurve: Curves.easeInCubic,
+                );
+                final shuttle = direction == HeroFlightDirection.push
+                    ? toContext.widget
+                    : fromContext.widget;
+                return FadeTransition(
+                  opacity: Tween<double>(begin: 0.84, end: 1).animate(curved),
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.965, end: 1).animate(curved),
+                    child: shuttle,
+                  ),
+                );
+              },
           child: GlassCard(
             margin: EdgeInsets.only(bottom: compact ? 12 : 18),
             radius: compact ? 28 : 34,

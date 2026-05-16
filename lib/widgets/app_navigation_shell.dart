@@ -16,7 +16,45 @@ class AppNavigationShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: RepaintBoundary(child: navigationShell),
+      body: RepaintBoundary(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 360),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          layoutBuilder: (currentChild, previousChildren) {
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                ...previousChildren,
+                ?currentChild,
+              ],
+            );
+          },
+          transitionBuilder: (child, animation) {
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: AppMotion.liquid,
+            );
+            return FadeTransition(
+              opacity: Tween<double>(begin: 0.72, end: 1).animate(curved),
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.985, end: 1).animate(curved),
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.018),
+                    end: Offset.zero,
+                  ).animate(curved),
+                  child: child,
+                ),
+              ),
+            );
+          },
+          child: KeyedSubtree(
+            key: ValueKey('tab-body-${navigationShell.currentIndex}'),
+            child: navigationShell,
+          ),
+        ),
+      ),
       floatingActionButton: _buildFloatingActionButton(context),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),
