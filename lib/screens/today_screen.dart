@@ -31,138 +31,124 @@ class TodayScreen extends ConsumerWidget {
 
     return SoftGradientBackground(
       child: SafeArea(
-        child: AnimatedSwitcher(
-          duration: AppMotion.medium,
-          reverseDuration: AppMotion.fast,
-          switchInCurve: AppMotion.liquid,
-          switchOutCurve: AppMotion.exit,
-          transitionBuilder: _pageTransition,
-          child: schedules.when(
-            loading: () => const Padding(
-              key: ValueKey('today-loading'),
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.xl,
-                AppSpacing.xl,
-                AppSpacing.xl,
-                0,
-              ),
-              child: LoadingSkeleton(itemCount: 4),
+        child: schedules.when(
+          skipLoadingOnRefresh: true,
+          skipLoadingOnReload: true,
+          loading: () => const Padding(
+            key: ValueKey('today-loading'),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xl,
+              AppSpacing.xl,
+              0,
             ),
-            error: (error, _) => EmptyState(
-              key: const ValueKey('today-error'),
-              title: 'Không tải được lịch hôm nay',
-              message: AppFeedbackService.messageFor(error),
-              action: FilledButton.tonalIcon(
-                onPressed: () => ref.invalidate(schedulesProvider),
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Thử lại'),
-              ),
+            child: LoadingSkeleton(itemCount: 4),
+          ),
+          error: (error, _) => EmptyState(
+            key: const ValueKey('today-error'),
+            title: 'Không tải được lịch hôm nay',
+            message: AppFeedbackService.messageFor(error),
+            action: FilledButton.tonalIcon(
+              onPressed: () => ref.invalidate(schedulesProvider),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Thử lại'),
             ),
-            data: (items) {
-              if (items.isEmpty) {
-                return EmptyState(
-                  key: const ValueKey('today-empty'),
-                  title: 'Chưa có lịch học nào hôm nay',
-                  message:
-                      'Thêm môn học đầu tiên để bắt đầu hoặc dành ngày này cho việc ôn tập.',
-                  action: FilledButton.icon(
-                    onPressed: () => context.push('/schedule/new'),
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Thêm lịch học'),
-                  ),
-                );
-              }
-              return MorphingScheduleList(
-                storageKey: const PageStorageKey('today-scroll'),
-                schedules: items,
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  AppSpacing.md,
-                  AppSpacing.xl,
-                  112,
+          ),
+          data: (items) {
+            if (items.isEmpty) {
+              return EmptyState(
+                key: const ValueKey('today-empty'),
+                title: 'Chưa có lịch học nào hôm nay',
+                message:
+                    'Thêm môn học đầu tiên để bắt đầu hoặc dành ngày này cho việc ôn tập.',
+                action: FilledButton.icon(
+                  onPressed: () => context.push('/schedule/new'),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Thêm lịch học'),
                 ),
-                headerSlivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.xl,
-                      AppSpacing.lg,
-                      AppSpacing.xl,
-                      0,
-                    ),
-                    sliver: SliverToBoxAdapter(
-                      child: Semantics(
-                        header: true,
-                        child: SectionHeader(
-                          title: 'Lịch hôm nay',
-                          subtitle:
-                              'Theo dõi tiến độ từng buổi học và ghi chú nhanh sau giờ lên lớp',
-                        ),
+              );
+            }
+            return MorphingScheduleList(
+              storageKey: const PageStorageKey('today-scroll'),
+              schedules: items,
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.md,
+                AppSpacing.xl,
+                112,
+              ),
+              headerSlivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.lg,
+                    AppSpacing.xl,
+                    0,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: Semantics(
+                      header: true,
+                      child: SectionHeader(
+                        title: 'Lịch hôm nay',
+                        subtitle:
+                            'Theo dõi tiến độ từng buổi học và ghi chú nhanh sau giờ lên lớp',
                       ),
                     ),
                   ),
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: AppSpacing.lg),
+                ),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.lg),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl,
-                    ),
-                    sliver: SliverToBoxAdapter(
-                      child: _TodaySummary(items: items),
-                    ),
+                  sliver: SliverToBoxAdapter(
+                    child: _TodaySummary(items: items),
                   ),
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: AppSpacing.md),
+                ),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.md),
+                ),
+                const SliverPadding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  sliver: SliverToBoxAdapter(child: _TodayQuickActions()),
+                ),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.xl),
+                ),
+              ],
+              logForSchedule: (schedule) => logBySchedule[schedule.id],
+              onDelete: (schedule) =>
+                  ref.read(scheduleActionsProvider).delete(schedule.id),
+              onReorder: (oldIndex, newIndex) => ref
+                  .read(scheduleReorderActionsProvider)
+                  .reorderDay(
+                    day: DateTime.now().weekday,
+                    oldIndex: oldIndex,
+                    newIndex: newIndex,
+                    visibleItems: items,
                   ),
-                  const SliverPadding(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                    sliver: SliverToBoxAdapter(child: _TodayQuickActions()),
-                  ),
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: AppSpacing.xl),
-                  ),
-                ],
-                logForSchedule: (schedule) => logBySchedule[schedule.id],
-                onDelete: (schedule) =>
-                    ref.read(scheduleActionsProvider).delete(schedule.id),
-                onReorder: (oldIndex, newIndex) => ref
-                    .read(scheduleReorderActionsProvider)
-                    .reorderDay(
-                      day: DateTime.now().weekday,
-                      oldIndex: oldIndex,
-                      newIndex: newIndex,
-                      visibleItems: items,
-                    ),
-                onStart: (schedule) async {
-                  await ref.read(scheduleActionsProvider).start(schedule);
-                  if (context.mounted) {
-                    _showMessage(context, 'Đã bắt đầu ${schedule.subjectName}');
-                  }
-                },
-                onComplete: (schedule) async {
-                  final note = await _noteDialog(context);
-                  if (note == null) return;
-                  await ref
-                      .read(scheduleActionsProvider)
-                      .complete(schedule, note);
-                  if (context.mounted) {
-                    _showMessage(context, 'Đã đánh dấu hoàn thành.');
-                  }
-                },
-              );
-            },
-          ),
+              onStart: (schedule) async {
+                await ref.read(scheduleActionsProvider).start(schedule);
+                if (context.mounted) {
+                  _showMessage(context, 'Đã bắt đầu ${schedule.subjectName}');
+                }
+              },
+              onComplete: (schedule) async {
+                final note = await _noteDialog(context);
+                if (note == null) return;
+                await ref
+                    .read(scheduleActionsProvider)
+                    .complete(schedule, note);
+                if (context.mounted) {
+                  _showMessage(context, 'Đã đánh dấu hoàn thành.');
+                }
+              },
+            );
+          },
         ),
       ),
-    );
-  }
-
-  Widget _pageTransition(Widget child, Animation<double> animation) {
-    return MorphTransitionWidget(
-      animation: animation,
-      beginScale: 0.99,
-      beginOpacity: 0.72,
-      child: child,
     );
   }
 

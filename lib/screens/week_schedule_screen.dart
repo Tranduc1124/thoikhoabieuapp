@@ -11,7 +11,6 @@ import '../theme/app_spacing.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/loading_skeleton.dart';
-import '../widgets/motion_widgets.dart';
 import '../widgets/morphing_schedule_list.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
@@ -76,126 +75,113 @@ class WeekScheduleScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 6),
             Expanded(
-              child: AnimatedSwitcher(
-                duration: AppMotion.medium,
-                reverseDuration: AppMotion.fast,
-                switchInCurve: AppMotion.liquid,
-                switchOutCurve: AppMotion.exit,
-                transitionBuilder: _contentTransition,
-                child: selectedSchedules.when(
-                  loading: () => const Padding(
-                    key: ValueKey('week-loading'),
-                    padding: EdgeInsets.all(AppSpacing.xl),
-                    child: LoadingSkeleton(itemCount: 4),
-                  ),
-                  error: (error, _) => EmptyState(
-                    key: const ValueKey('week-error'),
-                    title: 'Không tải được lịch tuần',
-                    message: AppFeedbackService.messageFor(error),
-                    action: FilledButton.tonalIcon(
-                      onPressed: () => ref.invalidate(schedulesProvider),
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Thử lại'),
-                    ),
-                  ),
-                  data: (filtered) {
-                    if (filtered.isEmpty) {
-                      return EmptyState(
-                        key: ValueKey('week-empty-$selectedDay-$query'),
-                        title: 'Chưa có lịch cho ${dayName(selectedDay)}',
-                        message: 'Thêm môn học hoặc đổi bộ lọc để tiếp tục.',
-                        action: FilledButton.icon(
-                          onPressed: () => context.push('/schedule/new'),
-                          icon: const Icon(Icons.add_rounded),
-                          label: const Text('Thêm lịch học'),
-                        ),
-                      );
-                    }
-                    return CustomScrollView(
-                      key: PageStorageKey('week-day-$selectedDay'),
-                      cacheExtent: 900,
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
-                      ),
-                      slivers: [
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.xl,
-                            AppSpacing.md,
-                            AppSpacing.xl,
-                            0,
-                          ),
-                          sliver: SliverToBoxAdapter(
-                            child: _FilterHint(count: filtered.length),
-                          ),
-                        ),
-                        const SliverToBoxAdapter(
-                          child: SizedBox(height: AppSpacing.lg),
-                        ),
-                        ..._dayPartSlivers(
-                          title: 'Buổi sáng',
-                          onReorder: (oldIndex, newIndex, visibleItems) => ref
-                              .read(scheduleReorderActionsProvider)
-                              .reorderDay(
-                                day: selectedDay,
-                                oldIndex: oldIndex,
-                                newIndex: newIndex,
-                                visibleItems: visibleItems,
-                              ),
-                          schedules: filtered
-                              .where((item) => item.startTime < 12 * 60)
-                              .toList(),
-                        ),
-                        ..._dayPartSlivers(
-                          title: 'Buổi chiều',
-                          onReorder: (oldIndex, newIndex, visibleItems) => ref
-                              .read(scheduleReorderActionsProvider)
-                              .reorderDay(
-                                day: selectedDay,
-                                oldIndex: oldIndex,
-                                newIndex: newIndex,
-                                visibleItems: visibleItems,
-                              ),
-                          schedules: filtered
-                              .where(
-                                (item) =>
-                                    item.startTime >= 12 * 60 &&
-                                    item.startTime < 18 * 60,
-                              )
-                              .toList(),
-                        ),
-                        ..._dayPartSlivers(
-                          title: 'Buổi tối',
-                          onReorder: (oldIndex, newIndex, visibleItems) => ref
-                              .read(scheduleReorderActionsProvider)
-                              .reorderDay(
-                                day: selectedDay,
-                                oldIndex: oldIndex,
-                                newIndex: newIndex,
-                                visibleItems: visibleItems,
-                              ),
-                          schedules: filtered
-                              .where((item) => item.startTime >= 18 * 60)
-                              .toList(),
-                        ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 112)),
-                      ],
-                    );
-                  },
+              child: selectedSchedules.when(
+                skipLoadingOnRefresh: true,
+                skipLoadingOnReload: true,
+                loading: () => const Padding(
+                  key: ValueKey('week-loading'),
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  child: LoadingSkeleton(itemCount: 4),
                 ),
+                error: (error, _) => EmptyState(
+                  key: const ValueKey('week-error'),
+                  title: 'Không tải được lịch tuần',
+                  message: AppFeedbackService.messageFor(error),
+                  action: FilledButton.tonalIcon(
+                    onPressed: () => ref.invalidate(schedulesProvider),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Thử lại'),
+                  ),
+                ),
+                data: (filtered) {
+                  if (filtered.isEmpty) {
+                    return EmptyState(
+                      key: ValueKey('week-empty-$selectedDay-$query'),
+                      title: 'Chưa có lịch cho ${dayName(selectedDay)}',
+                      message: 'Thêm môn học hoặc đổi bộ lọc để tiếp tục.',
+                      action: FilledButton.icon(
+                        onPressed: () => context.push('/schedule/new'),
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Thêm lịch học'),
+                      ),
+                    );
+                  }
+                  return CustomScrollView(
+                    key: PageStorageKey('week-day-$selectedDay'),
+                    cacheExtent: 900,
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.xl,
+                          AppSpacing.md,
+                          AppSpacing.xl,
+                          0,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: _FilterHint(count: filtered.length),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: AppSpacing.lg),
+                      ),
+                      ..._dayPartSlivers(
+                        title: 'Buổi sáng',
+                        onReorder: (oldIndex, newIndex, visibleItems) => ref
+                            .read(scheduleReorderActionsProvider)
+                            .reorderDay(
+                              day: selectedDay,
+                              oldIndex: oldIndex,
+                              newIndex: newIndex,
+                              visibleItems: visibleItems,
+                            ),
+                        schedules: filtered
+                            .where((item) => item.startTime < 12 * 60)
+                            .toList(),
+                      ),
+                      ..._dayPartSlivers(
+                        title: 'Buổi chiều',
+                        onReorder: (oldIndex, newIndex, visibleItems) => ref
+                            .read(scheduleReorderActionsProvider)
+                            .reorderDay(
+                              day: selectedDay,
+                              oldIndex: oldIndex,
+                              newIndex: newIndex,
+                              visibleItems: visibleItems,
+                            ),
+                        schedules: filtered
+                            .where(
+                              (item) =>
+                                  item.startTime >= 12 * 60 &&
+                                  item.startTime < 18 * 60,
+                            )
+                            .toList(),
+                      ),
+                      ..._dayPartSlivers(
+                        title: 'Buổi tối',
+                        onReorder: (oldIndex, newIndex, visibleItems) => ref
+                            .read(scheduleReorderActionsProvider)
+                            .reorderDay(
+                              day: selectedDay,
+                              oldIndex: oldIndex,
+                              newIndex: newIndex,
+                              visibleItems: visibleItems,
+                            ),
+                        schedules: filtered
+                            .where((item) => item.startTime >= 18 * 60)
+                            .toList(),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 112)),
+                    ],
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _contentTransition(Widget child, Animation<double> animation) {
-    return MorphTransitionWidget(
-      animation: animation,
-      beginScale: 0.99,
-      child: child,
     );
   }
 }

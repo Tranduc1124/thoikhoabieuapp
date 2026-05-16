@@ -111,192 +111,203 @@ class PremiumScheduleCard extends StatelessWidget {
             }
             context.push('/schedule/${schedule.id}', extra: schedule);
           },
-          child: Hero(
-            tag: 'schedule-card-${schedule.id}',
-            transitionOnUserGestures: true,
-            flightShuttleBuilder:
-                (context, animation, direction, fromContext, toContext) {
-                  final curved = CurvedAnimation(
-                    parent: animation,
-                    curve: AppMotion.liquid,
-                    reverseCurve: AppMotion.exit,
-                  );
-                  final shuttle = direction == HeroFlightDirection.push
-                      ? toContext.widget
-                      : fromContext.widget;
-                  return FadeTransition(
-                    opacity: Tween<double>(begin: 0.84, end: 1).animate(curved),
-                    child: ScaleTransition(
-                      scale: Tween<double>(
-                        begin: 0.965,
+          child: HeroMode(
+            enabled: TickerMode.valuesOf(context).enabled,
+            child: Hero(
+              tag: 'schedule-card-${schedule.id}',
+              transitionOnUserGestures: true,
+              flightShuttleBuilder:
+                  (context, animation, direction, fromContext, toContext) {
+                    final curved = CurvedAnimation(
+                      parent: animation,
+                      curve: AppMotion.liquid,
+                      reverseCurve: AppMotion.exit,
+                    );
+                    final shuttle = direction == HeroFlightDirection.push
+                        ? toContext.widget
+                        : fromContext.widget;
+                    return FadeTransition(
+                      opacity: Tween<double>(
+                        begin: 0.84,
                         end: 1,
                       ).animate(curved),
-                      child: shuttle,
-                    ),
-                  );
-                },
-            child: GlassCard(
-              margin: EdgeInsets.only(
-                bottom: compact ? AppSpacing.md : AppSpacing.xl,
-              ),
-              radius: compact ? AppRadius.lg : AppRadius.xl,
-              padding: EdgeInsets.zero,
-              borderColor: isSoon
-                  ? palette.primary.withValues(alpha: isDark ? 0.52 : 0.36)
-                  : palette.borderColor(isDark),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(
-                  compact ? AppRadius.lg : AppRadius.xl,
+                      child: ScaleTransition(
+                        scale: Tween<double>(
+                          begin: 0.965,
+                          end: 1,
+                        ).animate(curved),
+                        child: shuttle,
+                      ),
+                    );
+                  },
+              child: GlassCard(
+                margin: EdgeInsets.only(
+                  bottom: compact ? AppSpacing.md : AppSpacing.xl,
                 ),
-                child: Stack(
-                  children: [
-                    Positioned.fill(child: _CardAtmosphere(palette: palette)),
-                    Positioned(
-                      top: -34,
-                      right: -20,
-                      child: _GradientGlow(
-                        color: palette.primary,
-                        size: compact ? 110 : 150,
-                        opacity: isDark ? 0.18 : 0.14,
+                radius: compact ? AppRadius.lg : AppRadius.xl,
+                padding: EdgeInsets.zero,
+                borderColor: isSoon
+                    ? palette.primary.withValues(alpha: isDark ? 0.52 : 0.36)
+                    : palette.borderColor(isDark),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(
+                    compact ? AppRadius.lg : AppRadius.xl,
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: _CardAtmosphere(palette: palette)),
+                      Positioned(
+                        top: -34,
+                        right: -20,
+                        child: _GradientGlow(
+                          color: palette.primary,
+                          size: compact ? 110 : 150,
+                          opacity: isDark ? 0.18 : 0.14,
+                        ),
                       ),
-                    ),
-                    Positioned(
-                      left: -42,
-                      bottom: -44,
-                      child: _GradientGlow(
-                        color: palette.secondary,
-                        size: compact ? 120 : 170,
-                        opacity: isDark ? 0.12 : 0.10,
+                      Positioned(
+                        left: -42,
+                        bottom: -44,
+                        child: _GradientGlow(
+                          color: palette.secondary,
+                          size: compact ? 120 : 170,
+                          opacity: isDark ? 0.12 : 0.10,
+                        ),
                       ),
-                    ),
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.white.withValues(
-                                  alpha: isDark ? 0.05 : 0.20,
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.white.withValues(
+                                    alpha: isDark ? 0.05 : 0.20,
+                                  ),
+                                  Colors.transparent,
+                                  palette.primary.withValues(
+                                    alpha: isDark ? 0.05 : 0.07,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      AnimatedSize(
+                        duration: AppMotion.medium,
+                        curve: AppMotion.liquid,
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: isCollapsed ? (compact ? 96 : 104) : 0,
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              AppSpacing.xl,
+                              compact ? AppSpacing.lg : AppSpacing.xl,
+                              AppSpacing.xl,
+                              compact ? AppSpacing.lg : AppSpacing.xl,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _Header(
+                                  schedule: schedule,
+                                  palette: palette,
+                                  onDelete: onDelete,
+                                  showDragHandle: showDragHandle,
+                                  onConfirmDelete: () =>
+                                      _confirmDelete(context),
                                 ),
-                                Colors.transparent,
-                                palette.primary.withValues(
-                                  alpha: isDark ? 0.05 : 0.07,
-                                ),
+                                if (!isCollapsed) ...[
+                                  SizedBox(
+                                    height: compact ? 14 : AppSpacing.lg,
+                                  ),
+                                  Wrap(
+                                    spacing: 9,
+                                    runSpacing: 9,
+                                    children: [
+                                      GlassPill(
+                                        icon: Icons.access_time_rounded,
+                                        label:
+                                            '${formatMinutes(schedule.startTime)} - ${formatMinutes(schedule.endTime)}',
+                                        palette: palette,
+                                      ),
+                                      ScheduleStatusPill(
+                                        label: isSoon
+                                            ? 'Sắp tới'
+                                            : statusData.label,
+                                        icon: statusData.icon,
+                                        colors: statusData.colors,
+                                        active:
+                                            status == _ClassStatus.active ||
+                                            isSoon,
+                                        muted: status == _ClassStatus.done,
+                                      ),
+                                    ],
+                                  ),
+                                  if (!compact && _hasInfo) ...[
+                                    const SizedBox(height: AppSpacing.lg),
+                                    Wrap(
+                                      spacing: 9,
+                                      runSpacing: 9,
+                                      children: [
+                                        if (schedule.teacher.trim().isNotEmpty)
+                                          ScheduleInfoChip(
+                                            icon: Icons.school_rounded,
+                                            label: schedule.teacher.trim(),
+                                            palette: palette,
+                                          ),
+                                        if (schedule.room.trim().isNotEmpty)
+                                          ScheduleInfoChip(
+                                            icon: Icons.location_on_rounded,
+                                            label: schedule.room.trim(),
+                                            palette: palette,
+                                          ),
+                                        if (schedule.note.trim().isNotEmpty)
+                                          ScheduleInfoChip(
+                                            icon: Icons.sticky_note_2_rounded,
+                                            label: schedule.note.trim(),
+                                            palette: palette,
+                                          ),
+                                        if (schedule.hasMapLocation)
+                                          _MapChip(
+                                            label: 'Apple Maps',
+                                            palette: palette,
+                                            onTap: () =>
+                                                _openMap(schedule.appleMapsUrl),
+                                          ),
+                                        if (schedule.hasMapLocation)
+                                          _MapChip(
+                                            label: 'Google Maps',
+                                            palette: palette,
+                                            onTap: () => _openMap(
+                                              schedule.googleMapsUrl,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                  if (onStart != null ||
+                                      onComplete != null) ...[
+                                    const SizedBox(height: AppSpacing.lg),
+                                    _Actions(
+                                      palette: palette,
+                                      onStart: onStart,
+                                      onComplete: onComplete,
+                                    ),
+                                  ],
+                                ],
                               ],
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    AnimatedSize(
-                      duration: AppMotion.medium,
-                      curve: AppMotion.liquid,
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: isCollapsed ? (compact ? 96 : 104) : 0,
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            AppSpacing.xl,
-                            compact ? AppSpacing.lg : AppSpacing.xl,
-                            AppSpacing.xl,
-                            compact ? AppSpacing.lg : AppSpacing.xl,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _Header(
-                                schedule: schedule,
-                                palette: palette,
-                                onDelete: onDelete,
-                                showDragHandle: showDragHandle,
-                                onConfirmDelete: () => _confirmDelete(context),
-                              ),
-                              if (!isCollapsed) ...[
-                                SizedBox(height: compact ? 14 : AppSpacing.lg),
-                                Wrap(
-                                  spacing: 9,
-                                  runSpacing: 9,
-                                  children: [
-                                    GlassPill(
-                                      icon: Icons.access_time_rounded,
-                                      label:
-                                          '${formatMinutes(schedule.startTime)} - ${formatMinutes(schedule.endTime)}',
-                                      palette: palette,
-                                    ),
-                                    ScheduleStatusPill(
-                                      label: isSoon
-                                          ? 'Sắp tới'
-                                          : statusData.label,
-                                      icon: statusData.icon,
-                                      colors: statusData.colors,
-                                      active:
-                                          status == _ClassStatus.active ||
-                                          isSoon,
-                                      muted: status == _ClassStatus.done,
-                                    ),
-                                  ],
-                                ),
-                                if (!compact && _hasInfo) ...[
-                                  const SizedBox(height: AppSpacing.lg),
-                                  Wrap(
-                                    spacing: 9,
-                                    runSpacing: 9,
-                                    children: [
-                                      if (schedule.teacher.trim().isNotEmpty)
-                                        ScheduleInfoChip(
-                                          icon: Icons.school_rounded,
-                                          label: schedule.teacher.trim(),
-                                          palette: palette,
-                                        ),
-                                      if (schedule.room.trim().isNotEmpty)
-                                        ScheduleInfoChip(
-                                          icon: Icons.location_on_rounded,
-                                          label: schedule.room.trim(),
-                                          palette: palette,
-                                        ),
-                                      if (schedule.note.trim().isNotEmpty)
-                                        ScheduleInfoChip(
-                                          icon: Icons.sticky_note_2_rounded,
-                                          label: schedule.note.trim(),
-                                          palette: palette,
-                                        ),
-                                      if (schedule.hasMapLocation)
-                                        _MapChip(
-                                          label: 'Apple Maps',
-                                          palette: palette,
-                                          onTap: () =>
-                                              _openMap(schedule.appleMapsUrl),
-                                        ),
-                                      if (schedule.hasMapLocation)
-                                        _MapChip(
-                                          label: 'Google Maps',
-                                          palette: palette,
-                                          onTap: () =>
-                                              _openMap(schedule.googleMapsUrl),
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                                if (onStart != null || onComplete != null) ...[
-                                  const SizedBox(height: AppSpacing.lg),
-                                  _Actions(
-                                    palette: palette,
-                                    onStart: onStart,
-                                    onComplete: onComplete,
-                                  ),
-                                ],
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

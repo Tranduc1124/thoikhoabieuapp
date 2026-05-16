@@ -122,9 +122,9 @@ class CalendarScreen extends ConsumerWidget {
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl,
+                AppSpacing.lg,
                 AppSpacing.xs,
-                AppSpacing.xl,
+                AppSpacing.lg,
                 116,
               ),
               sliver: events.when(
@@ -630,21 +630,36 @@ class _WeekdayRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        for (final label in labels)
-          Expanded(
-            child: Center(
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: colorScheme.textSecondary,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final targetWidth = constraints.maxWidth < 540
+            ? 540.0
+            : constraints.maxWidth;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: SizedBox(
+            width: targetWidth,
+            child: Row(
+              children: [
+                for (final label in labels)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        label,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: colorScheme.textSecondary,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-      ],
+        );
+      },
     );
   }
 }
@@ -665,31 +680,43 @@ class _CalendarGrid extends StatelessWidget {
     final days = VietnameseCalendarUtils.monthGridDays(month);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 390;
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: days.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7,
-            crossAxisSpacing: compact ? AppSpacing.xs : AppSpacing.sm,
-            mainAxisSpacing: compact ? AppSpacing.xs : AppSpacing.sm,
-            childAspectRatio: compact ? 0.72 : 0.86,
-          ),
-          itemBuilder: (context, index) {
-            final date = days[index];
-            final key = VietnameseCalendarUtils.dateKey(date);
-            return ScheduleFadeWidget(
-              index: index,
-              child: _CalendarDayCell(
-                date: date,
-                month: month,
-                event: events[key],
-                compact: compact,
-                onTap: () => onDayTap(date, events[key]),
+        final availableWidth = constraints.maxWidth;
+        final targetWidth = availableWidth < 540 ? 540.0 : availableWidth;
+        final compact = targetWidth < 620;
+        return Scrollbar(
+          thumbVisibility: availableWidth < targetWidth,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: SizedBox(
+              width: targetWidth,
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: days.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  crossAxisSpacing: AppSpacing.sm,
+                  mainAxisSpacing: AppSpacing.sm,
+                  mainAxisExtent: compact ? 104 : 116,
+                ),
+                itemBuilder: (context, index) {
+                  final date = days[index];
+                  final key = VietnameseCalendarUtils.dateKey(date);
+                  return ScheduleFadeWidget(
+                    index: index,
+                    child: _CalendarDayCell(
+                      date: date,
+                      month: month,
+                      event: events[key],
+                      compact: compact,
+                      onTap: () => onDayTap(date, events[key]),
+                    ),
+                  );
+                },
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );
@@ -736,12 +763,29 @@ class _CalendarDayCell extends StatelessWidget {
         child: AnimatedContainer(
           duration: AppMotion.medium,
           curve: AppMotion.liquid,
-          padding: EdgeInsets.all(compact ? AppSpacing.xs : AppSpacing.sm),
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.sm,
+            compact ? AppSpacing.sm : AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.sm,
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.md),
-            color: hasEvent
-                ? eventColor.withValues(alpha: colorScheme.isDark ? 0.22 : 0.16)
-                : colorScheme.tileSurface,
+            gradient: hasEvent
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      eventColor.withValues(
+                        alpha: colorScheme.isDark ? 0.30 : 0.20,
+                      ),
+                      colorScheme.surfaceContainerHigh.withValues(
+                        alpha: colorScheme.isDark ? 0.78 : 0.88,
+                      ),
+                    ],
+                  )
+                : null,
+            color: hasEvent ? null : colorScheme.tileSurface,
             border: Border.all(
               width: today ? 1.6 : 1,
               color: today
@@ -774,6 +818,7 @@ class _CalendarDayCell extends StatelessWidget {
                         color: inMonth
                             ? colorScheme.textPrimary
                             : colorScheme.textHint,
+                        fontSize: compact ? 16 : 17,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -803,7 +848,7 @@ class _CalendarDayCell extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: eventColor,
-                    fontSize: compact ? 9 : 9.5,
+                    fontSize: compact ? 9.5 : 10.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -816,6 +861,7 @@ class _CalendarDayCell extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: colorScheme.textPrimary,
+                    fontSize: compact ? 10.5 : 11.5,
                     fontWeight: FontWeight.w900,
                   ),
                 )

@@ -87,6 +87,8 @@ class HomeScreen extends ConsumerWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 112),
               sliver: schedules.when(
+                skipLoadingOnRefresh: true,
+                skipLoadingOnReload: true,
                 loading: () => const SliverToBoxAdapter(
                   child: LoadingSkeleton(itemCount: 3),
                 ),

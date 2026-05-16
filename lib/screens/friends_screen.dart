@@ -109,6 +109,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               ),
               const SizedBox(height: 12),
               requests.when(
+                skipLoadingOnRefresh: true,
+                skipLoadingOnReload: true,
                 loading: () => const LoadingSkeleton(itemCount: 1),
                 error: (error, _) => EmptyState(
                   title: 'Không tải được lời mời',
@@ -124,7 +126,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   }
                   return Column(
                     children: items
-                        .map((item) => _RequestTile(request: item))
+                        .map(
+                          (item) => _RequestTile(
+                            key: ValueKey('friend-request-${item.id}'),
+                            request: item,
+                          ),
+                        )
                         .toList(growable: false),
                   );
                 },
@@ -136,6 +143,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               ),
               const SizedBox(height: 12),
               searchResults.when(
+                skipLoadingOnRefresh: true,
+                skipLoadingOnReload: true,
                 loading: () => const LoadingSkeleton(itemCount: 2),
                 error: (error, _) => EmptyState(
                   title: 'Không tìm thấy người dùng',
@@ -154,7 +163,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   }
                   return Column(
                     children: items
-                        .map((item) => _SearchUserTile(user: item))
+                        .map(
+                          (item) => _SearchUserTile(
+                            key: ValueKey('friend-search-${item.id}'),
+                            user: item,
+                          ),
+                        )
                         .toList(growable: false),
                   );
                 },
@@ -166,6 +180,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               ),
               const SizedBox(height: 12),
               friends.when(
+                skipLoadingOnRefresh: true,
+                skipLoadingOnReload: true,
                 loading: () => const LoadingSkeleton(itemCount: 2),
                 error: (error, _) => EmptyState(
                   title: 'Không tải được danh sách bạn bè',
@@ -182,7 +198,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   }
                   return Column(
                     children: filtered
-                        .map((item) => _FriendTile(friend: item))
+                        .map(
+                          (item) => _FriendTile(
+                            key: ValueKey('friend-${item.friendId}'),
+                            friend: item,
+                          ),
+                        )
                         .toList(growable: false),
                   );
                 },
@@ -302,7 +323,7 @@ class _QrProfileInvite extends ConsumerWidget {
 }
 
 class _RequestTile extends ConsumerWidget {
-  const _RequestTile({required this.request});
+  const _RequestTile({super.key, required this.request});
 
   final FriendRequestModel request;
 
@@ -382,7 +403,7 @@ class _RequestTile extends ConsumerWidget {
 }
 
 class _SearchUserTile extends ConsumerWidget {
-  const _SearchUserTile({required this.user});
+  const _SearchUserTile({super.key, required this.user});
 
   final AppUser user;
 
@@ -455,7 +476,7 @@ class _SearchUserTile extends ConsumerWidget {
 }
 
 class _FriendTile extends ConsumerWidget {
-  const _FriendTile({required this.friend});
+  const _FriendTile({super.key, required this.friend});
 
   final FriendModel friend;
 
