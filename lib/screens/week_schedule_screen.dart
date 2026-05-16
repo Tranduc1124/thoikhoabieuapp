@@ -11,6 +11,7 @@ import '../theme/app_spacing.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/loading_skeleton.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/morphing_schedule_list.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
@@ -104,8 +105,7 @@ class WeekScheduleScreen extends ConsumerWidget {
                       return EmptyState(
                         key: ValueKey('week-empty-$selectedDay-$query'),
                         title: 'Chưa có lịch cho ${dayName(selectedDay)}',
-                        message:
-                            'Thêm môn học hoặc đổi bộ lọc để tiếp tục.',
+                        message: 'Thêm môn học hoặc đổi bộ lọc để tiếp tục.',
                         action: FilledButton.icon(
                           onPressed: () => context.push('/schedule/new'),
                           icon: const Icon(Icons.add_rounded),
@@ -132,12 +132,28 @@ class WeekScheduleScreen extends ConsumerWidget {
                         ),
                         ..._dayPartSlivers(
                           title: 'Buổi sáng',
+                          onReorder: (oldIndex, newIndex, visibleItems) => ref
+                              .read(scheduleReorderActionsProvider)
+                              .reorderDay(
+                                day: selectedDay,
+                                oldIndex: oldIndex,
+                                newIndex: newIndex,
+                                visibleItems: visibleItems,
+                              ),
                           schedules: filtered
                               .where((item) => item.startTime < 12 * 60)
                               .toList(),
                         ),
                         ..._dayPartSlivers(
                           title: 'Buổi chiều',
+                          onReorder: (oldIndex, newIndex, visibleItems) => ref
+                              .read(scheduleReorderActionsProvider)
+                              .reorderDay(
+                                day: selectedDay,
+                                oldIndex: oldIndex,
+                                newIndex: newIndex,
+                                visibleItems: visibleItems,
+                              ),
                           schedules: filtered
                               .where(
                                 (item) =>
@@ -148,13 +164,19 @@ class WeekScheduleScreen extends ConsumerWidget {
                         ),
                         ..._dayPartSlivers(
                           title: 'Buổi tối',
+                          onReorder: (oldIndex, newIndex, visibleItems) => ref
+                              .read(scheduleReorderActionsProvider)
+                              .reorderDay(
+                                day: selectedDay,
+                                oldIndex: oldIndex,
+                                newIndex: newIndex,
+                                visibleItems: visibleItems,
+                              ),
                           schedules: filtered
                               .where((item) => item.startTime >= 18 * 60)
                               .toList(),
                         ),
-                        const SliverToBoxAdapter(
-                          child: SizedBox(height: 112),
-                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 112)),
                       ],
                     );
                   },
@@ -168,25 +190,17 @@ class WeekScheduleScreen extends ConsumerWidget {
   }
 
   Widget _contentTransition(Widget child, Animation<double> animation) {
-    final curved = CurvedAnimation(parent: animation, curve: AppMotion.liquid);
-    return FadeTransition(
-      opacity: Tween<double>(begin: 0.70, end: 1).animate(curved),
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.025),
-          end: Offset.zero,
-        ).animate(curved),
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.99, end: 1).animate(curved),
-          child: child,
-        ),
-      ),
+    return MorphTransitionWidget(
+      animation: animation,
+      beginScale: 0.99,
+      child: child,
     );
   }
 }
 
 List<Widget> _dayPartSlivers({
   required String title,
+  required DayPartReorderCallback onReorder,
   required List<ScheduleModel> schedules,
 }) {
   if (schedules.isEmpty) return const [];
@@ -207,10 +221,18 @@ List<Widget> _dayPartSlivers({
         AppSpacing.xl,
         AppSpacing.lg,
       ),
-      sliver: SliverMorphingScheduleList(schedules: schedules, compact: true),
+      sliver: SliverMorphingScheduleList(
+        schedules: schedules,
+        compact: true,
+        onReorder: (oldIndex, newIndex) =>
+            onReorder(oldIndex, newIndex, schedules),
+      ),
     ),
   ];
 }
+
+typedef DayPartReorderCallback =
+    void Function(int oldIndex, int newIndex, List<ScheduleModel> visibleItems);
 
 class _DayPill extends StatelessWidget {
   const _DayPill({

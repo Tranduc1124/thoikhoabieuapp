@@ -8,6 +8,7 @@ import '../services/app_feedback_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../widgets/app_avatar.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/qr_share_box.dart';
 import '../widgets/soft_gradient_background.dart';
 
@@ -94,23 +95,7 @@ class _ProfilePoster extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: AppMotion.medium,
-      curve: AppMotion.liquid,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 18 * (1 - value)),
-            child: Transform.scale(
-              scale: 0.985 + value * 0.015,
-              alignment: Alignment.topCenter,
-              child: child,
-            ),
-          ),
-        );
-      },
+    return ScheduleFadeWidget(
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(36),
@@ -134,64 +119,64 @@ class _ProfilePoster extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(22),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              AppAvatar(
-                name: card.displayName,
-                primaryUrl: card.avatarUrl,
-                radius: 34,
-                iconSize: 28,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      card.displayName,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w900),
-                    ),
-                    Text(card.username),
-                  ],
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AppAvatar(
+                  name: card.displayName,
+                  primaryUrl: card.avatarUrl,
+                  radius: 34,
+                  iconSize: 28,
                 ),
-              ),
-            ],
-          ),
-          if (card.bio.trim().isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(card.bio, style: Theme.of(context).textTheme.bodyMedium),
-          ],
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              _Metric(label: 'Chuỗi học', value: '${card.studyStreak} ngày'),
-              const SizedBox(width: 10),
-              _Metric(
-                label: 'Giờ học',
-                value: card.weeklyHours.toStringAsFixed(1),
-              ),
-              const SizedBox(width: 10),
-              _Metric(label: 'Buổi học', value: '${card.totalClasses}'),
-            ],
-          ),
-          const SizedBox(height: 18),
-          if (card.favoriteSubject.isNotEmpty)
-            Text(
-              'Môn yêu thích: ${card.favoriteSubject}',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        card.displayName,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                      Text(card.username),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          const SizedBox(height: 16),
-          QrShareBox(
-            data: card.qrLink ?? 'thoikhoabieu://profile/${card.id}',
-            label: 'Quét để mở hồ sơ',
-            subtitle: 'Chia sẻ để kết nối cùng bạn bè học tập',
-          ),
-        ],
+            if (card.bio.trim().isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(card.bio, style: Theme.of(context).textTheme.bodyMedium),
+            ],
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                _Metric(label: 'Chuỗi học', value: '${card.studyStreak} ngày'),
+                const SizedBox(width: 10),
+                _Metric(
+                  label: 'Giờ học',
+                  value: card.weeklyHours.toStringAsFixed(1),
+                ),
+                const SizedBox(width: 10),
+                _Metric(label: 'Buổi học', value: '${card.totalClasses}'),
+              ],
+            ),
+            const SizedBox(height: 18),
+            if (card.favoriteSubject.isNotEmpty)
+              Text(
+                'Môn yêu thích: ${card.favoriteSubject}',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            const SizedBox(height: 16),
+            QrShareBox(
+              data: card.qrLink ?? 'thoikhoabieu://profile/${card.id}',
+              label: 'Quét để mở hồ sơ',
+              subtitle: 'Chia sẻ để kết nối cùng bạn bè học tập',
+            ),
+          ],
         ),
       ),
     );

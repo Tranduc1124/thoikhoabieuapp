@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
+import '../theme/app_radius.dart';
+import 'motion_widgets.dart';
 
 enum AppPopupType { info, success, error }
 
@@ -23,25 +25,19 @@ Future<void> showAppPopup(
     transitionDuration: AppMotion.medium,
     pageBuilder: (context, _, _) => const SizedBox.shrink(),
     transitionBuilder: (context, animation, secondary, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: AppMotion.liquid,
-        reverseCurve: AppMotion.exit,
-      );
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween(begin: 0.94, end: 1.0).animate(curved),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: _PopupCard(
-                title: title,
-                message: message,
-                type: type,
-                primaryLabel: primaryLabel,
-                onPrimary: onPrimary,
-              ),
+      return MorphTransitionWidget(
+        animation: animation,
+        beginOffset: const Offset(0, 0.03),
+        beginScale: 0.94,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: _PopupCard(
+              title: title,
+              message: message,
+              type: type,
+              primaryLabel: primaryLabel,
+              onPrimary: onPrimary,
             ),
           ),
         ),
@@ -130,9 +126,14 @@ class _PopupCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
+                    AnimatedButton(
+                      onTap: () => Navigator.of(context).pop(),
+                      scale: 0.92,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Icon(Icons.close_rounded),
+                      ),
                     ),
                   ],
                 ),

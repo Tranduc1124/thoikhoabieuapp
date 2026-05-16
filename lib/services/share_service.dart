@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
@@ -24,20 +26,20 @@ class ShareService {
   final String userId;
   final String ownerName;
   final String? profilePhoto;
+  String get _mySharesCacheKey => 'shares.$userId.myLinks';
 
   static const _shareHost = 'minhduc.huutien.store';
   static const _shareScheme = 'thoikhoabieu';
 
   Future<List<ShareScheduleModel>> listMyShares() async {
-    final data = await Api.call('share.myLinks');
-    final items = (data['shares'] as List? ?? const []);
-    return items
-        .whereType<Map>()
-        .map(
-          (item) => ShareScheduleModel.fromMap(Map<String, dynamic>.from(item)),
-        )
-        .where((share) => !share.isDeleted)
-        .toList(growable: false);
+    try {
+      final data = await Api.call('share.myLinks');
+      final items = (data['shares'] as List? ?? const []);
+      await _cacheList(_mySharesCacheKey, items);
+      return _parseShares(items);
+    } catch (_) {
+      return _parseShares(await _loadCachedList(_mySharesCacheKey));
+    }
   }
 
   Future<ShareScheduleModel> createOrUpdateShare({
@@ -184,5 +186,29 @@ class ShareService {
 
   static String? normalizeShareId(String input) {
     return DeepLinkService.extractShareId(input);
+  }
+
+  List<ShareScheduleModel> _parseShares(List<Object?> items) {
+    return items
+        .whereType<Map>()
+        .map(
+          (item) => ShareScheduleModel.fromMap(Map<String, dynamic>.from(item)),
+        )
+        .where((share) => !share.isDeleted)
+        .toList(growable: false);
+  }
+
+  Future<void> _cacheList(String key, List<Object?> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, jsonEncode(items));
+  }
+
+  Future<List<Object?>> _loadCachedList(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(key);
+    if (raw == null || raw.trim().isEmpty) return const [];
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) return const [];
+    return decoded;
   }
 }

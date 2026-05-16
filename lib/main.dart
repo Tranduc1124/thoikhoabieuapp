@@ -236,11 +236,31 @@ CustomTransitionPage<void> _page(GoRouterState state, Widget child) {
   );
 }
 
-class ThoiKhoaBieuApp extends ConsumerWidget {
+class ThoiKhoaBieuApp extends ConsumerStatefulWidget {
   const ThoiKhoaBieuApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ThoiKhoaBieuApp> createState() => _ThoiKhoaBieuAppState();
+}
+
+class _ThoiKhoaBieuAppState extends ConsumerState<ThoiKhoaBieuApp> {
+  Timer? _themeTimer;
+  DateTime _themeClock = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleNextThemeTick();
+  }
+
+  @override
+  void dispose() {
+    _themeTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(_routerProvider);
     unawaited(DeepLinkService.attach(router));
 
@@ -295,7 +315,23 @@ class ThoiKhoaBieuApp extends ConsumerWidget {
     return switch (value) {
       'light' => ThemeMode.light,
       'dark' => ThemeMode.dark,
+      'auto' => _isDarkHour(_themeClock) ? ThemeMode.dark : ThemeMode.light,
       _ => ThemeMode.system,
     };
+  }
+
+  bool _isDarkHour(DateTime now) {
+    return now.hour < 6 || now.hour >= 18;
+  }
+
+  void _scheduleNextThemeTick() {
+    final now = DateTime.now();
+    final nextHour = DateTime(now.year, now.month, now.day, now.hour + 1);
+    _themeTimer?.cancel();
+    _themeTimer = Timer(nextHour.difference(now), () {
+      if (!mounted) return;
+      setState(() => _themeClock = DateTime.now());
+      _scheduleNextThemeTick();
+    });
   }
 }

@@ -6,9 +6,11 @@ import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
 import '../models/weather_now_model.dart';
 import '../providers/auth_provider.dart';
+import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/weather_provider.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/loading_skeleton.dart';
 import '../widgets/morphing_schedule_list.dart';
@@ -27,6 +29,8 @@ class HomeScreen extends ConsumerWidget {
     final logBySchedule = {for (final log in logs) log.scheduleId: log};
     final user = ref.watch(appUserProvider).valueOrNull;
     final weather = ref.watch(homeWeatherProvider).valueOrNull;
+    final friendRequestCount =
+        ref.watch(incomingFriendRequestsProvider).valueOrNull?.length ?? 0;
 
     return SoftGradientBackground(
       child: SafeArea(
@@ -40,6 +44,7 @@ class HomeScreen extends ConsumerWidget {
                   name: user?.displayName,
                   schedules: schedules.valueOrNull ?? const [],
                   weather: weather,
+                  friendRequestCount: friendRequestCount,
                 ),
               ),
             ),
@@ -99,9 +104,8 @@ class HomeScreen extends ConsumerWidget {
                   return SliverMorphingScheduleList(
                     schedules: items,
                     logForSchedule: (schedule) => logBySchedule[schedule.id],
-                    onDelete: (schedule) => ref
-                        .read(scheduleActionsProvider)
-                        .delete(schedule.id),
+                    onDelete: (schedule) =>
+                        ref.read(scheduleActionsProvider).delete(schedule.id),
                   );
                 },
               ),
@@ -118,11 +122,13 @@ class _Header extends StatelessWidget {
     required this.name,
     required this.schedules,
     required this.weather,
+    required this.friendRequestCount,
   });
 
   final String? name;
   final List<ScheduleModel> schedules;
   final WeatherNowModel? weather;
+  final int friendRequestCount;
 
   @override
   Widget build(BuildContext context) {
@@ -132,6 +138,7 @@ class _Header extends StatelessWidget {
       (sum, item) => sum + item.duration.inMinutes / 60,
     );
     final next = _nextSchedule(schedules);
+    final nextAlert = _nextAlert(next);
 
     return Container(
       padding: const EdgeInsets.all(22),
@@ -201,6 +208,28 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           _WeatherBadge(weather: weather, scheduleCount: schedules.length),
+          AnimatedSwitcher(
+            duration: AppMotion.medium,
+            switchInCurve: AppMotion.liquid,
+            switchOutCurve: AppMotion.exit,
+            child: nextAlert == null && friendRequestCount == 0
+                ? const SizedBox.shrink(key: ValueKey('home-alert-empty'))
+                : Padding(
+                    key: ValueKey('home-alert-$nextAlert-$friendRequestCount'),
+                    padding: const EdgeInsets.only(top: 12),
+                    child: _InlineAlert(
+                      icon: friendRequestCount > 0
+                          ? Icons.person_add_alt_1_rounded
+                          : Icons.notifications_active_rounded,
+                      message: friendRequestCount > 0
+                          ? '$friendRequestCount lời mời kết bạn đang chờ.'
+                          : nextAlert!,
+                      color: friendRequestCount > 0
+                          ? AppColors.lavender
+                          : AppColors.warning,
+                    ),
+                  ),
+          ),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -263,6 +292,58 @@ class _Header extends StatelessWidget {
     if (hour < 11) return 'Chào buổi sáng';
     if (hour < 18) return 'Chào buổi chiều';
     return 'Chào buổi tối';
+  }
+
+  String? _nextAlert(ScheduleModel? schedule) {
+    if (schedule == null) return null;
+    final now = DateTime.now();
+    final minutes = now.hour * 60 + now.minute;
+    final remaining = schedule.startTime - minutes;
+    if (remaining < 0 || remaining > 20) return null;
+    if (remaining == 0) return '${schedule.subjectName} đang bắt đầu.';
+    return '${schedule.subjectName} bắt đầu sau $remaining phút.';
+  }
+}
+
+class _InlineAlert extends StatelessWidget {
+  const _InlineAlert({
+    required this.icon,
+    required this.message,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String message;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: color.withValues(alpha: colorScheme.isDark ? 0.18 : 0.14),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: colorScheme.textPrimary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

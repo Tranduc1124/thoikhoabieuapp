@@ -2,7 +2,7 @@ import '../utils/safe_json.dart';
 
 class AppSettingsModel {
   const AppSettingsModel({
-    this.themeMode = 'system',
+    this.themeMode = 'auto',
     this.accentColor = 0xFF6A8DFF,
     this.liquidGlassEnabled = true,
     this.animationsEnabled = true,
@@ -22,7 +22,7 @@ class AppSettingsModel {
   factory AppSettingsModel.fromMap(dynamic data) {
     final safeData = JsonSafe.map(data);
     return AppSettingsModel(
-      themeMode: JsonSafe.string(safeData['themeMode'], fallback: 'system'),
+      themeMode: JsonSafe.string(safeData['themeMode'], fallback: 'auto'),
       accentColor: JsonSafe.integer(
         safeData['accentColor'],
         fallback: 0xFF6A8DFF,

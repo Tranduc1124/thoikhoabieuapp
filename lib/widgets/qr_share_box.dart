@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import 'glass_card.dart';
+import 'motion_widgets.dart';
 
 class QrShareBox extends StatelessWidget {
   const QrShareBox({
@@ -59,17 +61,30 @@ class QrShareBox extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: QrImageView(
-                    data: data,
-                    size: size,
-                    backgroundColor: const Color(0xFFFDFEFF),
-                    eyeStyle: const QrEyeStyle(
-                      eyeShape: QrEyeShape.circle,
-                      color: Color(0xFF111827),
-                    ),
-                    dataModuleStyle: const QrDataModuleStyle(
-                      dataModuleShape: QrDataModuleShape.circle,
-                      color: Color(0xFF111827),
+                  child: AnimatedSwitcher(
+                    duration: AppMotion.medium,
+                    switchInCurve: AppMotion.liquid,
+                    switchOutCurve: AppMotion.exit,
+                    transitionBuilder: (child, animation) =>
+                        MorphTransitionWidget(
+                          animation: animation,
+                          beginScale: 0.94,
+                          beginOffset: Offset.zero,
+                          child: child,
+                        ),
+                    child: QrImageView(
+                      key: ValueKey(data),
+                      data: data,
+                      size: size,
+                      backgroundColor: const Color(0xFFFDFEFF),
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.circle,
+                        color: Color(0xFF111827),
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.circle,
+                        color: Color(0xFF111827),
+                      ),
                     ),
                   ),
                 ),

@@ -10,6 +10,7 @@ import '../services/share_debug_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/qr_share_box.dart';
 import '../widgets/share_schedule_card.dart';
 import '../widgets/soft_gradient_background.dart';
@@ -107,8 +108,9 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                             ? const SizedBox.square(
                                 key: ValueKey('share-busy'),
                                 dimension: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(
                                 Icons.ios_share_rounded,
@@ -261,23 +263,7 @@ class _SharePoster extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: AppMotion.medium,
-      curve: AppMotion.liquid,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 18 * (1 - value)),
-            child: Transform.scale(
-              scale: 0.985 + value * 0.015,
-              alignment: Alignment.topCenter,
-              child: child,
-            ),
-          ),
-        );
-      },
+    return ScheduleFadeWidget(
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(36),
@@ -300,57 +286,57 @@ class _SharePoster extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(20),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _OwnerAvatar(photoUrl: share.profilePhoto),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      share.title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: colorScheme.textPrimary,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _OwnerAvatar(photoUrl: share.profilePhoto),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        share.title,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: colorScheme.textPrimary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Từ ${share.ownerName}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.textSecondary,
-                        fontWeight: FontWeight.w700,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Từ ${share.ownerName}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.textSecondary,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          QrShareBox(
-            data: share.publicUrl,
-            label: 'Quét để xem hoặc thêm vào lịch của bạn',
-            subtitle: share.id,
-          ),
-          const SizedBox(height: 18),
-          for (final schedule in share.schedulesSnapshot.take(8))
-            ShareScheduleCard(schedule: schedule, compact: true),
-          if (share.schedulesSnapshot.length > 8)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '+${share.schedulesSnapshot.length - 8} buổi học khác',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.textSecondary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              ],
             ),
-        ],
+            const SizedBox(height: 18),
+            QrShareBox(
+              data: share.publicUrl,
+              label: 'Quét để xem hoặc thêm vào lịch của bạn',
+              subtitle: share.id,
+            ),
+            const SizedBox(height: 18),
+            for (final schedule in share.schedulesSnapshot.take(8))
+              ShareScheduleCard(schedule: schedule, compact: true),
+            if (share.schedulesSnapshot.length > 8)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '+${share.schedulesSnapshot.length - 8} buổi học khác',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

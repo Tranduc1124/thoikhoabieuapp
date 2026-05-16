@@ -21,7 +21,7 @@ class SettingsScreen extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider).valueOrNull;
     final user = userState.valueOrNull;
     final appSettings = ref.watch(appSettingsProvider).valueOrNull;
-    final themeMode = appSettings?.themeMode ?? 'system';
+    final themeMode = appSettings?.themeMode ?? 'auto';
     final notificationSettings = ref
         .watch(notificationSettingsProvider)
         .valueOrNull;
@@ -96,9 +96,14 @@ class SettingsScreen extends ConsumerWidget {
                 showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(
+                    value: 'auto',
+                    icon: Icon(Icons.brightness_auto_rounded),
+                    label: Text('Tự động'),
+                  ),
+                  ButtonSegment(
                     value: 'system',
                     icon: Icon(Icons.phone_iphone_rounded),
-                    label: Text('Hệ thống'),
+                    label: Text('Máy'),
                   ),
                   ButtonSegment(
                     value: 'light',

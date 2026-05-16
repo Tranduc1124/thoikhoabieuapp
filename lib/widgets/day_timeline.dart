@@ -111,20 +111,20 @@ class _TimelineRow extends StatelessWidget {
                   AnimatedContainer(
                     duration: AppMotion.medium,
                     curve: AppMotion.liquid,
-                      width: 2,
-                      height: 104,
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(999),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            color.withValues(alpha: 0.38),
-                            color.withValues(alpha: 0.08),
-                          ],
-                        ),
+                    width: 2,
+                    height: 104,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          color.withValues(alpha: 0.38),
+                          color.withValues(alpha: 0.08),
+                        ],
                       ),
+                    ),
                   ),
               ],
             ),

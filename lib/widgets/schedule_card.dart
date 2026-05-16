@@ -12,6 +12,7 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import 'animated_pressable.dart';
 import 'glass_card.dart';
+import 'motion_widgets.dart';
 
 class ScheduleCard extends ConsumerWidget {
   const ScheduleCard({
@@ -23,6 +24,7 @@ class ScheduleCard extends ConsumerWidget {
     this.onStart,
     this.onComplete,
     this.onDelete,
+    this.showDragHandle = false,
   });
 
   final ScheduleModel schedule;
@@ -32,6 +34,7 @@ class ScheduleCard extends ConsumerWidget {
   final VoidCallback? onStart;
   final VoidCallback? onComplete;
   final VoidCallback? onDelete;
+  final bool showDragHandle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -48,6 +51,7 @@ class ScheduleCard extends ConsumerWidget {
       onStart: onStart,
       onComplete: onComplete,
       onDelete: onDelete,
+      showDragHandle: showDragHandle,
       isExpandedByUser: completedExpanded,
       onToggleCompletedCard: () =>
           ref.read(expandedCompletedCardsProvider.notifier).toggle(schedule.id),
@@ -65,6 +69,7 @@ class PremiumScheduleCard extends StatelessWidget {
     this.onStart,
     this.onComplete,
     this.onDelete,
+    this.showDragHandle = false,
     required this.isExpandedByUser,
     required this.onToggleCompletedCard,
   });
@@ -76,6 +81,7 @@ class PremiumScheduleCard extends StatelessWidget {
   final VoidCallback? onStart;
   final VoidCallback? onComplete;
   final VoidCallback? onDelete;
+  final bool showDragHandle;
   final bool isExpandedByUser;
   final VoidCallback onToggleCompletedCard;
 
@@ -88,199 +94,197 @@ class PremiumScheduleCard extends StatelessWidget {
     final canCollapse = status == _ClassStatus.done;
     final isCollapsed = canCollapse && !isExpandedByUser;
 
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 300 + index.clamp(0, 6) * 25),
-      curve: AppMotion.liquid,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value.clamp(0.0, 1.0),
-          child: Transform.translate(
-            offset: Offset(0, 12 * (1 - value)),
-            child: Transform.scale(
-              scale: 0.98 + (0.02 * value),
-              alignment: Alignment.topCenter,
-              child: child,
-            ),
-          ),
-        );
-      },
-      child: AnimatedPressable(
-        scale: 0.985,
-        onTap: () {
-          if (canCollapse) {
-            onToggleCompletedCard();
-            return;
-          }
-          context.push('/schedule/${schedule.id}', extra: schedule);
-        },
-        child: Hero(
-          tag: 'schedule-card-${schedule.id}',
-          transitionOnUserGestures: true,
-          flightShuttleBuilder:
-              (context, animation, direction, fromContext, toContext) {
-                final curved = CurvedAnimation(
-                  parent: animation,
-                  curve: AppMotion.liquid,
-                  reverseCurve: AppMotion.exit,
-                );
-                final shuttle = direction == HeroFlightDirection.push
-                    ? toContext.widget
-                    : fromContext.widget;
-                return FadeTransition(
-                  opacity: Tween<double>(begin: 0.84, end: 1).animate(curved),
-                  child: ScaleTransition(
-                    scale: Tween<double>(begin: 0.965, end: 1).animate(curved),
-                    child: shuttle,
-                  ),
-                );
-              },
-          child: GlassCard(
-            margin: EdgeInsets.only(bottom: compact ? 12 : 18),
-            radius: compact ? 28 : 34,
-            padding: EdgeInsets.zero,
-            borderColor: palette.borderColor(isDark),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(compact ? 28 : 34),
-              child: Stack(
-                children: [
-                  Positioned.fill(child: _CardAtmosphere(palette: palette)),
-                  Positioned(
-                    top: -34,
-                    right: -20,
-                    child: _GradientGlow(
-                      color: palette.primary,
-                      size: compact ? 110 : 150,
-                      opacity: isDark ? 0.18 : 0.14,
+    return RepaintBoundary(
+      child: Semantics(
+        button: true,
+        label: 'Mở chi tiết môn ${schedule.subjectName}',
+        child: AnimatedPressable(
+          scale: 0.985,
+          onTap: () {
+            if (canCollapse) {
+              onToggleCompletedCard();
+              return;
+            }
+            context.push('/schedule/${schedule.id}', extra: schedule);
+          },
+          child: Hero(
+            tag: 'schedule-card-${schedule.id}',
+            transitionOnUserGestures: true,
+            flightShuttleBuilder:
+                (context, animation, direction, fromContext, toContext) {
+                  final curved = CurvedAnimation(
+                    parent: animation,
+                    curve: AppMotion.liquid,
+                    reverseCurve: AppMotion.exit,
+                  );
+                  final shuttle = direction == HeroFlightDirection.push
+                      ? toContext.widget
+                      : fromContext.widget;
+                  return FadeTransition(
+                    opacity: Tween<double>(begin: 0.84, end: 1).animate(curved),
+                    child: ScaleTransition(
+                      scale: Tween<double>(
+                        begin: 0.965,
+                        end: 1,
+                      ).animate(curved),
+                      child: shuttle,
                     ),
-                  ),
-                  Positioned(
-                    left: -42,
-                    bottom: -44,
-                    child: _GradientGlow(
-                      color: palette.secondary,
-                      size: compact ? 120 : 170,
-                      opacity: isDark ? 0.12 : 0.10,
+                  );
+                },
+            child: GlassCard(
+              margin: EdgeInsets.only(
+                bottom: compact ? AppSpacing.md : AppSpacing.xl,
+              ),
+              radius: compact ? AppRadius.lg : AppRadius.xl,
+              padding: EdgeInsets.zero,
+              borderColor: palette.borderColor(isDark),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(
+                  compact ? AppRadius.lg : AppRadius.xl,
+                ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: _CardAtmosphere(palette: palette)),
+                    Positioned(
+                      top: -34,
+                      right: -20,
+                      child: _GradientGlow(
+                        color: palette.primary,
+                        size: compact ? 110 : 150,
+                        opacity: isDark ? 0.18 : 0.14,
+                      ),
                     ),
-                  ),
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.white.withValues(
-                                alpha: isDark ? 0.05 : 0.20,
+                    Positioned(
+                      left: -42,
+                      bottom: -44,
+                      child: _GradientGlow(
+                        color: palette.secondary,
+                        size: compact ? 120 : 170,
+                        opacity: isDark ? 0.12 : 0.10,
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white.withValues(
+                                  alpha: isDark ? 0.05 : 0.20,
+                                ),
+                                Colors.transparent,
+                                palette.primary.withValues(
+                                  alpha: isDark ? 0.05 : 0.07,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    AnimatedSize(
+                      duration: AppMotion.medium,
+                      curve: AppMotion.liquid,
+                      alignment: Alignment.topCenter,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: isCollapsed ? (compact ? 96 : 104) : 0,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(
+                            compact ? AppSpacing.lg : AppSpacing.xl,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _Header(
+                                schedule: schedule,
+                                palette: palette,
+                                onDelete: onDelete,
+                                showDragHandle: showDragHandle,
+                                onConfirmDelete: () => _confirmDelete(context),
                               ),
-                              Colors.transparent,
-                              palette.primary.withValues(
-                                alpha: isDark ? 0.05 : 0.07,
-                              ),
+                              if (!isCollapsed) ...[
+                                SizedBox(height: compact ? 14 : AppSpacing.lg),
+                                Wrap(
+                                  spacing: 9,
+                                  runSpacing: 9,
+                                  children: [
+                                    GlassPill(
+                                      icon: Icons.access_time_rounded,
+                                      label:
+                                          '${formatMinutes(schedule.startTime)} - ${formatMinutes(schedule.endTime)}',
+                                      palette: palette,
+                                    ),
+                                    ScheduleStatusPill(
+                                      label: statusData.label,
+                                      icon: statusData.icon,
+                                      colors: statusData.colors,
+                                      active: status == _ClassStatus.active,
+                                      muted: status == _ClassStatus.done,
+                                    ),
+                                  ],
+                                ),
+                                if (!compact && _hasInfo) ...[
+                                  const SizedBox(height: AppSpacing.lg),
+                                  Wrap(
+                                    spacing: 9,
+                                    runSpacing: 9,
+                                    children: [
+                                      if (schedule.teacher.trim().isNotEmpty)
+                                        ScheduleInfoChip(
+                                          icon: Icons.school_rounded,
+                                          label: schedule.teacher.trim(),
+                                          palette: palette,
+                                        ),
+                                      if (schedule.room.trim().isNotEmpty)
+                                        ScheduleInfoChip(
+                                          icon: Icons.location_on_rounded,
+                                          label: schedule.room.trim(),
+                                          palette: palette,
+                                        ),
+                                      if (schedule.note.trim().isNotEmpty)
+                                        ScheduleInfoChip(
+                                          icon: Icons.sticky_note_2_rounded,
+                                          label: schedule.note.trim(),
+                                          palette: palette,
+                                        ),
+                                      if (schedule.hasMapLocation)
+                                        _MapChip(
+                                          label: 'Apple Maps',
+                                          palette: palette,
+                                          onTap: () =>
+                                              _openMap(schedule.appleMapsUrl),
+                                        ),
+                                      if (schedule.hasMapLocation)
+                                        _MapChip(
+                                          label: 'Google Maps',
+                                          palette: palette,
+                                          onTap: () =>
+                                              _openMap(schedule.googleMapsUrl),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                                if (onStart != null || onComplete != null) ...[
+                                  const SizedBox(height: AppSpacing.lg),
+                                  _Actions(
+                                    palette: palette,
+                                    onStart: onStart,
+                                    onComplete: onComplete,
+                                  ),
+                                ],
+                              ],
                             ],
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  AnimatedSize(
-                    duration: AppMotion.medium,
-                    curve: AppMotion.liquid,
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: isCollapsed ? (compact ? 96 : 104) : 0,
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(compact ? 16 : 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _Header(
-                              schedule: schedule,
-                              palette: palette,
-                              onDelete: onDelete,
-                              onConfirmDelete: () => _confirmDelete(context),
-                            ),
-                            if (!isCollapsed) ...[
-                              SizedBox(height: compact ? 14 : AppSpacing.lg),
-                              Wrap(
-                                spacing: 9,
-                                runSpacing: 9,
-                                children: [
-                                  GlassPill(
-                                    icon: Icons.access_time_rounded,
-                                    label:
-                                        '${formatMinutes(schedule.startTime)} - ${formatMinutes(schedule.endTime)}',
-                                    palette: palette,
-                                  ),
-                                  ScheduleStatusPill(
-                                    label: statusData.label,
-                                    icon: statusData.icon,
-                                    colors: statusData.colors,
-                                    active: status == _ClassStatus.active,
-                                    muted: status == _ClassStatus.done,
-                                  ),
-                                ],
-                              ),
-                              if (!compact && _hasInfo) ...[
-                                const SizedBox(height: AppSpacing.lg),
-                                Wrap(
-                                  spacing: 9,
-                                  runSpacing: 9,
-                                  children: [
-                                    if (schedule.teacher.trim().isNotEmpty)
-                                      ScheduleInfoChip(
-                                        icon: Icons.school_rounded,
-                                        label: schedule.teacher.trim(),
-                                        palette: palette,
-                                      ),
-                                    if (schedule.room.trim().isNotEmpty)
-                                      ScheduleInfoChip(
-                                        icon: Icons.location_on_rounded,
-                                        label: schedule.room.trim(),
-                                        palette: palette,
-                                      ),
-                                    if (schedule.note.trim().isNotEmpty)
-                                      ScheduleInfoChip(
-                                        icon: Icons.sticky_note_2_rounded,
-                                        label: schedule.note.trim(),
-                                        palette: palette,
-                                      ),
-                                    if (schedule.hasMapLocation)
-                                      _MapChip(
-                                        label: 'Apple Maps',
-                                        palette: palette,
-                                        onTap: () =>
-                                            _openMap(schedule.appleMapsUrl),
-                                      ),
-                                    if (schedule.hasMapLocation)
-                                      _MapChip(
-                                        label: 'Google Maps',
-                                        palette: palette,
-                                        onTap: () =>
-                                            _openMap(schedule.googleMapsUrl),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                              if (onStart != null || onComplete != null) ...[
-                                const SizedBox(height: AppSpacing.lg),
-                                _Actions(
-                                  palette: palette,
-                                  onStart: onStart,
-                                  onComplete: onComplete,
-                                ),
-                              ],
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -412,60 +416,82 @@ class _Header extends StatelessWidget {
     required this.schedule,
     required this.palette,
     required this.onDelete,
+    required this.showDragHandle,
     required this.onConfirmDelete,
   });
 
   final ScheduleModel schedule;
   final SubjectPalette palette;
   final VoidCallback? onDelete;
+  final bool showDragHandle;
   final VoidCallback onConfirmDelete;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SubjectGradientIcon(palette: palette),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 1),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  schedule.subjectName,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontSize: 19,
-                    height: 1.12,
-                    fontWeight: FontWeight.w900,
-                    color: colorScheme.textPrimary,
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tight = constraints.maxWidth < 320;
+        final titleStyle =
+            (tight
+                    ? Theme.of(context).textTheme.titleMedium
+                    : Theme.of(context).textTheme.titleLarge)
+                ?.copyWith(
+                  height: 1.16,
+                  fontWeight: FontWeight.w900,
+                  color: colorScheme.textPrimary,
+                );
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SubjectGradientIcon(palette: palette, compact: tight),
+            SizedBox(width: tight ? AppSpacing.sm : AppSpacing.md),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      schedule.subjectName,
+                      maxLines: 3,
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      dayName(schedule.dayOfWeek),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: colorScheme.textSecondary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 5),
-                Text(
-                  dayName(schedule.dayOfWeek),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colorScheme.textSecondary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        _MoreMenu(
-          schedule: schedule,
-          onDelete: onDelete,
-          onConfirmDelete: onConfirmDelete,
-        ),
-      ],
+            SizedBox(width: tight ? AppSpacing.xs : AppSpacing.sm),
+            if (showDragHandle) ...[
+              Semantics(
+                label: 'Kéo để sắp xếp môn ${schedule.subjectName}',
+                child: Icon(
+                  Icons.drag_indicator_rounded,
+                  color: colorScheme.textSecondary.withValues(alpha: 0.72),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+            ],
+            _MoreMenu(
+              schedule: schedule,
+              onDelete: onDelete,
+              onConfirmDelete: onConfirmDelete,
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -484,52 +510,73 @@ class _MoreMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return GlassContainer(
-      radius: AppRadius.md,
-      padding: EdgeInsets.zero,
-      child: PopupMenuButton<String>(
-        tooltip: 'Tùy chọn',
-        icon: Icon(
-          Icons.more_horiz_rounded,
-          color: colorScheme.textSecondary,
-          size: 22,
+    return Semantics(
+      button: true,
+      label: 'Tùy chọn môn ${schedule.subjectName}',
+      child: AnimatedButton(
+        onTap: () => _openMenu(context),
+        scale: 0.92,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: GlassContainer(
+          radius: AppRadius.md,
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Icon(
+            Icons.more_horiz_rounded,
+            color: colorScheme.textSecondary,
+            size: 22,
+          ),
         ),
-        padding: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        color: context.surfaceColor.withValues(
-          alpha: context.isDark ? 0.98 : 0.96,
+      ),
+    );
+  }
+
+  Future<void> _openMenu(BuildContext context) async {
+    final box = context.findRenderObject() as RenderBox?;
+    final overlay =
+        Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
+    if (box == null || overlay == null) return;
+    final offset = box.localToGlobal(Offset.zero, ancestor: overlay);
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(offset.dx, offset.dy, box.size.width, box.size.height),
+        Offset.zero & overlay.size,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      color: context.surfaceColor.withValues(
+        alpha: context.isDark ? 0.98 : 0.96,
+      ),
+      items: [
+        const PopupMenuItem(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(Icons.edit_rounded),
+              SizedBox(width: AppSpacing.sm),
+              Text('Sửa'),
+            ],
+          ),
         ),
-        onSelected: (value) {
-          if (value == 'edit') {
-            context.push('/schedule/${schedule.id}', extra: schedule);
-          }
-          if (value == 'delete') onConfirmDelete();
-        },
-        itemBuilder: (context) => [
+        if (onDelete != null)
           const PopupMenuItem(
-            value: 'edit',
+            value: 'delete',
             child: Row(
               children: [
-                Icon(Icons.edit_rounded),
-                SizedBox(width: 10),
-                Text('Sửa'),
+                Icon(Icons.delete_outline_rounded),
+                SizedBox(width: AppSpacing.sm),
+                Text('Xóa'),
               ],
             ),
           ),
-          if (onDelete != null)
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete_outline_rounded),
-                  SizedBox(width: 10),
-                  Text('Xóa'),
-                ],
-              ),
-            ),
-        ],
-      ),
+      ],
     );
+    if (!context.mounted || selected == null) return;
+    if (selected == 'edit') {
+      context.push('/schedule/${schedule.id}', extra: schedule);
+    }
+    if (selected == 'delete') onConfirmDelete();
   }
 }
 
@@ -836,17 +883,25 @@ class ScheduleInfoChip extends StatelessWidget {
 }
 
 class SubjectGradientIcon extends StatelessWidget {
-  const SubjectGradientIcon({super.key, required this.palette});
+  const SubjectGradientIcon({
+    super.key,
+    required this.palette,
+    this.compact = false,
+  });
 
   final SubjectPalette palette;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final size = compact ? 44.0 : 50.0;
     return Container(
-      width: 50,
-      height: 50,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(
+          compact ? AppRadius.sm : AppRadius.md,
+        ),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

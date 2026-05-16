@@ -13,6 +13,7 @@ import '../theme/app_spacing.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/loading_skeleton.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/morphing_schedule_list.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
@@ -39,7 +40,12 @@ class TodayScreen extends ConsumerWidget {
           child: schedules.when(
             loading: () => const Padding(
               key: ValueKey('today-loading'),
-              padding: EdgeInsets.all(AppSpacing.xl),
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.xl,
+                AppSpacing.xl,
+                0,
+              ),
               child: LoadingSkeleton(itemCount: 4),
             ),
             error: (error, _) => EmptyState(
@@ -73,30 +79,55 @@ class TodayScreen extends ConsumerWidget {
                 schedules: items,
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.xl,
-                  AppSpacing.lg,
+                  AppSpacing.md,
                   AppSpacing.xl,
                   112,
                 ),
                 headerSlivers: [
-                  const SliverToBoxAdapter(
-                    child: SectionHeader(
-                    title: 'Lịch hôm nay',
-                    subtitle:
-                        'Theo dõi tiến độ từng buổi học và ghi chú nhanh sau giờ lên lớp',
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.lg,
+                      AppSpacing.xl,
+                      0,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: Semantics(
+                        header: true,
+                        child: SectionHeader(
+                          title: 'Lịch hôm nay',
+                          subtitle:
+                              'Theo dõi tiến độ từng buổi học và ghi chú nhanh sau giờ lên lớp',
+                        ),
+                      ),
                     ),
                   ),
                   const SliverToBoxAdapter(
                     child: SizedBox(height: AppSpacing.lg),
                   ),
-                  SliverToBoxAdapter(child: _TodaySummary(items: items)),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: _TodaySummary(items: items),
+                    ),
+                  ),
                   const SliverToBoxAdapter(
-                    child: SizedBox(height: AppSpacing.lg),
+                    child: SizedBox(height: AppSpacing.xl),
                   ),
                 ],
                 logForSchedule: (schedule) => logBySchedule[schedule.id],
-                onDelete: (schedule) => ref
-                    .read(scheduleActionsProvider)
-                    .delete(schedule.id),
+                onDelete: (schedule) =>
+                    ref.read(scheduleActionsProvider).delete(schedule.id),
+                onReorder: (oldIndex, newIndex) => ref
+                    .read(scheduleReorderActionsProvider)
+                    .reorderDay(
+                      day: DateTime.now().weekday,
+                      oldIndex: oldIndex,
+                      newIndex: newIndex,
+                      visibleItems: items,
+                    ),
                 onStart: (schedule) async {
                   await ref.read(scheduleActionsProvider).start(schedule);
                   if (context.mounted) {
@@ -122,16 +153,11 @@ class TodayScreen extends ConsumerWidget {
   }
 
   Widget _pageTransition(Widget child, Animation<double> animation) {
-    final curved = CurvedAnimation(parent: animation, curve: AppMotion.liquid);
-    return FadeTransition(
-      opacity: Tween<double>(begin: 0.72, end: 1).animate(curved),
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.025),
-          end: Offset.zero,
-        ).animate(curved),
-        child: child,
-      ),
+    return MorphTransitionWidget(
+      animation: animation,
+      beginScale: 0.99,
+      beginOpacity: 0.72,
+      child: child,
     );
   }
 
@@ -183,32 +209,59 @@ class _TodaySummary extends StatelessWidget {
       (total, item) => total + item.duration.inMinutes,
     );
     final next = _nextSchedule(items);
-    return GlassCard(
-      radius: AppRadius.lg,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Row(
-        children: [
-          _SummaryTile(
-            icon: Icons.auto_stories_rounded,
-            label: 'Môn',
-            value: '${items.length}',
-            color: colorScheme.primary,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          _SummaryTile(
-            icon: Icons.timer_rounded,
-            label: 'Giờ học',
-            value: (totalMinutes / 60).toStringAsFixed(1),
-            color: AppColors.mint,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          _SummaryTile(
-            icon: Icons.near_me_rounded,
-            label: 'Tiếp theo',
-            value: next == null ? '--' : formatMinutes(next.startTime),
-            color: AppColors.peach,
-          ),
-        ],
+    return Semantics(
+      label: 'Tóm tắt lịch hôm nay',
+      child: GlassCard(
+        radius: AppRadius.lg,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final useWrap = constraints.maxWidth < 340;
+            final tiles = [
+              _SummaryTile(
+                icon: Icons.auto_stories_rounded,
+                label: 'Môn',
+                value: '${items.length}',
+                color: colorScheme.primary,
+              ),
+              _SummaryTile(
+                icon: Icons.timer_rounded,
+                label: 'Giờ học',
+                value: (totalMinutes / 60).toStringAsFixed(1),
+                color: AppColors.mint,
+              ),
+              _SummaryTile(
+                icon: Icons.near_me_rounded,
+                label: 'Tiếp theo',
+                value: next == null ? '--' : formatMinutes(next.startTime),
+                color: AppColors.peach,
+              ),
+            ];
+            if (useWrap) {
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: tiles[0]),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(child: tiles[1]),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  tiles[2],
+                ],
+              );
+            }
+            return Row(
+              children: [
+                for (var index = 0; index < tiles.length; index++) ...[
+                  if (index > 0) const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: tiles[index]),
+                ],
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -241,11 +294,15 @@ class _SummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Expanded(
+    return Semantics(
+      label: '$label: $value',
       child: AnimatedContainer(
         duration: AppMotion.medium,
         curve: AppMotion.liquid,
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadius.md),
           color: colorScheme.tileSurface,
@@ -256,16 +313,13 @@ class _SummaryTile extends StatelessWidget {
           children: [
             Icon(icon, size: 18, color: color),
             const SizedBox(height: AppSpacing.sm),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                maxLines: 1,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: colorScheme.textPrimary,
-                  fontWeight: FontWeight.w900,
-                ),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: colorScheme.textPrimary,
+                fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: 2),

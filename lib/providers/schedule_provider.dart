@@ -7,6 +7,9 @@ import 'auth_provider.dart';
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
 final selectedDayProvider = StateProvider<int>((ref) => DateTime.now().weekday);
+final scheduleOrderProvider = StateProvider<Map<int, List<String>>>(
+  (ref) => const {},
+);
 
 final scheduleRepositoryProvider = Provider<ScheduleRepository?>((ref) {
   final user = ref.watch(authControllerProvider).valueOrNull;
@@ -24,17 +27,14 @@ final todaySchedulesProvider = Provider<AsyncValue<List<ScheduleModel>>>((ref) {
   final query = ref.watch(searchQueryProvider).trim().toLowerCase();
   final today = DateTime.now().weekday;
   return ref.watch(schedulesProvider).whenData((items) {
-    final filtered =
-        items
-            .where((item) => item.dayOfWeek == today)
-            .where(
-              (item) =>
-                  query.isEmpty ||
-                  item.subjectName.toLowerCase().contains(query),
-            )
-            .toList()
-          ..sort((a, b) => a.startTime.compareTo(b.startTime));
-    return filtered;
+    final filtered = items
+        .where((item) => item.dayOfWeek == today)
+        .where(
+          (item) =>
+              query.isEmpty || item.subjectName.toLowerCase().contains(query),
+        )
+        .toList();
+    return _orderedSchedules(filtered, ref.watch(scheduleOrderProvider)[today]);
   });
 });
 
@@ -44,19 +44,36 @@ final selectedDaySchedulesProvider = Provider<AsyncValue<List<ScheduleModel>>>((
   final day = ref.watch(selectedDayProvider);
   final query = ref.watch(searchQueryProvider).trim().toLowerCase();
   return ref.watch(schedulesProvider).whenData((items) {
-    final filtered =
-        items
-            .where((item) => item.dayOfWeek == day)
-            .where(
-              (item) =>
-                  query.isEmpty ||
-                  item.subjectName.toLowerCase().contains(query),
-            )
-            .toList()
-          ..sort((a, b) => a.startTime.compareTo(b.startTime));
-    return filtered;
+    final filtered = items
+        .where((item) => item.dayOfWeek == day)
+        .where(
+          (item) =>
+              query.isEmpty || item.subjectName.toLowerCase().contains(query),
+        )
+        .toList();
+    return _orderedSchedules(filtered, ref.watch(scheduleOrderProvider)[day]);
   });
 });
+
+List<ScheduleModel> _orderedSchedules(
+  List<ScheduleModel> items,
+  List<String>? orderedIds,
+) {
+  final order = orderedIds == null
+      ? const <String, int>{}
+      : {
+          for (var index = 0; index < orderedIds.length; index++)
+            orderedIds[index]: index,
+        };
+  return [...items]..sort((a, b) {
+    final aOrder = order[a.id];
+    final bOrder = order[b.id];
+    if (aOrder != null && bOrder != null) return aOrder.compareTo(bOrder);
+    if (aOrder != null) return -1;
+    if (bOrder != null) return 1;
+    return a.startTime.compareTo(b.startTime);
+  });
+}
 
 final todayStudyLogsProvider = FutureProvider<List<StudyLogModel>>((ref) async {
   final repository = ref.watch(scheduleRepositoryProvider);
@@ -72,6 +89,10 @@ final weekStudyLogsProvider = FutureProvider<List<StudyLogModel>>((ref) async {
 
 final scheduleActionsProvider = Provider<ScheduleActions>(
   (ref) => ScheduleActions(ref),
+);
+
+final scheduleReorderActionsProvider = Provider<ScheduleReorderActions>(
+  (ref) => ScheduleReorderActions(ref),
 );
 
 class ScheduleActions {
@@ -121,6 +142,41 @@ class ScheduleActions {
       noteAfterClass: note,
     );
     _refresh();
+  }
+}
+
+class ScheduleReorderActions {
+  const ScheduleReorderActions(this.ref);
+
+  final Ref ref;
+
+  void reorderDay({
+    required int day,
+    required int oldIndex,
+    required int newIndex,
+    required List<ScheduleModel> visibleItems,
+  }) {
+    if (oldIndex < 0 ||
+        oldIndex >= visibleItems.length ||
+        newIndex < 0 ||
+        oldIndex == newIndex) {
+      return;
+    }
+    final adjustedNewIndex = newIndex > oldIndex ? newIndex - 1 : newIndex;
+    final ids = visibleItems.map((item) => item.id).toList(growable: true);
+    final moved = ids.removeAt(oldIndex);
+    ids.insert(adjustedNewIndex.clamp(0, ids.length), moved);
+
+    final current = ref.read(scheduleOrderProvider);
+    final previousForDay = current[day] ?? const <String>[];
+    final visibleSet = ids.toSet();
+    final preservedHidden = previousForDay
+        .where((id) => !visibleSet.contains(id))
+        .toList(growable: false);
+    ref.read(scheduleOrderProvider.notifier).state = {
+      ...current,
+      day: [...ids, ...preservedHidden],
+    };
   }
 }
 

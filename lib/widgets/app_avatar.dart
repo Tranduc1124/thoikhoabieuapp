@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_motion.dart';
+import 'motion_widgets.dart';
+
 class AppAvatar extends StatefulWidget {
   const AppAvatar({
     super.key,
@@ -52,54 +55,67 @@ class _AppAvatarState extends State<AppAvatar> {
       iconSize: widget.iconSize,
     );
 
-    if (currentUrl == null) {
-      return fallback;
-    }
-
-    return CircleAvatar(
-      radius: widget.radius,
-      backgroundColor:
-          widget.backgroundColor ??
-          Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
-      child: ClipOval(
-        child: Image.network(
-          currentUrl,
-          width: widget.radius * 2,
-          height: widget.radius * 2,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return SizedBox(
-              width: widget.radius * 2,
-              height: widget.radius * 2,
-              child: Center(
-                child: SizedBox(
-                  width: widget.radius * 0.9,
-                  height: widget.radius * 0.9,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    value: loadingProgress.expectedTotalBytes == null
-                        ? null
-                        : loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!,
-                  ),
+    return AnimatedSwitcher(
+      duration: AppMotion.fast,
+      switchInCurve: AppMotion.liquid,
+      switchOutCurve: AppMotion.exit,
+      transitionBuilder: (child, animation) => MorphTransitionWidget(
+        animation: animation,
+        beginScale: 0.92,
+        beginOffset: Offset.zero,
+        child: child,
+      ),
+      child: currentUrl == null
+          ? KeyedSubtree(
+              key: ValueKey('avatar-fallback-${widget.name}'),
+              child: fallback,
+            )
+          : CircleAvatar(
+              key: ValueKey('avatar-$currentUrl'),
+              radius: widget.radius,
+              backgroundColor:
+                  widget.backgroundColor ??
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
+              child: ClipOval(
+                child: Image.network(
+                  currentUrl,
+                  width: widget.radius * 2,
+                  height: widget.radius * 2,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return SizedBox(
+                      width: widget.radius * 2,
+                      height: widget.radius * 2,
+                      child: Center(
+                        child: SizedBox(
+                          width: widget.radius * 0.9,
+                          height: widget.radius * 0.9,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            value: loadingProgress.expectedTotalBytes == null
+                                ? null
+                                : loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    if (_urlIndex + 1 < urls.length) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() => _urlIndex += 1);
+                        }
+                      });
+                      return const SizedBox.shrink();
+                    }
+                    return fallback;
+                  },
                 ),
               ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            if (_urlIndex + 1 < urls.length) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  setState(() => _urlIndex += 1);
-                }
-              });
-              return const SizedBox.shrink();
-            }
-            return fallback;
-          },
-        ),
-      ),
+            ),
     );
   }
 

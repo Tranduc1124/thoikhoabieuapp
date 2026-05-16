@@ -6,6 +6,7 @@ import '../theme/app_motion.dart';
 import 'animated_pressable.dart';
 import 'glass_card.dart';
 import 'glass_floating_button.dart';
+import 'motion_widgets.dart';
 
 class AppNavigationShell extends StatelessWidget {
   const AppNavigationShell({super.key, required this.navigationShell});
@@ -25,29 +26,16 @@ class AppNavigationShell extends StatelessWidget {
           layoutBuilder: (currentChild, previousChildren) {
             return Stack(
               fit: StackFit.expand,
-              children: [
-                ...previousChildren,
-                ?currentChild,
-              ],
+              children: [...previousChildren, ?currentChild],
             );
           },
           transitionBuilder: (child, animation) {
-            final curved = CurvedAnimation(
-              parent: animation,
-              curve: AppMotion.liquid,
-            );
-            return FadeTransition(
-              opacity: Tween<double>(begin: 0.72, end: 1).animate(curved),
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.985, end: 1).animate(curved),
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.018),
-                    end: Offset.zero,
-                  ).animate(curved),
-                  child: child,
-                ),
-              ),
+            return MorphTransitionWidget(
+              animation: animation,
+              beginOffset: const Offset(0, 0.018),
+              beginScale: 0.985,
+              beginOpacity: 0.72,
+              child: child,
             );
           },
           child: KeyedSubtree(
