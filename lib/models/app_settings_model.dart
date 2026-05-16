@@ -6,8 +6,8 @@ class AppSettingsModel {
     this.accentColor = 0xFF6A8DFF,
     this.liquidGlassEnabled = true,
     this.animationsEnabled = true,
-    this.dynamicIslandEnabled = false,
-    this.liveActivitiesEnabled = false,
+    this.dynamicIslandEnabled = true,
+    this.liveActivitiesEnabled = true,
     this.updatedAt,
   });
 

@@ -10,6 +10,9 @@ import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/weather_provider.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/soft_gradient_background.dart';
 
@@ -126,62 +129,51 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Hero(
-                      tag: 'app-logo',
-                      child: Container(
-                        width: 104,
-                        height: 104,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(34),
-                          gradient: LinearGradient(
-                            colors: [colorScheme.primary, colorScheme.tertiary],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: colorScheme.primary.withValues(
-                                alpha: 0.28,
-                              ),
-                              blurRadius: 30,
-                              offset: const Offset(0, 18),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.calendar_month_rounded,
-                          color: Colors.white,
-                          size: 54,
-                        ),
-                      ),
+                    _OrbitingLoader(
+                      controller: _controller,
+                      progress: _progress,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.xl),
                     Text(
                       'Thời Khóa Biểu',
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.w900),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.xs),
                     AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
+                      duration: AppMotion.fast,
+                      switchInCurve: AppMotion.liquid,
+                      switchOutCurve: AppMotion.exit,
                       child: Text(
                         _status,
                         key: ValueKey(_status),
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: 180,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          value: _progress,
-                          minHeight: 8,
-                          backgroundColor: colorScheme.tileSurface,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.textSecondary,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(
+                      width: 220,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween<double>(end: _progress),
+                          duration: AppMotion.medium,
+                          curve: AppMotion.liquid,
+                          builder: (context, value, child) {
+                            return LinearProgressIndicator(
+                              value: value,
+                              minHeight: 9,
+                              backgroundColor: colorScheme.tileSurface,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                     const _LoadingDots(),
                   ],
                 ),
@@ -190,6 +182,89 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _OrbitingLoader extends StatelessWidget {
+  const _OrbitingLoader({required this.controller, required this.progress});
+
+  final AnimationController controller;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        return SizedBox(
+          width: 132,
+          height: 132,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 124,
+                height: 124,
+                child: CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 5,
+                  strokeCap: StrokeCap.round,
+                  backgroundColor: colorScheme.tileSurface,
+                ),
+              ),
+              Transform.rotate(
+                angle: controller.value * 6.28318,
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colorScheme.tertiary,
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.tertiary.withValues(alpha: 0.42),
+                          blurRadius: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Hero(
+                tag: 'app-logo',
+                child: Container(
+                  width: 92,
+                  height: 92,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [colorScheme.primary, colorScheme.tertiary],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colorScheme.primary.withValues(alpha: 0.30),
+                        blurRadius: 30,
+                        offset: const Offset(0, 18),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.calendar_month_rounded,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

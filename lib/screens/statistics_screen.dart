@@ -82,6 +82,13 @@ class StatisticsScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
+                _ProgressSummaryCard(
+                  completion: completion,
+                  completedCount: value.completedCount,
+                  totalCount: scheduleCount,
+                  topSubject: value.topSubject,
+                ),
+                const SizedBox(height: 16),
                 GlassCard(
                   padding: const EdgeInsets.all(18),
                   child: Column(
@@ -105,6 +112,8 @@ class StatisticsScreen extends ConsumerWidget {
                         height: 250,
                         child: BarChart(_chartData(context, entries)),
                       ),
+                      const SizedBox(height: 18),
+                      _SubjectBreakdown(entries: entries),
                     ],
                   ),
                 ),
@@ -184,6 +193,127 @@ class StatisticsScreen extends ConsumerWidget {
               ),
             ],
           ),
+      ],
+    );
+  }
+}
+
+class _ProgressSummaryCard extends StatelessWidget {
+  const _ProgressSummaryCard({
+    required this.completion,
+    required this.completedCount,
+    required this.totalCount,
+    required this.topSubject,
+  });
+
+  final double completion;
+  final int completedCount;
+  final int totalCount;
+  final String topSubject;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return GlassCard(
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          SizedBox.square(
+            dimension: 82,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: completion,
+                  strokeWidth: 8,
+                  strokeCap: StrokeCap.round,
+                  backgroundColor: colorScheme.tileSurface,
+                ),
+                Text(
+                  '${(completion * 100).round()}%',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tien do tuan nay',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$completedCount/$totalCount buoi hoc da hoan thanh. Mon noi bat: $topSubject.',
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colorScheme.textSecondary,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubjectBreakdown extends StatelessWidget {
+  const _SubjectBreakdown({required this.entries});
+
+  final List<MapEntry<String, double>> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final total = entries.fold<double>(0, (sum, item) => sum + item.value);
+    return Column(
+      children: [
+        for (final entry in entries.take(6)) ...[
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  entry.key,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '${entry.value.toStringAsFixed(1)}h',
+                style: TextStyle(
+                  color: colorScheme.textSecondary,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: total <= 0 ? 0 : entry.value / total,
+              minHeight: 8,
+              backgroundColor: colorScheme.tileSurface,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
       ],
     );
   }

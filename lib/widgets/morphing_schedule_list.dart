@@ -128,15 +128,15 @@ class SliverMorphingScheduleList extends StatelessWidget {
         compact: compact,
         index: index,
         showDragHandle: draggable,
+        dragIndex: draggable ? index : null,
         onDelete: onDelete == null ? null : () => onDelete!(schedule),
         onStart: onStart == null ? null : () => onStart!(schedule),
         onComplete: onComplete == null ? null : () => onComplete!(schedule),
       ),
     );
     if (!draggable) return card;
-    return ReorderableDelayedDragStartListener(
+    return KeyedSubtree(
       key: ValueKey('reorder-schedule-${schedule.id}'),
-      index: index,
       child: card,
     );
   }

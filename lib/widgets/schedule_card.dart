@@ -25,6 +25,7 @@ class ScheduleCard extends ConsumerWidget {
     this.onComplete,
     this.onDelete,
     this.showDragHandle = false,
+    this.dragIndex,
   });
 
   final ScheduleModel schedule;
@@ -35,6 +36,7 @@ class ScheduleCard extends ConsumerWidget {
   final VoidCallback? onComplete;
   final VoidCallback? onDelete;
   final bool showDragHandle;
+  final int? dragIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,6 +54,7 @@ class ScheduleCard extends ConsumerWidget {
       onComplete: onComplete,
       onDelete: onDelete,
       showDragHandle: showDragHandle,
+      dragIndex: dragIndex,
       isExpandedByUser: completedExpanded,
       onToggleCompletedCard: () =>
           ref.read(expandedCompletedCardsProvider.notifier).toggle(schedule.id),
@@ -70,6 +73,7 @@ class PremiumScheduleCard extends StatelessWidget {
     this.onComplete,
     this.onDelete,
     this.showDragHandle = false,
+    this.dragIndex,
     required this.isExpandedByUser,
     required this.onToggleCompletedCard,
   });
@@ -82,6 +86,7 @@ class PremiumScheduleCard extends StatelessWidget {
   final VoidCallback? onComplete;
   final VoidCallback? onDelete;
   final bool showDragHandle;
+  final int? dragIndex;
   final bool isExpandedByUser;
   final VoidCallback onToggleCompletedCard;
 
@@ -211,6 +216,7 @@ class PremiumScheduleCard extends StatelessWidget {
                                 palette: palette,
                                 onDelete: onDelete,
                                 showDragHandle: showDragHandle,
+                                dragIndex: dragIndex,
                                 onConfirmDelete: () => _confirmDelete(context),
                               ),
                               if (!isCollapsed) ...[
@@ -436,6 +442,7 @@ class _Header extends StatelessWidget {
     required this.palette,
     required this.onDelete,
     required this.showDragHandle,
+    required this.dragIndex,
     required this.onConfirmDelete,
   });
 
@@ -443,6 +450,7 @@ class _Header extends StatelessWidget {
   final SubjectPalette palette;
   final VoidCallback? onDelete;
   final bool showDragHandle;
+  final int? dragIndex;
   final VoidCallback onConfirmDelete;
 
   @override
@@ -496,10 +504,7 @@ class _Header extends StatelessWidget {
             if (showDragHandle) ...[
               Semantics(
                 label: 'Kéo để sắp xếp môn ${schedule.subjectName}',
-                child: Icon(
-                  Icons.drag_indicator_rounded,
-                  color: colorScheme.textSecondary.withValues(alpha: 0.72),
-                ),
+                child: _DragHandle(index: dragIndex ?? 0),
               ),
               const SizedBox(width: AppSpacing.xs),
             ],
@@ -511,6 +516,32 @@ class _Header extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _DragHandle extends StatelessWidget {
+  const _DragHandle({required this.index});
+
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ReorderableDragStartListener(
+      index: index,
+      child: Tooltip(
+        message: 'Keo de sap xep',
+        child: GlassContainer(
+          radius: AppRadius.md,
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Icon(
+            Icons.drag_indicator_rounded,
+            color: colorScheme.textSecondary.withValues(alpha: 0.82),
+            size: 22,
+          ),
+        ),
+      ),
     );
   }
 }

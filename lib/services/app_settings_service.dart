@@ -40,10 +40,9 @@ class AppSettingsService {
       accentColor: prefs.getInt(_key('accentColor')) ?? 0xFF6A8DFF,
       liquidGlassEnabled: prefs.getBool(_key('liquidGlassEnabled')) ?? true,
       animationsEnabled: prefs.getBool(_key('animationsEnabled')) ?? true,
-      dynamicIslandEnabled:
-          prefs.getBool(_key('dynamicIslandEnabled')) ?? false,
+      dynamicIslandEnabled: prefs.getBool(_key('dynamicIslandEnabled')) ?? true,
       liveActivitiesEnabled:
-          prefs.getBool(_key('liveActivitiesEnabled')) ?? false,
+          prefs.getBool(_key('liveActivitiesEnabled')) ?? true,
     );
   }
 

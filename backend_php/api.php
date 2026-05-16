@@ -138,7 +138,7 @@ function main(): void
             ok(['user' => serializeUser(requireAuth($pdo))]);
             return;
         case 'auth.resetPassword':
-            ok([], 'Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.');
+            handleAuthResetPassword($pdo, $data);
             return;
 
         case 'profile.get':
@@ -735,8 +735,8 @@ function defaultAppSettings(): array
         'accentColor' => 0xFF6A8DFF,
         'liquidGlassEnabled' => true,
         'animationsEnabled' => true,
-        'dynamicIslandEnabled' => false,
-        'liveActivitiesEnabled' => false,
+        'dynamicIslandEnabled' => true,
+        'liveActivitiesEnabled' => true,
     ];
 }
 
@@ -770,8 +770,8 @@ function ensureSettingsRow(PDO $pdo, int $userId): void
         'notification_settings_json' => jsonEncode(defaultNotificationSettings()),
         'widget_settings_json' => jsonEncode([]),
         'dynamic_island_settings_json' => jsonEncode([
-            'dynamicIslandEnabled' => false,
-            'liveActivitiesEnabled' => false,
+            'dynamicIslandEnabled' => true,
+            'liveActivitiesEnabled' => true,
         ]),
     ]);
 }
@@ -1382,6 +1382,65 @@ function handleAuthLogin(PDO $pdo, array $data): void
     }
     $token = issueToken($pdo, (int)$user['id']);
     ok(['token' => $token, 'user' => serializeUser($user)], 'Đăng nhập thành công.');
+}
+
+function handleAuthResetPassword(PDO $pdo, array $data): void
+{
+    $email = normalizeEmail(requireString($data, 'email', 5, 191));
+    $stmt = $pdo->prepare('SELECT id, name, email FROM users WHERE email = :email LIMIT 1');
+    $stmt->execute(['email' => $email]);
+    $user = $stmt->fetch();
+    if (!$user) {
+        ok([], 'Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.');
+    }
+
+    $token = rtrim(strtr(base64_encode(random_bytes(48)), '+/', '-_'), '=');
+    $tokenHash = hash('sha256', $token);
+    $pdo->prepare(
+        'UPDATE password_resets
+         SET used_at = NOW()
+         WHERE user_id = :user_id AND used_at IS NULL'
+    )->execute(['user_id' => $user['id']]);
+    $pdo->prepare(
+        'INSERT INTO password_resets (
+            user_id, token_hash, email, created_at, expires_at, used_at
+         ) VALUES (
+            :user_id, :token_hash, :email, NOW(), DATE_ADD(NOW(), INTERVAL 30 MINUTE), NULL
+         )'
+    )->execute([
+        'user_id' => $user['id'],
+        'token_hash' => $tokenHash,
+        'email' => $email,
+    ]);
+
+    $resetUrl = rtrim((string)APP_BASE_URL, '/') . '/reset-password.php?token=' . rawurlencode($token);
+    $sent = sendPasswordResetMail(
+        $email,
+        (string)($user['name'] ?? 'ban'),
+        $resetUrl
+    );
+    if (!$sent) {
+        error_log('[api.php] password reset mail failed for ' . $email);
+    }
+    ok(['mailSent' => $sent], 'Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.');
+}
+
+function sendPasswordResetMail(string $email, string $name, string $resetUrl): bool
+{
+    $subject = 'Khoi phuc mat khau Thoi Khoa Bieu';
+    $safeName = trim($name) === '' ? 'ban' : $name;
+    $body = "Xin chao {$safeName},\n\n"
+        . "Ban vua yeu cau khoi phuc mat khau cho tai khoan Thoi Khoa Bieu.\n"
+        . "Mo lien ket sau de dat mat khau moi trong 30 phut:\n\n"
+        . $resetUrl . "\n\n"
+        . "Neu khong phai ban yeu cau, hay bo qua email nay.";
+    $headers = [
+        'From: Thoi Khoa Bieu <no-reply@' . parse_url((string)APP_BASE_URL, PHP_URL_HOST) . '>',
+        'Reply-To: no-reply@' . parse_url((string)APP_BASE_URL, PHP_URL_HOST),
+        'Content-Type: text/plain; charset=UTF-8',
+        'X-Mailer: PHP/' . PHP_VERSION,
+    ];
+    return mail($email, $subject, $body, implode("\r\n", $headers));
 }
 
 function handleAuthLogout(PDO $pdo): void
