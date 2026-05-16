@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import 'motion_widgets.dart';
@@ -39,33 +38,28 @@ class MorphingScheduleList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final idsKey = schedules.map((item) => item.id).join('|');
-    return AnimatedSwitcher(
-      duration: AppMotion.medium,
-      reverseDuration: AppMotion.fast,
-      switchInCurve: AppMotion.liquid,
-      switchOutCurve: AppMotion.exit,
-      transitionBuilder: (child, animation) =>
-          MorphTransitionWidget(animation: animation, child: child),
-      child: CustomScrollView(
-        key: ValueKey('${storageKey?.value ?? 'schedule-list'}-$idsKey'),
-        slivers: [
-          ...headerSlivers,
-          SliverPadding(
-            padding: padding,
-            sliver: SliverMorphingScheduleList(
-              schedules: schedules,
-              compact: compact,
-              logForSchedule: logForSchedule,
-              onDelete: onDelete,
-              onStart: onStart,
-              onComplete: onComplete,
-              onReorder: onReorder,
-            ),
-          ),
-          ...trailingSlivers,
-        ],
+    return CustomScrollView(
+      key: storageKey,
+      cacheExtent: 900,
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
       ),
+      slivers: [
+        ...headerSlivers,
+        SliverPadding(
+          padding: padding,
+          sliver: SliverMorphingScheduleList(
+            schedules: schedules,
+            compact: compact,
+            logForSchedule: logForSchedule,
+            onDelete: onDelete,
+            onStart: onStart,
+            onComplete: onComplete,
+            onReorder: onReorder,
+          ),
+        ),
+        ...trailingSlivers,
+      ],
     );
   }
 }

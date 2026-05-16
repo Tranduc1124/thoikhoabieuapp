@@ -257,11 +257,16 @@ class Api {
   static Future<Map<String, dynamic>> scheduleCreate(
     Map<String, dynamic> data,
   ) => call('schedule.create', data: data);
+  static Future<Map<String, dynamic>> scheduleBulkCreate(
+    Map<String, dynamic> data,
+  ) => call('schedule.bulkCreate', data: data);
   static Future<Map<String, dynamic>> scheduleUpdate(
     Map<String, dynamic> data,
   ) => call('schedule.update', data: data);
   static Future<Map<String, dynamic>> scheduleDelete(String id) =>
       call('schedule.delete', data: {'id': id});
+  static Future<Map<String, dynamic>> scheduleDeleteByDay(int dayOfWeek) =>
+      call('schedule.deleteByDay', data: {'dayOfWeek': dayOfWeek});
   static Future<Map<String, dynamic>> taskList() => call('task.list');
   static Future<Map<String, dynamic>> taskCreate(Map<String, dynamic> data) =>
       call('task.create', data: data);

@@ -80,13 +80,9 @@ class _ScheduleFadeWidgetState extends State<ScheduleFadeWidget>
   @override
   void didUpdateWidget(covariant ScheduleFadeWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.index != widget.index ||
-        oldWidget.enabled != widget.enabled) {
+    if (oldWidget.enabled != widget.enabled) {
       _controller
-        ..duration = Duration(
-          milliseconds:
-              AppMotion.medium.inMilliseconds + widget.index.clamp(0, 5) * 16,
-        )
+        ..duration = AppMotion.fast
         ..forward(from: widget.enabled ? 0.12 : 1);
     }
   }
@@ -102,12 +98,7 @@ class _ScheduleFadeWidgetState extends State<ScheduleFadeWidget>
     return RepaintBoundary(
       child: AnimatedBuilder(
         animation: _curved,
-        child: AnimatedSize(
-          duration: AppMotion.medium,
-          curve: AppMotion.liquid,
-          alignment: Alignment.topCenter,
-          child: widget.child,
-        ),
+        child: widget.child,
         builder: (context, child) {
           final value = _curved.value.clamp(0.0, 1.0);
           return Opacity(

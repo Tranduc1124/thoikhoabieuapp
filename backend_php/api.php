@@ -169,11 +169,17 @@ function main(): void
         case 'schedule.create':
             handleScheduleCreate($pdo, requireAuth($pdo), $data);
             return;
+        case 'schedule.bulkCreate':
+            handleScheduleBulkCreate($pdo, requireAuth($pdo), $data);
+            return;
         case 'schedule.update':
             handleScheduleUpdate($pdo, requireAuth($pdo), $data);
             return;
         case 'schedule.delete':
             handleScheduleDelete($pdo, requireAuth($pdo), $data);
+            return;
+        case 'schedule.deleteByDay':
+            handleScheduleDeleteByDay($pdo, requireAuth($pdo), $data);
             return;
 
         case 'task.list': {
@@ -1626,6 +1632,55 @@ function handleScheduleCreate(PDO $pdo, array $user, array $data): void
 {
     $scheduleId = trim((string)($data['id'] ?? $data['scheduleId'] ?? $data['schedule_id'] ?? '')) ?: 'sch_' . bin2hex(random_bytes(8));
     $payload = normalizeSchedulePayload($data, $scheduleId);
+    insertSchedulePayload($pdo, $payload, (int)$user['id']);
+    ok([
+        'id' => $scheduleId,
+        'scheduleId' => $scheduleId,
+        'schedule' => serializeSchedule(findScheduleRow($pdo, (int)$user['id'], $scheduleId)),
+    ], 'Đã thêm môn học.');
+}
+
+function handleScheduleBulkCreate(PDO $pdo, array $user, array $data): void
+{
+    $items = $data['schedules'] ?? $data['items'] ?? [];
+    if (!is_array($items) || count($items) === 0) {
+        fail('invalid_input', 'Danh sach mon hoc dang trong.');
+    }
+    $dayOfWeek = (int)($data['dayOfWeek'] ?? $data['day_of_week'] ?? 0);
+    $created = [];
+    $pdo->beginTransaction();
+    try {
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $payloadData = $item;
+            if ($dayOfWeek >= 1 && $dayOfWeek <= 7) {
+                $payloadData['dayOfWeek'] = $dayOfWeek;
+            }
+            $scheduleId = trim((string)($payloadData['id'] ?? $payloadData['scheduleId'] ?? $payloadData['schedule_id'] ?? '')) ?: 'sch_' . bin2hex(random_bytes(8));
+            $payload = normalizeSchedulePayload($payloadData, $scheduleId);
+            insertSchedulePayload($pdo, $payload, (int)$user['id']);
+            $created[] = serializeSchedule(findScheduleRow($pdo, (int)$user['id'], $scheduleId));
+        }
+        if (!$created) {
+            fail('invalid_input', 'Khong co mon hoc hop le de them.');
+        }
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $error;
+    }
+    ok([
+        'createdCount' => count($created),
+        'schedules' => $created,
+    ], 'Da them nhieu mon hoc.');
+}
+
+function insertSchedulePayload(PDO $pdo, array $payload, int $userId): void
+{
     $stmt = $pdo->prepare(
         'INSERT INTO schedules (
             schedule_id, user_id, subject_name, day_of_week, start_time, end_time, room,
@@ -1639,12 +1694,7 @@ function handleScheduleCreate(PDO $pdo, array $user, array $data): void
             :status, NOW(), NOW()
          )'
     );
-    $stmt->execute($payload + ['user_id' => $user['id']]);
-    ok([
-        'id' => $scheduleId,
-        'scheduleId' => $scheduleId,
-        'schedule' => serializeSchedule(findScheduleRow($pdo, (int)$user['id'], $scheduleId)),
-    ], 'Đã thêm môn học.');
+    $stmt->execute($payload + ['user_id' => $userId]);
 }
 
 function handleScheduleUpdate(PDO $pdo, array $user, array $data): void
@@ -1696,6 +1746,29 @@ function handleScheduleDelete(PDO $pdo, array $user, array $data): void
         fail('not_found', 'Không tìm thấy lịch học để xoá.', 404);
     }
     ok(['scheduleId' => $scheduleId], 'Đã xoá lịch học.');
+}
+
+function handleScheduleDeleteByDay(PDO $pdo, array $user, array $data): void
+{
+    $dayOfWeek = (int)($data['dayOfWeek'] ?? $data['day_of_week'] ?? 0);
+    if ($dayOfWeek < 1 || $dayOfWeek > 7) {
+        fail('invalid_input', 'Ngay can xoa khong hop le.');
+    }
+    $stmt = $pdo->prepare(
+        'UPDATE schedules
+         SET deleted_at = NOW(), updated_at = NOW()
+         WHERE user_id = :user_id
+           AND day_of_week = :day_of_week
+           AND deleted_at IS NULL'
+    );
+    $stmt->execute([
+        'user_id' => $user['id'],
+        'day_of_week' => $dayOfWeek,
+    ]);
+    ok([
+        'dayOfWeek' => $dayOfWeek,
+        'deletedCount' => $stmt->rowCount(),
+    ], 'Da xoa tat ca mon trong ngay.');
 }
 
 function handleTaskUpsert(PDO $pdo, array $user, array $data, bool $isUpdate): void

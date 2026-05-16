@@ -99,8 +99,6 @@ class WeekScheduleScreen extends ConsumerWidget {
                     ),
                   ),
                   data: (filtered) {
-                    final stateKey =
-                        'week-$selectedDay-${query.trim()}-${filtered.map((item) => item.id).join('|')}';
                     if (filtered.isEmpty) {
                       return EmptyState(
                         key: ValueKey('week-empty-$selectedDay-$query'),
@@ -114,7 +112,11 @@ class WeekScheduleScreen extends ConsumerWidget {
                       );
                     }
                     return CustomScrollView(
-                      key: ValueKey(stateKey),
+                      key: PageStorageKey('week-day-$selectedDay'),
+                      cacheExtent: 900,
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
                       slivers: [
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(

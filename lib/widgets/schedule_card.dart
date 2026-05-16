@@ -199,7 +199,10 @@ class PremiumScheduleCard extends StatelessWidget {
                           minHeight: isCollapsed ? (compact ? 96 : 104) : 0,
                         ),
                         child: Padding(
-                          padding: EdgeInsets.all(
+                          padding: EdgeInsets.fromLTRB(
+                            AppSpacing.xl,
+                            compact ? AppSpacing.lg : AppSpacing.xl,
+                            AppSpacing.xl,
                             compact ? AppSpacing.lg : AppSpacing.xl,
                           ),
                           child: Column(
@@ -456,7 +459,7 @@ class _Header extends StatelessWidget {
                     ? Theme.of(context).textTheme.titleMedium
                     : Theme.of(context).textTheme.titleLarge)
                 ?.copyWith(
-                  height: 1.16,
+                  height: 1.22,
                   fontWeight: FontWeight.w900,
                   color: colorScheme.textPrimary,
                 );
@@ -473,7 +476,7 @@ class _Header extends StatelessWidget {
                   children: [
                     Text(
                       schedule.subjectName,
-                      maxLines: 3,
+                      maxLines: tight ? 4 : 3,
                       softWrap: true,
                       overflow: TextOverflow.ellipsis,
                       style: titleStyle,
@@ -882,7 +885,7 @@ class ScheduleInfoChip extends StatelessWidget {
           Flexible(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: MediaQuery.sizeOf(context).width * 0.56,
+                maxWidth: MediaQuery.sizeOf(context).width * 0.68,
               ),
               child: Text(
                 label,

@@ -125,6 +125,12 @@ class ScheduleActions {
     return id;
   }
 
+  Future<int> addMany(List<ScheduleModel> schedules) async {
+    final count = await _repository.addSchedules(schedules);
+    _refresh();
+    return count;
+  }
+
   Future<void> update(ScheduleModel schedule) async {
     await _repository.updateSchedule(schedule);
     _refresh();
@@ -133,6 +139,12 @@ class ScheduleActions {
   Future<void> delete(String id) async {
     await _repository.deleteSchedule(id);
     _refresh();
+  }
+
+  Future<int> deleteByDay(int dayOfWeek) async {
+    final count = await _repository.deleteSchedulesByDay(dayOfWeek);
+    _refresh();
+    return count;
   }
 
   Future<void> start(ScheduleModel schedule) async {

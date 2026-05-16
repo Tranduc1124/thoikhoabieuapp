@@ -99,6 +99,26 @@ class ScheduleRepository {
     }
   }
 
+  Future<int> addSchedules(List<ScheduleModel> schedules) async {
+    if (schedules.isEmpty) return 0;
+    for (final schedule in schedules) {
+      _validate(schedule);
+    }
+    try {
+      final data = await Api.scheduleBulkCreate({
+        'schedules': schedules.map((item) => item.toCreateMap()).toList(),
+      });
+      final items = (data['schedules'] as List? ?? const []);
+      await _afterScheduleChanged();
+      return items.length;
+    } catch (error) {
+      throw AppUserMessageException(
+        AppFeedbackService.messageFor(error),
+        debugMessage: 'addSchedules failed: $error',
+      );
+    }
+  }
+
   Future<void> updateSchedule(ScheduleModel schedule) async {
     _validate(schedule);
     try {
@@ -135,6 +155,19 @@ class ScheduleRepository {
       label: 'cancel schedule notification',
     );
     await _afterScheduleChanged();
+  }
+
+  Future<int> deleteSchedulesByDay(int dayOfWeek) async {
+    try {
+      final data = await Api.scheduleDeleteByDay(dayOfWeek);
+      await _afterScheduleChanged();
+      return (data['deletedCount'] as num?)?.toInt() ?? 0;
+    } catch (error) {
+      throw AppUserMessageException(
+        AppFeedbackService.messageFor(error),
+        debugMessage: 'deleteSchedulesByDay failed: $error',
+      );
+    }
   }
 
   Future<void> markStarted(ScheduleModel schedule, DateTime date) {

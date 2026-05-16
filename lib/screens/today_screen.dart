@@ -72,9 +72,7 @@ class TodayScreen extends ConsumerWidget {
                   ),
                 );
               }
-              final listKey = items.map((item) => item.id).join('|');
               return MorphingScheduleList(
-                key: ValueKey('today-list-$listKey'),
                 storageKey: const PageStorageKey('today-scroll'),
                 schedules: items,
                 padding: const EdgeInsets.fromLTRB(
