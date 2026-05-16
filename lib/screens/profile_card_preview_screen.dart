@@ -139,7 +139,21 @@ class _ProfilePoster extends StatelessWidget {
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.w900),
                       ),
-                      Text(card.username),
+                      Text(
+                        [
+                              if (card.idUser.trim().isNotEmpty)
+                                '@${card.idUser.trim()}',
+                              if (card.idProfile > 0) 'ID #${card.idProfile}',
+                            ].isEmpty
+                            ? card.username
+                            : [
+                                if (card.idUser.trim().isNotEmpty)
+                                  '@${card.idUser.trim()}',
+                                if (card.idProfile > 0) 'ID #${card.idProfile}',
+                              ].join(' • '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),

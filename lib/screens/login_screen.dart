@@ -17,6 +17,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _idUserController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isRegister = false;
@@ -24,6 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _idUserController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -142,19 +144,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             : const SizedBox.shrink(),
                       ),
                       if (_isRegister) const SizedBox(height: 12),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 240),
+                        switchInCurve: Curves.easeOutCubic,
+                        child: _isRegister
+                            ? TextFormField(
+                                key: const ValueKey('id-user'),
+                                controller: _idUserController,
+                                textInputAction: TextInputAction.next,
+                                decoration: const InputDecoration(
+                                  labelText: 'ID người dùng',
+                                  helperText: 'Ví dụ: minhduc209',
+                                  prefixIcon: Icon(
+                                    Icons.alternate_email_rounded,
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (!_isRegister) return null;
+                                  final text = value?.trim() ?? '';
+                                  if (text.isEmpty) return null;
+                                  final valid = RegExp(
+                                    r'^[a-zA-Z0-9_]{3,32}$',
+                                  ).hasMatch(text);
+                                  return valid
+                                      ? null
+                                      : 'ID chỉ gồm chữ, số, _, từ 3-32 ký tự';
+                                },
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      if (_isRegister) const SizedBox(height: 12),
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
+                        decoration: InputDecoration(
+                          labelText: _isRegister
+                              ? 'Email'
+                              : 'Email, ID người dùng hoặc ID hồ sơ',
                           prefixIcon: Icon(Icons.mail_outline_rounded),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Vui lòng nhập email';
+                            return _isRegister
+                                ? 'Vui lòng nhập email'
+                                : 'Vui lòng nhập email hoặc ID';
                           }
-                          if (!value.contains('@')) {
+                          if (_isRegister && !value.contains('@')) {
                             return 'Email chưa hợp lệ';
                           }
                           return null;
@@ -222,6 +258,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         name: _nameController.text,
         email: _emailController.text,
         password: _passwordController.text,
+        idUser: _idUserController.text,
       );
     } else {
       await controller.signInWithEmail(

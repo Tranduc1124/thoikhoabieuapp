@@ -15,6 +15,8 @@
    - `APP_DOWNLOAD_URL`
 5. Chạy:
    - `https://minhduc.huutien.store/install.php?key=YOUR_INSTALL_KEY`
+   - Với cấu hình hiện tại trong `config.php` mẫu, thay `YOUR_INSTALL_KEY` bằng `change_this_install_key`.
+   - Link cài lại/migrate SQL theo config hiện tại: `https://minhduc.huutien.store/install.php?key=change_this_install_key`
 6. Test API:
 
 ```json
@@ -43,3 +45,6 @@ Body:
   - `X-App-Key: thoikhoabieuapp_public_key`
 - Upload avatar dùng multipart field `avatar`.
 - `install.php` idempotent, chạy lại không xóa dữ liệu cũ.
+- `install.php` hiện tự migrate thêm `users.id_user` và `users.id_profile`.
+- `id_user` là ID công khai tuỳ chỉnh dạng chữ/số như `minhduc209`; `id_profile` là số hồ sơ app cấp.
+- Đăng nhập và tìm bạn hỗ trợ email, `id_user`, hoặc `id_profile`.

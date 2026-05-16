@@ -78,7 +78,21 @@ class PublicProfileCardScreen extends ConsumerWidget {
                                       .headlineSmall
                                       ?.copyWith(fontWeight: FontWeight.w900),
                                 ),
-                                Text(data.username),
+                                Text(
+                                  [
+                                        if (data.idUser.trim().isNotEmpty)
+                                          '@${data.idUser.trim()}',
+                                        if (data.idProfile > 0)
+                                          'ID #${data.idProfile}',
+                                      ].isEmpty
+                                      ? data.username
+                                      : [
+                                          if (data.idUser.trim().isNotEmpty)
+                                            '@${data.idUser.trim()}',
+                                          if (data.idProfile > 0)
+                                            'ID #${data.idProfile}',
+                                        ].join(' • '),
+                                ),
                               ],
                             ),
                           ),

@@ -114,6 +114,13 @@ class TodayScreen extends ConsumerWidget {
                     ),
                   ),
                   const SliverToBoxAdapter(
+                    child: SizedBox(height: AppSpacing.md),
+                  ),
+                  const SliverPadding(
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                    sliver: SliverToBoxAdapter(child: _TodayQuickActions()),
+                  ),
+                  const SliverToBoxAdapter(
                     child: SizedBox(height: AppSpacing.xl),
                   ),
                 ],
@@ -193,6 +200,96 @@ class TodayScreen extends ConsumerWidget {
 
   void _showMessage(BuildContext context, String message) {
     AppFeedbackService.success(context, message);
+  }
+}
+
+class _TodayQuickActions extends StatelessWidget {
+  const _TodayQuickActions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _QuickActionButton(
+            icon: Icons.people_alt_rounded,
+            label: 'Bạn bè',
+            onTap: () => context.push('/friends'),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _QuickActionButton(
+            icon: Icons.ios_share_rounded,
+            label: 'Chia sẻ',
+            onTap: () => context.push('/share'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionButton extends StatelessWidget {
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: label,
+      child: AnimatedButton(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            gradient: LinearGradient(
+              colors: [
+                colorScheme.primary.withValues(
+                  alpha: context.isDark ? 0.22 : 0.14,
+                ),
+                colorScheme.tertiary.withValues(
+                  alpha: context.isDark ? 0.18 : 0.12,
+                ),
+              ],
+            ),
+            border: Border.all(color: colorScheme.glassStrokeSubtle),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: colorScheme.primary),
+              const SizedBox(width: AppSpacing.xs),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: colorScheme.textPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

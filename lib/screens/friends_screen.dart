@@ -10,10 +10,13 @@ import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
 import '../services/app_feedback_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import '../widgets/app_avatar.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/loading_skeleton.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/soft_gradient_background.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
@@ -25,10 +28,13 @@ class FriendsScreen extends ConsumerStatefulWidget {
 
 class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   final _searchController = TextEditingController();
+  final _friendFilterController = TextEditingController();
+  String _friendFilter = '';
 
   @override
   void dispose() {
     _searchController.dispose();
+    _friendFilterController.dispose();
     super.dispose();
   }
 
@@ -68,7 +74,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     TextField(
                       controller: _searchController,
                       decoration: const InputDecoration(
-                        labelText: 'Tìm theo tên, tên người dùng hoặc email',
+                        labelText:
+                            'Tìm theo tên, ID người dùng, ID hồ sơ hoặc email',
                         prefixIcon: Icon(Icons.search_rounded),
                       ),
                       onChanged: (value) =>
@@ -80,6 +87,19 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                       _QrProfileInvite(user: user),
                     ],
                   ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              GlassCard(
+                radius: AppRadius.lg,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: TextField(
+                  controller: _friendFilterController,
+                  decoration: const InputDecoration(
+                    labelText: 'Lọc bạn bè hiện có',
+                    prefixIcon: Icon(Icons.filter_alt_rounded),
+                  ),
+                  onChanged: (value) => setState(() => _friendFilter = value),
                 ),
               ),
               const SizedBox(height: 18),
@@ -152,15 +172,16 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   message: AppFeedbackService.messageFor(error),
                 ),
                 data: (items) {
-                  if (items.isEmpty) {
+                  final filtered = _filterFriends(items);
+                  if (filtered.isEmpty) {
                     return const EmptyState(
                       title: 'Chưa có bạn học nào',
                       message:
-                          'Hãy gửi lời mời đầu tiên để bắt đầu kết nối cùng bạn bè.',
+                          'Hãy gửi lời mời đầu tiên hoặc đổi bộ lọc để tiếp tục.',
                     );
                   }
                   return Column(
-                    children: items
+                    children: filtered
                         .map((item) => _FriendTile(friend: item))
                         .toList(growable: false),
                   );
@@ -171,6 +192,26 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
         ),
       ),
     );
+  }
+
+  List<FriendModel> _filterFriends(List<FriendModel> friends) {
+    final query = _friendFilter.trim().toLowerCase();
+    if (query.isEmpty) return friends;
+    return friends
+        .where((friend) {
+          final profile = friend.friendIdProfile > 0
+              ? friend.friendIdProfile.toString()
+              : '';
+          final haystack = [
+            friend.friendName,
+            friend.friendUsername ?? '',
+            friend.friendIdUser ?? '',
+            friend.friendId,
+            profile,
+          ].join(' ').toLowerCase();
+          return haystack.contains(query);
+        })
+        .toList(growable: false);
   }
 }
 
@@ -212,7 +253,8 @@ class _QrProfileInvite extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final service = ref.watch(friendServiceProvider);
-    final link = service?.buildProfileShareLink(user.username) ?? user.username;
+    final publicId = user.idUser.isEmpty ? user.username : user.idUser;
+    final link = service?.buildProfileShareLink(publicId) ?? publicId;
     return GlassCard(
       radius: 28,
       child: Row(
@@ -242,7 +284,10 @@ class _QrProfileInvite extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  user.username,
+                  [
+                    if (user.idUser.trim().isNotEmpty) '@${user.idUser}',
+                    if (user.idProfile > 0) 'ID #${user.idProfile}',
+                  ].join(' • '),
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -363,29 +408,49 @@ class _SearchUserTile extends ConsumerWidget {
               ],
             ),
           ),
-          FilledButton.tonal(
-            onPressed: () async {
-              try {
-                final service = ref.read(friendServiceProvider);
-                final current = ref.read(appUserProvider).valueOrNull;
-                if (service == null || current == null) return;
-                await service.sendFriendRequest(
-                  fromUser: current,
-                  toUser: user,
-                );
-                if (context.mounted) {
-                  AppFeedbackService.success(context, 'Đã gửi lời mời kết bạn');
-                }
-              } catch (error) {
-                if (!context.mounted) return;
-                AppFeedbackService.error(context, error);
-              }
+          AnimatedButton(
+            onTap: () async {
+              await _sendRequest(context, ref);
             },
-            child: const Text('Kết bạn'),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.14),
+              ),
+              child: Text(
+                'Kết bạn',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _sendRequest(BuildContext context, WidgetRef ref) async {
+    try {
+      final service = ref.read(friendServiceProvider);
+      final current = ref.read(appUserProvider).valueOrNull;
+      if (service == null || current == null) return;
+      await service.sendFriendRequest(fromUser: current, toUser: user);
+      if (context.mounted) {
+        AppFeedbackService.success(context, 'Đã gửi lời mời kết bạn');
+      }
+    } catch (error) {
+      if (!context.mounted) return;
+      AppFeedbackService.error(context, error);
+    }
   }
 }
 
@@ -434,6 +499,18 @@ class _FriendTile extends ConsumerWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
+                Text(
+                  [
+                    if ((friend.friendIdUser ?? friend.friendUsername ?? '')
+                        .trim()
+                        .isNotEmpty)
+                      '@${(friend.friendIdUser ?? friend.friendUsername)!}',
+                    if (friend.friendIdProfile > 0)
+                      'ID #${friend.friendIdProfile}',
+                  ].join(' • '),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 3),
                 Text(
                   '${friend.studyStreak} ngày liên tục • ${friend.weeklyHours.toStringAsFixed(1)} giờ/tuần',
                   style: Theme.of(context).textTheme.bodySmall,

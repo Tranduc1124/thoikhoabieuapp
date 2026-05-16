@@ -108,6 +108,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: [
                     _InfoRow(label: 'Email', value: user.email),
                     const Divider(height: 22),
+                    _InfoRow(
+                      label: 'ID người dùng',
+                      value: user.idUser.isEmpty ? user.username : user.idUser,
+                    ),
+                    const Divider(height: 22),
+                    _InfoRow(
+                      label: 'ID hồ sơ',
+                      value: user.idProfile > 0 ? '#${user.idProfile}' : '--',
+                    ),
+                    const Divider(height: 22),
                     _InfoRow(label: 'Tên hiển thị', value: user.displayName),
                     const Divider(height: 22),
                     _InfoRow(
@@ -232,7 +242,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = ref.read(appUserProvider).valueOrNull;
     if (service == null || user == null) return;
     final nameController = TextEditingController(text: user.name);
-    final usernameController = TextEditingController(text: user.username);
+    final usernameController = TextEditingController(
+      text: user.idUser.isEmpty ? user.username : user.idUser,
+    );
     final bioController = TextEditingController(text: user.bio);
     final favoriteController = TextEditingController(
       text: user.favoriteSubject,
@@ -262,7 +274,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: 10),
                     TextField(
                       controller: usernameController,
-                      decoration: const InputDecoration(labelText: 'Tên ngắn'),
+                      decoration: const InputDecoration(
+                        labelText: 'ID người dùng',
+                        helperText: 'Bạn bè có thể tìm bạn bằng ID này',
+                      ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
@@ -320,6 +335,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           try {
                             await service.updateProfile(
                               name: nameController.text.trim(),
+                              idUser: usernameController.text.trim(),
                               username: usernameController.text.trim(),
                               bio: bioController.text.trim(),
                               favoriteSubject: favoriteController.text.trim(),
@@ -477,6 +493,20 @@ class _ProfileHeroCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(user.subtitleText),
+                    if (user.idUser.trim().isNotEmpty ||
+                        user.idProfile > 0) ...[
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (user.idUser.trim().isNotEmpty)
+                            _IdChip(label: '@${user.idUser.trim()}'),
+                          if (user.idProfile > 0)
+                            _IdChip(label: 'ID #${user.idProfile}'),
+                        ],
+                      ),
+                    ],
                     if (user.bio.trim().isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
@@ -520,6 +550,34 @@ class _ProfileHeroCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _IdChip extends StatelessWidget {
+  const _IdChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: colorScheme.primary.withValues(
+          alpha: context.isDark ? 0.18 : 0.12,
+        ),
+        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: colorScheme.primary,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }

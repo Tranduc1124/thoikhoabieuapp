@@ -55,7 +55,11 @@ class FriendService {
   }) async {
     await Api.call(
       'friend.request',
-      data: {'toUserId': toUser.id, 'message': message},
+      data: {
+        'toUserId': toUser.idUser.isNotEmpty ? toUser.idUser : toUser.id,
+        'toIdProfile': toUser.idProfile,
+        'message': message,
+      },
     );
   }
 

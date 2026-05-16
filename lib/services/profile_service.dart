@@ -31,6 +31,7 @@ class ProfileService {
 
   Future<void> updateProfile({
     required String name,
+    String? idUser,
     String? username,
     String? bio,
     String? avatarUrl,
@@ -44,6 +45,7 @@ class ProfileService {
     bool? hideStreak,
   }) async {
     final data = <String, dynamic>{'name': name.trim()};
+    if (idUser != null) data['idUser'] = idUser.trim();
     if (username != null) data['username'] = username.trim();
     if (bio != null) data['bio'] = bio.trim();
     if (avatarUrl != null) data['avatarUrl'] = avatarUrl;
@@ -115,7 +117,9 @@ class ProfileService {
       id: cardId,
       ownerId: userId,
       displayName: user.displayName,
-      username: user.username,
+      username: user.idUser.isEmpty ? user.username : user.idUser,
+      idUser: user.idUser.isEmpty ? user.username : user.idUser,
+      idProfile: user.idProfile,
       bio: user.bio,
       favoriteSubject: user.favoriteSubject,
       studyStreak: user.studyStreak,

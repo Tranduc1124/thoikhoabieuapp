@@ -11,8 +11,11 @@ import '../providers/schedule_provider.dart';
 import '../providers/weather_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/loading_skeleton.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/morphing_schedule_list.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
@@ -44,6 +47,14 @@ class HomeScreen extends ConsumerWidget {
                   name: user?.displayName,
                   schedules: schedules.valueOrNull ?? const [],
                   weather: weather,
+                  friendRequestCount: friendRequestCount,
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+              sliver: SliverToBoxAdapter(
+                child: _HomePrimaryActions(
                   friendRequestCount: friendRequestCount,
                 ),
               ),
@@ -108,6 +119,87 @@ class HomeScreen extends ConsumerWidget {
                         ref.read(scheduleActionsProvider).delete(schedule.id),
                   );
                 },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomePrimaryActions extends StatelessWidget {
+  const _HomePrimaryActions({required this.friendRequestCount});
+
+  final int friendRequestCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _HomeActionButton(
+            icon: Icons.people_alt_rounded,
+            label: friendRequestCount > 0
+                ? '$friendRequestCount lời mời'
+                : 'Bạn bè',
+            onTap: () => context.push('/friends'),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _HomeActionButton(
+            icon: Icons.ios_share_rounded,
+            label: 'Chia sẻ lịch',
+            onTap: () => context.push('/share'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeActionButton extends StatelessWidget {
+  const _HomeActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return AnimatedButton(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          color: colorScheme.tileSurface,
+          border: Border.all(color: colorScheme.glassStrokeSubtle),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: colorScheme.primary),
+            const SizedBox(width: AppSpacing.xs),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: colorScheme.textPrimary,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           ],

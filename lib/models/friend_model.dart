@@ -4,6 +4,9 @@ class FriendModel {
     required this.userIds,
     required this.friendId,
     required this.friendName,
+    this.friendUid,
+    this.friendIdUser,
+    this.friendIdProfile = 0,
     this.friendAvatarUrl,
     this.friendUsername,
     this.sharedSubjects = const [],
@@ -18,6 +21,9 @@ class FriendModel {
   final List<String> userIds;
   final String friendId;
   final String friendName;
+  final String? friendUid;
+  final String? friendIdUser;
+  final int friendIdProfile;
   final String? friendAvatarUrl;
   final String? friendUsername;
   final List<String> sharedSubjects;
@@ -51,6 +57,21 @@ class FriendModel {
       friendId: friendId,
       friendName: (data['friendName'] ?? friendProfile['name'] ?? 'Bạn học')
           .toString(),
+      friendUid:
+          data['friendUid']?.toString() ?? friendProfile['uid']?.toString(),
+      friendIdUser:
+          data['friendIdUser']?.toString() ??
+          data['idUser']?.toString() ??
+          data['id_user']?.toString() ??
+          data['friendUsername']?.toString() ??
+          friendProfile['idUser']?.toString(),
+      friendIdProfile:
+          (data['friendIdProfile'] ??
+                  data['idProfile'] ??
+                  data['id_profile'] ??
+                  friendProfile['idProfile'] as num?)
+              ?.toInt() ??
+          0,
       friendAvatarUrl:
           data['friendAvatarUrl']?.toString() ??
           friendProfile['avatarUrl']?.toString(),

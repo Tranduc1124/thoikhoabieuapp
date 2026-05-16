@@ -4,6 +4,8 @@ class ProfileCardModel {
     required this.ownerId,
     required this.displayName,
     required this.username,
+    this.idUser = '',
+    this.idProfile = 0,
     required this.bio,
     required this.favoriteSubject,
     required this.studyStreak,
@@ -20,6 +22,8 @@ class ProfileCardModel {
   final String ownerId;
   final String displayName;
   final String username;
+  final String idUser;
+  final int idProfile;
   final String bio;
   final String favoriteSubject;
   final int studyStreak;
@@ -38,6 +42,10 @@ class ProfileCardModel {
       displayName: (data['displayName'] ?? data['display_name'] ?? 'Bạn học')
           .toString(),
       username: (data['username'] ?? '').toString(),
+      idUser: (data['idUser'] ?? data['id_user'] ?? data['username'] ?? '')
+          .toString(),
+      idProfile:
+          (data['idProfile'] ?? data['id_profile'] as num?)?.toInt() ?? 0,
       bio: (data['bio'] ?? '').toString(),
       favoriteSubject:
           (data['favoriteSubject'] ?? data['favorite_subject'] ?? '')
@@ -64,6 +72,10 @@ class ProfileCardModel {
       'ownerId': ownerId,
       'displayName': displayName,
       'username': username,
+      'idUser': idUser,
+      'id_user': idUser,
+      'idProfile': idProfile,
+      'id_profile': idProfile,
       'bio': bio,
       'favoriteSubject': favoriteSubject,
       'studyStreak': studyStreak,

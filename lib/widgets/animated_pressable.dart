@@ -8,6 +8,7 @@ class AnimatedPressable extends StatefulWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.onLongPress,
     this.scale = 0.975,
     this.duration = AppMotion.tap,
     this.pressedOpacity = 0.88,
@@ -16,6 +17,7 @@ class AnimatedPressable extends StatefulWidget {
 
   final Widget child;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final double scale;
   final Duration duration;
   final double pressedOpacity;
@@ -31,7 +33,7 @@ class _AnimatedPressableState extends State<AnimatedPressable> {
 
   @override
   Widget build(BuildContext context) {
-    final enabled = widget.onTap != null;
+    final enabled = widget.onTap != null || widget.onLongPress != null;
     final colorScheme = Theme.of(context).colorScheme;
     return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
@@ -46,6 +48,12 @@ class _AnimatedPressableState extends State<AnimatedPressable> {
               ? () {
                   _setPressed(false);
                   widget.onTap?.call();
+                }
+              : null,
+          onLongPress: enabled
+              ? () {
+                  _setPressed(false);
+                  widget.onLongPress?.call();
                 }
               : null,
           onTapDown: enabled

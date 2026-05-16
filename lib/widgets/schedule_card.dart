@@ -93,6 +93,7 @@ class PremiumScheduleCard extends StatelessWidget {
     final isDark = Theme.of(context).colorScheme.isDark;
     final canCollapse = status == _ClassStatus.done;
     final isCollapsed = canCollapse && !isExpandedByUser;
+    final isSoon = _isSoon();
 
     return RepaintBoundary(
       child: Semantics(
@@ -100,6 +101,8 @@ class PremiumScheduleCard extends StatelessWidget {
         label: 'Mở chi tiết môn ${schedule.subjectName}',
         child: AnimatedPressable(
           scale: 0.985,
+          onLongPress: () =>
+              context.push('/schedule/${schedule.id}', extra: schedule),
           onTap: () {
             if (canCollapse) {
               onToggleCompletedCard();
@@ -137,7 +140,9 @@ class PremiumScheduleCard extends StatelessWidget {
               ),
               radius: compact ? AppRadius.lg : AppRadius.xl,
               padding: EdgeInsets.zero,
-              borderColor: palette.borderColor(isDark),
+              borderColor: isSoon
+                  ? palette.primary.withValues(alpha: isDark ? 0.52 : 0.36)
+                  : palette.borderColor(isDark),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(
                   compact ? AppRadius.lg : AppRadius.xl,
@@ -220,10 +225,14 @@ class PremiumScheduleCard extends StatelessWidget {
                                       palette: palette,
                                     ),
                                     ScheduleStatusPill(
-                                      label: statusData.label,
+                                      label: isSoon
+                                          ? 'Sắp tới'
+                                          : statusData.label,
                                       icon: statusData.icon,
                                       colors: statusData.colors,
-                                      active: status == _ClassStatus.active,
+                                      active:
+                                          status == _ClassStatus.active ||
+                                          isSoon,
                                       muted: status == _ClassStatus.done,
                                     ),
                                   ],
@@ -328,6 +337,15 @@ class PremiumScheduleCard extends StatelessWidget {
       'in_progress',
       'đang học',
     }.contains(value.trim().toLowerCase());
+  }
+
+  bool _isSoon() {
+    if (log != null) return false;
+    final now = DateTime.now();
+    if (now.weekday != schedule.dayOfWeek) return false;
+    final minutes = now.hour * 60 + now.minute;
+    final remaining = schedule.startTime - minutes;
+    return remaining >= 0 && remaining <= 20;
   }
 
   Future<void> _confirmDelete(BuildContext context) async {

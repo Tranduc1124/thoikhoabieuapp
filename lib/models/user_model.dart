@@ -5,6 +5,8 @@ class AppUser {
     required this.id,
     required this.name,
     required this.email,
+    this.idUser = '',
+    this.idProfile = 0,
     this.username = '',
     this.bio = '',
     this.avatarUrl,
@@ -26,6 +28,8 @@ class AppUser {
   final String id;
   final String name;
   final String email;
+  final String idUser;
+  final int idProfile;
   final String username;
   final String bio;
   final String? avatarUrl;
@@ -60,7 +64,8 @@ class AppUser {
 
   String get subtitleText {
     if (email.trim().isNotEmpty) return email.trim();
-    if (username.trim().isNotEmpty) return username.trim();
+    if (idUser.trim().isNotEmpty) return '@${idUser.trim()}';
+    if (username.trim().isNotEmpty) return '@${username.trim()}';
     return 'Sinh viên';
   }
 
@@ -74,12 +79,19 @@ class AppUser {
       safeData['name'] ?? safeData['displayName'],
     ).trim();
     final username = JsonSafe.string(safeData['username']).trim();
+    final idUser = JsonSafe.string(
+      safeData['idUser'] ?? safeData['id_user'] ?? username,
+    ).trim();
     final rawSocialLinks = JsonSafe.map(safeData['socialLinks']);
     return AppUser(
       id: id,
       name: name,
       email: JsonSafe.string(safeData['email']).trim(),
-      username: username,
+      idUser: idUser,
+      idProfile: JsonSafe.integer(
+        safeData['idProfile'] ?? safeData['id_profile'],
+      ),
+      username: idUser.isEmpty ? username : idUser,
       bio: JsonSafe.string(safeData['bio']),
       avatarUrl: JsonSafe.string(safeData['avatarUrl']).trim().isEmpty
           ? null
@@ -114,10 +126,14 @@ class AppUser {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'idUser': idUser,
+      'id_user': idUser,
+      'idProfile': idProfile,
+      'id_profile': idProfile,
       'name': name,
       'displayName': displayName,
       'email': email,
-      'username': username,
+      'username': idUser.isEmpty ? username : idUser,
       'bio': bio,
       'avatarUrl': avatarUrl,
       'themeMode': themeMode,

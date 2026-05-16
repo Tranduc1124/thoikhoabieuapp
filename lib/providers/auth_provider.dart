@@ -100,6 +100,7 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     required String name,
     required String email,
     required String password,
+    String? idUser,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -110,6 +111,8 @@ class AuthController extends AsyncNotifier<AuthSession?> {
           'name': name.trim(),
           'email': email.trim(),
           'password': password,
+          if (idUser != null && idUser.trim().isNotEmpty)
+            'idUser': idUser.trim(),
         },
       );
       await Api.applyAuthPayload(data);

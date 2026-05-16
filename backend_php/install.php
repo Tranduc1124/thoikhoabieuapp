@@ -36,6 +36,8 @@ $queries = [
         email VARCHAR(191) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
         name VARCHAR(120) NOT NULL,
+        id_user VARCHAR(64) NOT NULL UNIQUE,
+        id_profile BIGINT UNSIGNED NULL UNIQUE,
         username VARCHAR(64) NOT NULL UNIQUE,
         bio TEXT NULL,
         avatar_url VARCHAR(500) NULL,
@@ -52,7 +54,9 @@ $queries = [
         created_at DATETIME NOT NULL,
         updated_at DATETIME NOT NULL,
         INDEX idx_users_email (email),
-        INDEX idx_users_uid (uid)
+        INDEX idx_users_uid (uid),
+        INDEX idx_users_id_user (id_user),
+        INDEX idx_users_id_profile (id_profile)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
     'CREATE TABLE IF NOT EXISTS auth_tokens (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -253,6 +257,14 @@ foreach ($queries as $query) {
     $pdo->exec($query);
 }
 
+ensureColumn($pdo, 'users', 'id_user', 'VARCHAR(64) NULL');
+ensureColumn($pdo, 'users', 'id_profile', 'BIGINT UNSIGNED NULL');
+backfillUserPublicIds($pdo);
+ensureUniqueIndex($pdo, 'users', 'uniq_users_id_user', 'id_user');
+ensureUniqueIndex($pdo, 'users', 'uniq_users_id_profile', 'id_profile');
+ensureIndex($pdo, 'users', 'idx_users_id_user', 'id_user');
+ensureIndex($pdo, 'users', 'idx_users_id_profile', 'id_profile');
+
 $uploadPath = __DIR__ . '/uploads/avatars';
 if (!is_dir($uploadPath)) {
     mkdir($uploadPath, 0775, true);
@@ -264,3 +276,125 @@ echo json_encode([
     'baseUrl' => APP_BASE_URL,
     'uploadPath' => $uploadPath,
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+function ensureColumn(PDO $pdo, string $table, string $column, string $definition): void
+{
+    $stmt = $pdo->prepare(
+        'SELECT COUNT(*) AS count_value
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = :table_name
+           AND COLUMN_NAME = :column_name'
+    );
+    $stmt->execute(['table_name' => $table, 'column_name' => $column]);
+    if ((int)($stmt->fetch()['count_value'] ?? 0) > 0) {
+        return;
+    }
+    $pdo->exec('ALTER TABLE `' . $table . '` ADD COLUMN `' . $column . '` ' . $definition);
+}
+
+function ensureIndex(PDO $pdo, string $table, string $indexName, string $column): void
+{
+    if (indexExists($pdo, $table, $indexName)) {
+        return;
+    }
+    $pdo->exec('CREATE INDEX `' . $indexName . '` ON `' . $table . '` (`' . $column . '`)');
+}
+
+function ensureUniqueIndex(PDO $pdo, string $table, string $indexName, string $column): void
+{
+    if (indexExists($pdo, $table, $indexName)) {
+        return;
+    }
+    $pdo->exec('CREATE UNIQUE INDEX `' . $indexName . '` ON `' . $table . '` (`' . $column . '`)');
+}
+
+function indexExists(PDO $pdo, string $table, string $indexName): bool
+{
+    $stmt = $pdo->prepare(
+        'SELECT COUNT(*) AS count_value
+         FROM INFORMATION_SCHEMA.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = :table_name
+           AND INDEX_NAME = :index_name'
+    );
+    $stmt->execute(['table_name' => $table, 'index_name' => $indexName]);
+    return (int)($stmt->fetch()['count_value'] ?? 0) > 0;
+}
+
+function backfillUserPublicIds(PDO $pdo): void
+{
+    $pdo->exec(
+        'UPDATE users
+         SET id_profile = id
+         WHERE id_profile IS NULL'
+    );
+    $rows = $pdo->query(
+        'SELECT id, username, email, name
+         FROM users
+         WHERE id_user IS NULL OR id_user = ""'
+    )->fetchAll();
+    foreach ($rows as $row) {
+        $base = normalizeInstallIdUser((string)($row['username'] ?? ''));
+        if ($base === '') {
+            $base = normalizeInstallIdUser((string)strtok((string)$row['email'], '@'));
+        }
+        if ($base === '') {
+            $base = 'user' . (string)$row['id'];
+        }
+        $idUser = uniqueInstallIdUser($pdo, $base, (int)$row['id']);
+        $stmt = $pdo->prepare(
+            'UPDATE users
+             SET id_user = :id_user, username = :id_user
+             WHERE id = :id'
+        );
+        $stmt->execute(['id_user' => $idUser, 'id' => $row['id']]);
+    }
+}
+
+function uniqueInstallIdUser(PDO $pdo, string $base, int $currentId): string
+{
+    $candidate = $base;
+    $suffix = 1;
+    while (true) {
+        $stmt = $pdo->prepare(
+            'SELECT id FROM users
+             WHERE id_user = :id_user
+               AND id <> :id
+             LIMIT 1'
+        );
+        $stmt->execute(['id_user' => $candidate, 'id' => $currentId]);
+        if (!$stmt->fetch()) {
+            return $candidate;
+        }
+        $suffix++;
+        $candidate = $base . $suffix;
+    }
+}
+
+function normalizeInstallIdUser(string $value): string
+{
+    $normalized = mb_strtolower(trim($value));
+    $normalized = preg_replace('/[^a-z0-9_]+/u', '', transliterateInstall($normalized)) ?? '';
+    return substr($normalized, 0, 32);
+}
+
+function transliterateInstall(string $value): string
+{
+    $table = [
+        'à' => 'a', 'á' => 'a', 'ạ' => 'a', 'ả' => 'a', 'ã' => 'a',
+        'â' => 'a', 'ầ' => 'a', 'ấ' => 'a', 'ậ' => 'a', 'ẩ' => 'a', 'ẫ' => 'a',
+        'ă' => 'a', 'ằ' => 'a', 'ắ' => 'a', 'ặ' => 'a', 'ẳ' => 'a', 'ẵ' => 'a',
+        'è' => 'e', 'é' => 'e', 'ẹ' => 'e', 'ẻ' => 'e', 'ẽ' => 'e',
+        'ê' => 'e', 'ề' => 'e', 'ế' => 'e', 'ệ' => 'e', 'ể' => 'e', 'ễ' => 'e',
+        'ì' => 'i', 'í' => 'i', 'ị' => 'i', 'ỉ' => 'i', 'ĩ' => 'i',
+        'ò' => 'o', 'ó' => 'o', 'ọ' => 'o', 'ỏ' => 'o', 'õ' => 'o',
+        'ô' => 'o', 'ồ' => 'o', 'ố' => 'o', 'ộ' => 'o', 'ổ' => 'o', 'ỗ' => 'o',
+        'ơ' => 'o', 'ờ' => 'o', 'ớ' => 'o', 'ợ' => 'o', 'ở' => 'o', 'ỡ' => 'o',
+        'ù' => 'u', 'ú' => 'u', 'ụ' => 'u', 'ủ' => 'u', 'ũ' => 'u',
+        'ư' => 'u', 'ừ' => 'u', 'ứ' => 'u', 'ự' => 'u', 'ử' => 'u', 'ữ' => 'u',
+        'ỳ' => 'y', 'ý' => 'y', 'ỵ' => 'y', 'ỷ' => 'y', 'ỹ' => 'y',
+        'đ' => 'd',
+    ];
+    return strtr($value, $table);
+}

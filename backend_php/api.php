@@ -554,7 +554,7 @@ function uniqueUsername(PDO $pdo, string $name, string $email): string
     $candidate = $base;
     $suffix = 1;
     while (true) {
-        $stmt = $pdo->prepare('SELECT id FROM users WHERE username = :username LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE username = :username OR id_user = :username LIMIT 1');
         $stmt->execute(['username' => $candidate]);
         if (!$stmt->fetch()) {
             return $candidate;
@@ -758,6 +758,40 @@ function findUserByUid(PDO $pdo, string $uid): array
     return $row;
 }
 
+function findUserByPublicIdentifier(PDO $pdo, string $identifier): array
+{
+    $value = trim($identifier);
+    if ($value === '') {
+        fail('invalid_input', 'Thiếu mã người dùng.', 400);
+    }
+    if (ctype_digit($value)) {
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE id_profile = :id_profile LIMIT 1');
+        $stmt->execute(['id_profile' => (int)$value]);
+        $row = $stmt->fetch();
+        if ($row) {
+            return $row;
+        }
+    }
+    $idUser = normalizeUsername($value);
+    $stmt = $pdo->prepare(
+        'SELECT *
+         FROM users
+         WHERE uid = :raw_value
+            OR id_user = :id_user
+            OR username = :id_user
+         LIMIT 1'
+    );
+    $stmt->execute([
+        'raw_value' => $value,
+        'id_user' => $idUser,
+    ]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        fail('not_found', 'Không tìm thấy người dùng.', 404);
+    }
+    return $row;
+}
+
 function findScheduleRow(PDO $pdo, int $userId, string $scheduleId): array
 {
     $stmt = $pdo->prepare(
@@ -863,13 +897,22 @@ function findProfileCardRow(PDO $pdo, string $cardId): array
 function serializeUser(array $row): array
 {
     $socialLinks = decodeJsonObject((string)($row['social_links_json'] ?? '{}'));
+    $idUser = trim((string)($row['id_user'] ?? '')) ?: (string)$row['username'];
+    $idProfile = (int)($row['id_profile'] ?? 0);
+    if ($idProfile <= 0) {
+        $idProfile = (int)$row['id'];
+    }
     return [
         'id' => (string)$row['uid'],
         'uid' => (string)$row['uid'],
+        'idUser' => $idUser,
+        'id_user' => $idUser,
+        'idProfile' => $idProfile,
+        'id_profile' => $idProfile,
         'name' => (string)$row['name'],
         'displayName' => (string)$row['name'],
         'email' => (string)$row['email'],
-        'username' => (string)$row['username'],
+        'username' => $idUser,
         'bio' => (string)$row['bio'],
         'avatarUrl' => nullableString($row['avatar_url']),
         'photoURL' => nullableString($row['avatar_url']),
@@ -950,9 +993,13 @@ function isShareExpired(array $row): bool
 function serializeShare(array $row): array
 {
     $shareId = (string)$row['share_id'];
+    $owner = findUserById(db(), (int)$row['owner_id']);
+    $ownerIdUser = trim((string)($owner['id_user'] ?? '')) ?: (string)$owner['username'];
     return [
         'id' => $shareId,
         'ownerId' => (string)$row['owner_uid'],
+        'ownerIdUser' => $ownerIdUser,
+        'ownerIdProfile' => (int)($owner['id_profile'] ?? $owner['id']),
         'ownerName' => (string)$row['owner_name'],
         'title' => (string)$row['title'],
         'shareType' => (string)$row['share_type'],
@@ -1132,15 +1179,25 @@ function handleAuthRegister(PDO $pdo, array $data): void
     }
 
     $uid = 'u_' . bin2hex(random_bytes(8));
-    $username = uniqueUsername($pdo, $name, $email);
+    $requestedIdUser = normalizeUsername((string)($data['idUser'] ?? $data['id_user'] ?? $data['username'] ?? ''));
+    if ($requestedIdUser !== '') {
+        $idExists = $pdo->prepare('SELECT id FROM users WHERE username = :id_user OR id_user = :id_user LIMIT 1');
+        $idExists->execute(['id_user' => $requestedIdUser]);
+        if ($idExists->fetch()) {
+            fail('already_exists', 'ID người dùng này đã được sử dụng.');
+        }
+        $username = $requestedIdUser;
+    } else {
+        $username = uniqueUsername($pdo, $name, $email);
+    }
     $stmt = $pdo->prepare(
         'INSERT INTO users (
-            uid, email, password_hash, name, username, bio, avatar_url,
+            uid, email, password_hash, name, id_user, id_profile, username, bio, avatar_url,
             theme_mode, profile_theme, favorite_subject, accent_color, study_streak,
             is_profile_public, allow_friends_to_view_timetable, hide_statistics, hide_streak,
             social_links_json, created_at, updated_at
          ) VALUES (
-            :uid, :email, :password_hash, :name, :username, :bio, :avatar_url,
+            :uid, :email, :password_hash, :name, :id_user, NULL, :username, :bio, :avatar_url,
             :theme_mode, :profile_theme, :favorite_subject, :accent_color, :study_streak,
             :is_profile_public, :allow_friends_to_view_timetable, :hide_statistics, :hide_streak,
             :social_links_json, NOW(), NOW()
@@ -1152,6 +1209,7 @@ function handleAuthRegister(PDO $pdo, array $data): void
         'email' => $email,
         'password_hash' => password_hash($password, PASSWORD_DEFAULT),
         'name' => $name,
+        'id_user' => $username,
         'username' => $username,
         'bio' => '',
         'avatar_url' => null,
@@ -1168,6 +1226,8 @@ function handleAuthRegister(PDO $pdo, array $data): void
     ]);
 
     $userId = (int)$pdo->lastInsertId();
+    $pdo->prepare('UPDATE users SET id_profile = :id_profile WHERE id = :id AND id_profile IS NULL')
+        ->execute(['id_profile' => $userId, 'id' => $userId]);
     ensureSettingsRow($pdo, $userId);
     saveSettingsSection($pdo, $userId, 'app_settings_json', defaultAppSettings());
     saveSettingsSection($pdo, $userId, 'notification_settings_json', defaultNotificationSettings());
@@ -1178,10 +1238,19 @@ function handleAuthRegister(PDO $pdo, array $data): void
 
 function handleAuthLogin(PDO $pdo, array $data): void
 {
-    $email = normalizeEmail(requireString($data, 'email', 5, 191));
+    $login = requireString($data, 'email', 1, 191);
     $password = requireString($data, 'password', 1, 255);
-    $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email LIMIT 1');
-    $stmt->execute(['email' => $email]);
+    if (str_contains($login, '@')) {
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email LIMIT 1');
+        $stmt->execute(['email' => normalizeEmail($login)]);
+    } elseif (ctype_digit(trim($login))) {
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE id_profile = :id_profile LIMIT 1');
+        $stmt->execute(['id_profile' => (int)trim($login)]);
+    } else {
+        $idUser = normalizeUsername($login);
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE id_user = :id_user OR username = :id_user LIMIT 1');
+        $stmt->execute(['id_user' => $idUser]);
+    }
     $user = $stmt->fetch();
     if (!$user || !password_verify($password, (string)$user['password_hash'])) {
         fail('invalid_credentials', 'Email hoặc mật khẩu không đúng.', 401);
@@ -1198,6 +1267,9 @@ function handleAuthLogout(PDO $pdo): void
 
 function handleProfileUpdate(PDO $pdo, array $user, array $data): void
 {
+    if (array_key_exists('idUser', $data) || array_key_exists('id_user', $data)) {
+        $data['username'] = $data['idUser'] ?? $data['id_user'];
+    }
     $allowed = [
         'name' => 'name',
         'username' => 'username',
@@ -1223,8 +1295,21 @@ function handleProfileUpdate(PDO $pdo, array $user, array $data): void
         if ($inputKey === 'username') {
             $value = normalizeUsername((string)$value);
             if ($value === '') {
-                fail('invalid_input', 'Username không hợp lệ.');
+                fail('invalid_input', 'ID người dùng không hợp lệ.');
             }
+            $exists = $pdo->prepare(
+                'SELECT id
+                 FROM users
+                 WHERE (username = :value OR id_user = :value)
+                   AND id <> :id
+                 LIMIT 1'
+            );
+            $exists->execute(['value' => $value, 'id' => $user['id']]);
+            if ($exists->fetch()) {
+                fail('already_exists', 'ID người dùng này đã được sử dụng.');
+            }
+            $sets[] = 'id_user = :idUserMirror';
+            $params['idUserMirror'] = $value;
         } elseif (in_array($inputKey, ['isProfilePublic', 'allowFriendsToViewTimetable', 'hideStatistics', 'hideStreak'], true)) {
             $value = boolToInt($value);
         } elseif (in_array($inputKey, ['accentColor', 'studyStreak'], true)) {
@@ -1768,7 +1853,8 @@ function handleMyShares(PDO $pdo, array $user): void
 function handleFriendList(PDO $pdo, array $user): void
 {
     $stmt = $pdo->prepare(
-        'SELECT f.friend_uid, f.shared_subjects_json, f.created_at, f.updated_at, u.name, u.username, u.avatar_url, u.study_streak
+        'SELECT f.friend_uid, f.shared_subjects_json, f.created_at, f.updated_at,
+                u.uid, u.name, u.id_user, u.id_profile, u.username, u.avatar_url, u.study_streak
          FROM friends f
          INNER JOIN users u ON u.uid = f.friend_uid
          WHERE f.user_id = :user_id
@@ -1782,13 +1868,19 @@ function handleFriendList(PDO $pdo, array $user): void
         $sumStmt = $pdo->prepare('SELECT COALESCE(SUM(end_time - start_time), 0) AS total_minutes FROM schedules WHERE user_id = :user_id AND deleted_at IS NULL');
         $sumStmt->execute(['user_id' => $friendUser['id']]);
         $minutes = (int)($sumStmt->fetch()['total_minutes'] ?? 0);
+        $friendIdUser = trim((string)($row['id_user'] ?? '')) ?: (string)$row['username'];
+        $friendIdProfile = (int)($row['id_profile'] ?? $friendUser['id']);
+        $currentIdUser = trim((string)($user['id_user'] ?? '')) ?: (string)$user['username'];
         $friends[] = [
-            'id' => $user['uid'] . '_' . $row['friend_uid'],
-            'userIds' => [$user['uid'], (string)$row['friend_uid']],
-            'friendId' => (string)$row['friend_uid'],
+            'id' => $currentIdUser . '_' . $friendIdUser,
+            'userIds' => [$currentIdUser, $friendIdUser],
+            'friendId' => $friendIdUser,
+            'friendUid' => (string)$row['friend_uid'],
+            'friendIdUser' => $friendIdUser,
+            'friendIdProfile' => $friendIdProfile,
             'friendName' => (string)$row['name'],
             'friendAvatarUrl' => nullableString($row['avatar_url']),
-            'friendUsername' => (string)$row['username'],
+            'friendUsername' => $friendIdUser,
             'sharedSubjects' => decodeJsonList((string)($row['shared_subjects_json'] ?? '[]')),
             'weeklyHours' => round($minutes / 60, 1),
             'studyStreak' => (int)($row['study_streak'] ?? 0),
@@ -1803,8 +1895,10 @@ function handleFriendList(PDO $pdo, array $user): void
 function handleFriendRequests(PDO $pdo, array $user): void
 {
     $stmt = $pdo->prepare(
-        'SELECT fr.*, fu.uid AS from_uid, fu.name AS from_name, fu.avatar_url AS from_avatar_url,
-                tu.uid AS to_uid, tu.name AS to_name, tu.avatar_url AS to_avatar_url
+        'SELECT fr.*, fu.uid AS from_uid, fu.id_user AS from_id_user, fu.id_profile AS from_id_profile,
+                fu.name AS from_name, fu.avatar_url AS from_avatar_url,
+                tu.uid AS to_uid, tu.id_user AS to_id_user, tu.id_profile AS to_id_profile,
+                tu.name AS to_name, tu.avatar_url AS to_avatar_url
          FROM friend_requests fr
          INNER JOIN users fu ON fu.id = fr.from_user_id
          INNER JOIN users tu ON tu.id = fr.to_user_id
@@ -1815,8 +1909,12 @@ function handleFriendRequests(PDO $pdo, array $user): void
     $requests = array_map(
         static fn(array $row): array => [
             'id' => (string)$row['request_id'],
-            'fromUserId' => (string)$row['from_uid'],
-            'toUserId' => (string)$row['to_uid'],
+            'fromUserId' => trim((string)($row['from_id_user'] ?? '')) ?: (string)$row['from_uid'],
+            'toUserId' => trim((string)($row['to_id_user'] ?? '')) ?: (string)$row['to_uid'],
+            'fromUid' => (string)$row['from_uid'],
+            'toUid' => (string)$row['to_uid'],
+            'fromIdProfile' => (int)($row['from_id_profile'] ?? 0),
+            'toIdProfile' => (int)($row['to_id_profile'] ?? 0),
             'fromName' => (string)$row['from_name'],
             'toName' => (string)$row['to_name'],
             'fromAvatarUrl' => nullableString($row['from_avatar_url']),
@@ -1837,21 +1935,44 @@ function handleFriendSearch(PDO $pdo, array $user, array $data): void
     if ($query === '') {
         ok(['users' => []]);
     }
+    $normalized = normalizeUsername($query);
     $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $query) . '%';
+    $normalizedLike = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $normalized) . '%';
+    $params = [
+        'id' => $user['id'],
+        'query' => $like,
+        'normalized_query' => $normalizedLike,
+    ];
+    $profileClause = '';
+    if (ctype_digit($query)) {
+        $profileClause = ' OR id_profile = :id_profile';
+        $params['id_profile'] = (int)$query;
+    }
     $stmt = $pdo->prepare(
-        'SELECT * FROM users WHERE id <> :id AND (name LIKE :query OR username LIKE :query OR email LIKE :query) ORDER BY name ASC LIMIT 20'
+        'SELECT *
+         FROM users
+         WHERE id <> :id
+           AND (
+                name LIKE :query
+             OR email LIKE :query
+             OR username LIKE :normalized_query
+             OR id_user LIKE :normalized_query
+             ' . $profileClause . '
+           )
+         ORDER BY name ASC
+         LIMIT 20'
     );
-    $stmt->execute(['id' => $user['id'], 'query' => $like]);
+    $stmt->execute($params);
     ok(['users' => array_map('serializeUser', $stmt->fetchAll())]);
 }
 
 function handleFriendRequest(PDO $pdo, array $user, array $data): void
 {
-    $toUserUid = trim((string)($data['toUserId'] ?? ''));
-    if ($toUserUid === '') {
+    $toUserIdentifier = trim((string)($data['toUserId'] ?? $data['toIdUser'] ?? $data['toIdProfile'] ?? ''));
+    if ($toUserIdentifier === '') {
         fail('invalid_input', 'Thiếu người nhận lời mời.');
     }
-    $toUser = findUserByUid($pdo, $toUserUid);
+    $toUser = findUserByPublicIdentifier($pdo, $toUserIdentifier);
     if ((int)$toUser['id'] === (int)$user['id']) {
         fail('invalid_input', 'Không thể tự kết bạn với chính mình.');
     }
@@ -1935,11 +2056,11 @@ function handleFriendReject(PDO $pdo, array $user, array $data): void
 
 function handleFriendRemove(PDO $pdo, array $user, array $data): void
 {
-    $friendUid = trim((string)($data['friendId'] ?? ''));
-    if ($friendUid === '') {
+    $friendIdentifier = trim((string)($data['friendId'] ?? ''));
+    if ($friendIdentifier === '') {
         fail('invalid_input', 'Thiếu mã bạn bè.');
     }
-    $friend = findUserByUid($pdo, $friendUid);
+    $friend = findUserByPublicIdentifier($pdo, $friendIdentifier);
     $pdo->prepare('DELETE FROM friends WHERE (user_id = :user_id AND friend_id = :friend_id) OR (user_id = :friend_id AND friend_id = :user_id)')
         ->execute(['user_id' => $user['id'], 'friend_id' => $friend['id']]);
     ok([], 'Đã xoá bạn bè.');
@@ -1994,8 +2115,13 @@ function handleProfileCardCreate(PDO $pdo, array $user, array $data): void
 {
     $cardId = trim((string)($data['id'] ?? '')) ?: 'card_' . bin2hex(random_bytes(8));
     $payload = $data;
+    $idUser = trim((string)($user['id_user'] ?? '')) ?: (string)$user['username'];
     $payload['id'] = $cardId;
     $payload['ownerId'] = $user['uid'];
+    $payload['idUser'] = $payload['idUser'] ?? $idUser;
+    $payload['id_user'] = $payload['id_user'] ?? $idUser;
+    $payload['idProfile'] = $payload['idProfile'] ?? (int)($user['id_profile'] ?? $user['id']);
+    $payload['id_profile'] = $payload['id_profile'] ?? (int)($user['id_profile'] ?? $user['id']);
     $payload['createdAt'] = $payload['createdAt'] ?? gmdate(DATE_ATOM);
     $payload['updatedAt'] = gmdate(DATE_ATOM);
     $pdo->prepare(
