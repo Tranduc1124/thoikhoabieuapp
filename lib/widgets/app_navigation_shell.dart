@@ -18,9 +18,10 @@ class AppNavigationShell extends StatelessWidget {
       extendBody: true,
       body: RepaintBoundary(
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 360),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
+          duration: AppMotion.medium,
+          reverseDuration: AppMotion.fast,
+          switchInCurve: AppMotion.liquid,
+          switchOutCurve: AppMotion.exit,
           layoutBuilder: (currentChild, previousChildren) {
             return Stack(
               fit: StackFit.expand,
@@ -149,7 +150,7 @@ class _PremiumNavButton extends StatelessWidget {
       onTap: onTap,
       scale: 0.96,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
+        duration: AppMotion.fast,
         curve: AppMotion.liquid,
         height: 58,
         margin: const EdgeInsets.symmetric(horizontal: 2),

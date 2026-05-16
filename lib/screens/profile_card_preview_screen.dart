@@ -6,6 +6,7 @@ import '../models/profile_card_model.dart';
 import '../providers/pro_feature_providers.dart';
 import '../services/app_feedback_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../widgets/app_avatar.dart';
 import '../widgets/qr_share_box.dart';
 import '../widgets/soft_gradient_background.dart';
@@ -42,12 +43,19 @@ class _ProfileCardPreviewScreenState
               const SizedBox(height: 18),
               FilledButton.icon(
                 onPressed: _busy || shareService == null ? null : _shareImage,
-                icon: _busy
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.ios_share_rounded),
+                icon: AnimatedSwitcher(
+                  duration: AppMotion.fast,
+                  child: _busy
+                      ? const SizedBox.square(
+                          key: ValueKey('profile-card-busy'),
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(
+                          Icons.ios_share_rounded,
+                          key: ValueKey('profile-card-ready'),
+                        ),
+                ),
                 label: const Text('Chia sẻ thẻ hồ sơ'),
               ),
             ],
@@ -86,29 +94,46 @@ class _ProfilePoster extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(36),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colorScheme.surfaceContainer.withValues(alpha: 0.96),
-            colorScheme.surfaceContainerHigh.withValues(alpha: 0.94),
-            colorScheme.primary.withValues(alpha: 0.16),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: AppMotion.medium,
+      curve: AppMotion.liquid,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 18 * (1 - value)),
+            child: Transform.scale(
+              scale: 0.985 + value * 0.015,
+              alignment: Alignment.topCenter,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(36),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              colorScheme.surfaceContainer.withValues(alpha: 0.96),
+              colorScheme.surfaceContainerHigh.withValues(alpha: 0.94),
+              colorScheme.primary.withValues(alpha: 0.16),
+            ],
+          ),
+          border: Border.all(color: colorScheme.glassStroke),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.primary.withValues(alpha: 0.22),
+              blurRadius: 30,
+              offset: const Offset(0, 18),
+            ),
           ],
         ),
-        border: Border.all(color: colorScheme.glassStroke),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.primary.withValues(alpha: 0.22),
-            blurRadius: 30,
-            offset: const Offset(0, 18),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(22),
-      child: Column(
+        padding: const EdgeInsets.all(22),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -167,6 +192,7 @@ class _ProfilePoster extends StatelessWidget {
             subtitle: 'Chia sẻ để kết nối cùng bạn bè học tập',
           ),
         ],
+        ),
       ),
     );
   }

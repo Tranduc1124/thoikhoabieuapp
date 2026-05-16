@@ -7,6 +7,9 @@ import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
 import '../providers/schedule_provider.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import 'animated_pressable.dart';
 import 'glass_card.dart';
 
@@ -88,7 +91,7 @@ class PremiumScheduleCard extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: Duration(milliseconds: 300 + index.clamp(0, 6) * 25),
-      curve: Curves.easeOutCubic,
+      curve: AppMotion.liquid,
       builder: (context, value, child) {
         return Opacity(
           opacity: value.clamp(0.0, 1.0),
@@ -118,8 +121,8 @@ class PremiumScheduleCard extends StatelessWidget {
               (context, animation, direction, fromContext, toContext) {
                 final curved = CurvedAnimation(
                   parent: animation,
-                  curve: Curves.easeOutCubic,
-                  reverseCurve: Curves.easeInCubic,
+                  curve: AppMotion.liquid,
+                  reverseCurve: AppMotion.exit,
                 );
                 final shuttle = direction == HeroFlightDirection.push
                     ? toContext.widget
@@ -182,8 +185,8 @@ class PremiumScheduleCard extends StatelessWidget {
                     ),
                   ),
                   AnimatedSize(
-                    duration: const Duration(milliseconds: 280),
-                    curve: Curves.easeOutCubic,
+                    duration: AppMotion.medium,
+                    curve: AppMotion.liquid,
                     alignment: Alignment.topCenter,
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
@@ -202,7 +205,7 @@ class PremiumScheduleCard extends StatelessWidget {
                               onConfirmDelete: () => _confirmDelete(context),
                             ),
                             if (!isCollapsed) ...[
-                              SizedBox(height: compact ? 14 : 16),
+                              SizedBox(height: compact ? 14 : AppSpacing.lg),
                               Wrap(
                                 spacing: 9,
                                 runSpacing: 9,
@@ -223,7 +226,7 @@ class PremiumScheduleCard extends StatelessWidget {
                                 ],
                               ),
                               if (!compact && _hasInfo) ...[
-                                const SizedBox(height: 16),
+                                const SizedBox(height: AppSpacing.lg),
                                 Wrap(
                                   spacing: 9,
                                   runSpacing: 9,
@@ -264,7 +267,7 @@ class PremiumScheduleCard extends StatelessWidget {
                                 ),
                               ],
                               if (onStart != null || onComplete != null) ...[
-                                const SizedBox(height: 18),
+                                const SizedBox(height: AppSpacing.lg),
                                 _Actions(
                                   palette: palette,
                                   onStart: onStart,
@@ -393,7 +396,7 @@ class _MapChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       onTap: onTap,
       child: ScheduleInfoChip(
         icon: Icons.map_rounded,
@@ -424,7 +427,7 @@ class _Header extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SubjectGradientIcon(palette: palette),
-        const SizedBox(width: 14),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: 1),
@@ -456,7 +459,7 @@ class _Header extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.sm),
         _MoreMenu(
           schedule: schedule,
           onDelete: onDelete,
@@ -482,7 +485,7 @@ class _MoreMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return GlassContainer(
-      radius: 18,
+      radius: AppRadius.md,
       padding: EdgeInsets.zero,
       child: PopupMenuButton<String>(
         tooltip: 'Tùy chọn',
@@ -539,20 +542,18 @@ class _Actions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        if (onStart != null)
-          Expanded(
-            child: OutlinedButton.icon(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final vertical = constraints.maxWidth < 330;
+        final buttons = [
+          if (onStart != null)
+            OutlinedButton.icon(
               onPressed: onStart,
               icon: const Icon(Icons.play_arrow_rounded),
-              label: const Text('Bắt đầu học'),
+              label: const Text('Bắt đầu'),
             ),
-          ),
-        if (onStart != null && onComplete != null) const SizedBox(width: 10),
-        if (onComplete != null)
-          Expanded(
-            child: FilledButton.icon(
+          if (onComplete != null)
+            FilledButton.icon(
               onPressed: onComplete,
               icon: const Icon(Icons.done_rounded),
               label: const Text('Đã học'),
@@ -561,8 +562,27 @@ class _Actions extends StatelessWidget {
                 foregroundColor: Colors.white,
               ),
             ),
-          ),
-      ],
+        ];
+        if (vertical) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < buttons.length; i++) ...[
+                if (i > 0) const SizedBox(height: AppSpacing.sm),
+                buttons[i],
+              ],
+            ],
+          );
+        }
+        return Row(
+          children: [
+            for (var i = 0; i < buttons.length; i++) ...[
+              if (i > 0) const SizedBox(width: AppSpacing.sm),
+              Expanded(child: buttons[i]),
+            ],
+          ],
+        );
+      },
     );
   }
 }
@@ -629,11 +649,15 @@ class GlassPill extends StatelessWidget {
         children: [
           _MiniGradientIcon(icon: icon, palette: palette),
           const SizedBox(width: 7),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: colorScheme.textPrimary,
-              fontWeight: FontWeight.w900,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: colorScheme.textPrimary,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
@@ -702,8 +726,8 @@ class _ScheduleStatusPillState extends State<ScheduleStatusPill>
         final pulse = widget.active ? _controller.value : 0.0;
         return AnimatedScale(
           scale: widget.active ? 1 + pulse * 0.018 : 1,
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
+          duration: AppMotion.fast,
+          curve: AppMotion.liquid,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
             decoration: BoxDecoration(
@@ -778,7 +802,7 @@ class ScheduleInfoChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return GlassContainer(
-      radius: 18,
+      radius: AppRadius.md,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       backgroundColor: colorScheme.tileSurface,
       borderColor: palette
@@ -789,15 +813,19 @@ class ScheduleInfoChip extends StatelessWidget {
         children: [
           Icon(icon, size: 15, color: palette.primary),
           const SizedBox(width: 6),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 230),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colorScheme.textSecondary,
-                fontWeight: FontWeight.w800,
+          Flexible(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.56,
+              ),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.textSecondary,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),

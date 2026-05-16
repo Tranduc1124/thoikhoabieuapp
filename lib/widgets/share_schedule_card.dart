@@ -148,11 +148,18 @@ class _InfoChip extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: tint),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: colorScheme.textPrimary,
-              fontWeight: FontWeight.w700,
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width * 0.50,
+            ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: colorScheme.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

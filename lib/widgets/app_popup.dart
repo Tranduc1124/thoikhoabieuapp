@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 
 enum AppPopupType { info, success, error }
 
@@ -19,13 +20,13 @@ Future<void> showAppPopup(
     barrierDismissible: true,
     barrierLabel: 'popup',
     barrierColor: Colors.black.withValues(alpha: 0.42),
-    transitionDuration: const Duration(milliseconds: 240),
+    transitionDuration: AppMotion.medium,
     pageBuilder: (context, _, _) => const SizedBox.shrink(),
     transitionBuilder: (context, animation, secondary, child) {
       final curved = CurvedAnimation(
         parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
+        curve: AppMotion.liquid,
+        reverseCurve: AppMotion.exit,
       );
       return FadeTransition(
         opacity: curved,

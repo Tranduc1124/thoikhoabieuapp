@@ -31,12 +31,17 @@ class TimePill extends StatelessWidget {
         children: [
           Icon(icon, size: 15, color: color),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 132),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
             ),
           ),
         ],

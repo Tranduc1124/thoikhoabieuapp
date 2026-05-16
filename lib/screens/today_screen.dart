@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
 import '../providers/schedule_provider.dart';
 import '../services/app_feedback_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/glass_card.dart';
 import '../widgets/loading_skeleton.dart';
 import '../widgets/morphing_schedule_list.dart';
 import '../widgets/section_header.dart';
@@ -24,68 +30,107 @@ class TodayScreen extends ConsumerWidget {
 
     return SoftGradientBackground(
       child: SafeArea(
-        child: schedules.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.all(20),
-            child: LoadingSkeleton(itemCount: 4),
-          ),
-          error: (error, _) => EmptyState(
-            title: 'Không tải được lịch hôm nay',
-            message: AppFeedbackService.messageFor(error),
-            action: FilledButton.tonalIcon(
-              onPressed: () => ref.invalidate(schedulesProvider),
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Thử lại'),
+        child: AnimatedSwitcher(
+          duration: AppMotion.medium,
+          reverseDuration: AppMotion.fast,
+          switchInCurve: AppMotion.liquid,
+          switchOutCurve: AppMotion.exit,
+          transitionBuilder: _pageTransition,
+          child: schedules.when(
+            loading: () => const Padding(
+              key: ValueKey('today-loading'),
+              padding: EdgeInsets.all(AppSpacing.xl),
+              child: LoadingSkeleton(itemCount: 4),
             ),
-          ),
-          data: (items) {
-            if (items.isEmpty) {
-              return EmptyState(
-                title: 'Chưa có lịch học nào hôm nay',
-                message:
-                    'Thêm môn học đầu tiên để bắt đầu hoặc dành ngày này cho việc ôn tập.',
-                action: FilledButton.icon(
-                  onPressed: () => context.push('/schedule/new'),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Thêm lịch học'),
+            error: (error, _) => EmptyState(
+              key: const ValueKey('today-error'),
+              title: 'Không tải được lịch hôm nay',
+              message: AppFeedbackService.messageFor(error),
+              action: FilledButton.tonalIcon(
+                onPressed: () => ref.invalidate(schedulesProvider),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Thử lại'),
+              ),
+            ),
+            data: (items) {
+              if (items.isEmpty) {
+                return EmptyState(
+                  key: const ValueKey('today-empty'),
+                  title: 'Chưa có lịch học nào hôm nay',
+                  message:
+                      'Thêm môn học đầu tiên để bắt đầu hoặc dành ngày này cho việc ôn tập.',
+                  action: FilledButton.icon(
+                    onPressed: () => context.push('/schedule/new'),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Thêm lịch học'),
+                  ),
+                );
+              }
+              final listKey = items.map((item) => item.id).join('|');
+              return MorphingScheduleList(
+                key: ValueKey('today-list-$listKey'),
+                storageKey: const PageStorageKey('today-scroll'),
+                schedules: items,
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.lg,
+                  AppSpacing.xl,
+                  112,
                 ),
-              );
-            }
-            return MorphingScheduleList(
-              storageKey: const PageStorageKey('today-scroll'),
-              schedules: items,
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 112),
-              headerSlivers: const [
-                SliverToBoxAdapter(
-                  child: SectionHeader(
+                headerSlivers: [
+                  const SliverToBoxAdapter(
+                    child: SectionHeader(
                     title: 'Lịch hôm nay',
                     subtitle:
                         'Theo dõi tiến độ từng buổi học và ghi chú nhanh sau giờ lên lớp',
+                    ),
                   ),
-                ),
-                SliverToBoxAdapter(child: SizedBox(height: 18)),
-              ],
-              logForSchedule: (schedule) => logBySchedule[schedule.id],
-              onDelete: (schedule) => ref
-                  .read(scheduleActionsProvider)
-                  .delete(schedule.id),
-              onStart: (schedule) async {
-                await ref.read(scheduleActionsProvider).start(schedule);
-                if (context.mounted) {
-                  _showMessage(context, 'Đã bắt đầu ${schedule.subjectName}');
-                }
-              },
-              onComplete: (schedule) async {
-                final note = await _noteDialog(context);
-                if (note == null) return;
-                await ref.read(scheduleActionsProvider).complete(schedule, note);
-                if (context.mounted) {
-                  _showMessage(context, 'Đã đánh dấu hoàn thành.');
-                }
-              },
-            );
-          },
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: AppSpacing.lg),
+                  ),
+                  SliverToBoxAdapter(child: _TodaySummary(items: items)),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: AppSpacing.lg),
+                  ),
+                ],
+                logForSchedule: (schedule) => logBySchedule[schedule.id],
+                onDelete: (schedule) => ref
+                    .read(scheduleActionsProvider)
+                    .delete(schedule.id),
+                onStart: (schedule) async {
+                  await ref.read(scheduleActionsProvider).start(schedule);
+                  if (context.mounted) {
+                    _showMessage(context, 'Đã bắt đầu ${schedule.subjectName}');
+                  }
+                },
+                onComplete: (schedule) async {
+                  final note = await _noteDialog(context);
+                  if (note == null) return;
+                  await ref
+                      .read(scheduleActionsProvider)
+                      .complete(schedule, note);
+                  if (context.mounted) {
+                    _showMessage(context, 'Đã đánh dấu hoàn thành.');
+                  }
+                },
+              );
+            },
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _pageTransition(Widget child, Animation<double> animation) {
+    final curved = CurvedAnimation(parent: animation, curve: AppMotion.liquid);
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.72, end: 1).animate(curved),
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.025),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
       ),
     );
   }
@@ -122,5 +167,120 @@ class TodayScreen extends ConsumerWidget {
 
   void _showMessage(BuildContext context, String message) {
     AppFeedbackService.success(context, message);
+  }
+}
+
+class _TodaySummary extends StatelessWidget {
+  const _TodaySummary({required this.items});
+
+  final List<ScheduleModel> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final totalMinutes = items.fold<int>(
+      0,
+      (total, item) => total + item.duration.inMinutes,
+    );
+    final next = _nextSchedule(items);
+    return GlassCard(
+      radius: AppRadius.lg,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        children: [
+          _SummaryTile(
+            icon: Icons.auto_stories_rounded,
+            label: 'Môn',
+            value: '${items.length}',
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          _SummaryTile(
+            icon: Icons.timer_rounded,
+            label: 'Giờ học',
+            value: (totalMinutes / 60).toStringAsFixed(1),
+            color: AppColors.mint,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          _SummaryTile(
+            icon: Icons.near_me_rounded,
+            label: 'Tiếp theo',
+            value: next == null ? '--' : formatMinutes(next.startTime),
+            color: AppColors.peach,
+          ),
+        ],
+      ),
+    );
+  }
+
+  ScheduleModel? _nextSchedule(List<ScheduleModel> schedules) {
+    final now = DateTime.now();
+    final minutes = now.hour * 60 + now.minute;
+    final upcoming = schedules.where((item) => item.endTime >= minutes).toList()
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    if (upcoming.isNotEmpty) return upcoming.first;
+    final sorted = [...schedules]
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    return sorted.isEmpty ? null : sorted.first;
+  }
+}
+
+class _SummaryTile extends StatelessWidget {
+  const _SummaryTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Expanded(
+      child: AnimatedContainer(
+        duration: AppMotion.medium,
+        curve: AppMotion.liquid,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          color: colorScheme.tileSurface,
+          border: Border.all(color: colorScheme.glassStrokeSubtle),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(height: AppSpacing.sm),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: colorScheme.textPrimary,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colorScheme.textSecondary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

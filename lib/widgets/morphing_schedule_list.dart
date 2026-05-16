@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
+import '../theme/app_motion.dart';
 import 'schedule_card.dart';
 
 class MorphingScheduleList extends StatelessWidget {
@@ -32,23 +33,48 @@ class MorphingScheduleList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      key: storageKey,
-      slivers: [
-        ...headerSlivers,
-        SliverPadding(
-          padding: padding,
-          sliver: SliverMorphingScheduleList(
-            schedules: schedules,
-            compact: compact,
-            logForSchedule: logForSchedule,
-            onDelete: onDelete,
-            onStart: onStart,
-            onComplete: onComplete,
+    final idsKey = schedules.map((item) => item.id).join('|');
+    return AnimatedSwitcher(
+      duration: AppMotion.medium,
+      reverseDuration: AppMotion.fast,
+      switchInCurve: AppMotion.liquid,
+      switchOutCurve: AppMotion.exit,
+      transitionBuilder: _morphTransition,
+      child: CustomScrollView(
+        key: ValueKey('${storageKey?.value ?? 'schedule-list'}-$idsKey'),
+        slivers: [
+          ...headerSlivers,
+          SliverPadding(
+            padding: padding,
+            sliver: SliverMorphingScheduleList(
+              schedules: schedules,
+              compact: compact,
+              logForSchedule: logForSchedule,
+              onDelete: onDelete,
+              onStart: onStart,
+              onComplete: onComplete,
+            ),
           ),
+          ...trailingSlivers,
+        ],
+      ),
+    );
+  }
+
+  Widget _morphTransition(Widget child, Animation<double> animation) {
+    final curved = CurvedAnimation(parent: animation, curve: AppMotion.liquid);
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.70, end: 1).animate(curved),
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.025),
+          end: Offset.zero,
+        ).animate(curved),
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.985, end: 1).animate(curved),
+          child: child,
         ),
-        ...trailingSlivers,
-      ],
+      ),
     );
   }
 }
@@ -73,9 +99,9 @@ class SliverMorphingScheduleList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverList.builder(
-      itemCount: schedules.length,
-      itemBuilder: (context, index) {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
         final schedule = schedules[index];
         return MorphingScheduleCard(
           key: ValueKey('morph-schedule-${schedule.id}'),
@@ -93,6 +119,17 @@ class SliverMorphingScheduleList extends StatelessWidget {
           ),
         );
       },
+        childCount: schedules.length,
+        findChildIndexCallback: (key) {
+          final value = key is ValueKey<String> ? key.value : null;
+          if (value == null || !value.startsWith('morph-schedule-')) {
+            return null;
+          }
+          final id = value.substring('morph-schedule-'.length);
+          final index = schedules.indexWhere((item) => item.id == id);
+          return index < 0 ? null : index;
+        },
+      ),
     );
   }
 }
@@ -123,9 +160,9 @@ class _MorphingScheduleCardState extends State<MorphingScheduleCard>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 380),
+      duration: AppMotion.medium,
     );
-    _curved = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _curved = CurvedAnimation(parent: _controller, curve: AppMotion.liquid);
     Future<void>.delayed(Duration(milliseconds: widget.index * 28), () {
       if (mounted) {
         _controller.forward();
@@ -140,7 +177,8 @@ class _MorphingScheduleCardState extends State<MorphingScheduleCard>
         oldWidget.index != widget.index) {
       _controller
         ..duration = Duration(
-          milliseconds: 300 + widget.index.clamp(0, 5) * 20,
+          milliseconds: AppMotion.medium.inMilliseconds +
+              widget.index.clamp(0, 5) * 20,
         )
         ..forward(from: 0.18);
     }
@@ -158,8 +196,8 @@ class _MorphingScheduleCardState extends State<MorphingScheduleCard>
       child: AnimatedBuilder(
         animation: _curved,
         child: AnimatedSize(
-          duration: const Duration(milliseconds: 320),
-          curve: Curves.easeOutCubic,
+          duration: AppMotion.medium,
+          curve: AppMotion.liquid,
           alignment: Alignment.topCenter,
           child: widget.child,
         ),

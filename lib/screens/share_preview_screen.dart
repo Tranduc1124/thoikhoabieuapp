@@ -8,6 +8,7 @@ import '../providers/pro_feature_providers.dart';
 import '../services/app_feedback_service.dart';
 import '../services/share_debug_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/qr_share_box.dart';
 import '../widgets/share_schedule_card.dart';
@@ -100,12 +101,20 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: _busy || service == null ? null : _shareLink,
-                      icon: _busy
-                          ? const SizedBox.square(
-                              dimension: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.ios_share_rounded),
+                      icon: AnimatedSwitcher(
+                        duration: AppMotion.fast,
+                        child: _busy
+                            ? const SizedBox.square(
+                                key: ValueKey('share-busy'),
+                                dimension: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(
+                                Icons.ios_share_rounded,
+                                key: ValueKey('share-ready'),
+                              ),
+                      ),
                       label: const Text('Chia sẻ ngay'),
                     ),
                   ),
@@ -252,28 +261,45 @@ class _SharePoster extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(36),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colorScheme.surfaceContainer.withValues(alpha: 0.96),
-            colorScheme.surfaceContainerHigh.withValues(alpha: 0.92),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: AppMotion.medium,
+      curve: AppMotion.liquid,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 18 * (1 - value)),
+            child: Transform.scale(
+              scale: 0.985 + value * 0.015,
+              alignment: Alignment.topCenter,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(36),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              colorScheme.surfaceContainer.withValues(alpha: 0.96),
+              colorScheme.surfaceContainerHigh.withValues(alpha: 0.92),
+            ],
+          ),
+          border: Border.all(color: colorScheme.glassStroke),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.primary.withValues(alpha: 0.16),
+              blurRadius: 32,
+              offset: const Offset(0, 18),
+            ),
           ],
         ),
-        border: Border.all(color: colorScheme.glassStroke),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.primary.withValues(alpha: 0.16),
-            blurRadius: 32,
-            offset: const Offset(0, 18),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
+        padding: const EdgeInsets.all(20),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -325,6 +351,7 @@ class _SharePoster extends StatelessWidget {
               ),
             ),
         ],
+        ),
       ),
     );
   }

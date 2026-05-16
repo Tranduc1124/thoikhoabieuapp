@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import 'animated_pressable.dart';
 
 class GlassFloatingButton extends StatelessWidget {
@@ -20,13 +22,14 @@ class GlassFloatingButton extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return AnimatedPressable(
       onTap: onPressed,
+      scale: 0.94,
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: label == null ? 18 : 20,
-          vertical: 15,
+          horizontal: label == null ? AppSpacing.lg : AppSpacing.xl,
+          vertical: AppSpacing.md,
         ),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           gradient: LinearGradient(
             colors: [
               colorScheme.primary,
@@ -48,11 +51,16 @@ class GlassFloatingButton extends StatelessWidget {
             Icon(icon, color: colorScheme.onPrimary),
             if (label != null) ...[
               const SizedBox(width: 8),
-              Text(
-                label!,
-                style: TextStyle(
-                  color: colorScheme.onPrimary,
-                  fontWeight: FontWeight.w900,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: Text(
+                  label!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colorScheme.onPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ],

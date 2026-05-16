@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'app_motion.dart';
 import 'app_radius.dart';
 import 'app_text_styles.dart';
 
@@ -147,6 +148,7 @@ class AppTheme {
         style: FilledButton.styleFrom(
           foregroundColor: colorScheme.onPrimary,
           backgroundColor: colorScheme.primary,
+          animationDuration: AppMotion.tap,
           minimumSize: const Size.fromHeight(56),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
@@ -157,6 +159,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.onSurface,
+          animationDuration: AppMotion.tap,
           minimumSize: const Size.fromHeight(50),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),

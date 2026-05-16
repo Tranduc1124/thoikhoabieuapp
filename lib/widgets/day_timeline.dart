@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/schedule_model.dart';
+import '../theme/app_motion.dart';
 import 'morphing_schedule_list.dart';
 import 'schedule_card.dart';
 
@@ -21,9 +22,9 @@ class DayTimeline extends StatelessWidget {
     final sorted = [...schedules]
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 280),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
+      duration: AppMotion.medium,
+      switchInCurve: AppMotion.liquid,
+      switchOutCurve: AppMotion.exit,
       child: Column(
         key: ValueKey(sorted.map((item) => item.id).join('-')),
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,16 +56,17 @@ class _TimelineRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCurrent = _isCurrent(schedule);
     final color = schedule.displayColor;
-    return IntrinsicHeight(
+    return RepaintBoundary(
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 62,
             child: Column(
               children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 260),
+                  duration: AppMotion.fast,
+                  curve: AppMotion.liquid,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 6,
@@ -106,9 +108,11 @@ class _TimelineRow extends StatelessWidget {
                   ),
                 ),
                 if (!isLast)
-                  Expanded(
-                    child: Container(
+                  AnimatedContainer(
+                    duration: AppMotion.medium,
+                    curve: AppMotion.liquid,
                       width: 2,
+                      height: 104,
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(999),
@@ -121,7 +125,6 @@ class _TimelineRow extends StatelessWidget {
                           ],
                         ),
                       ),
-                    ),
                   ),
               ],
             ),
