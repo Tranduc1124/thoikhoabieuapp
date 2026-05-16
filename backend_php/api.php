@@ -551,6 +551,11 @@ function normalizeEmail(string $value): string
     return $email;
 }
 
+function emailLookupCondition(string $placeholder = ':email'): string
+{
+    return 'LOWER(TRIM(email)) = ' . $placeholder;
+}
+
 function normalizeUsername(string $value): string
 {
     $normalized = mb_strtolower(trim($value));
@@ -1282,7 +1287,7 @@ function handleAuthRegister(PDO $pdo, array $data): void
     $name = requireString($data, 'name', 2, 120);
     $email = normalizeEmail(requireString($data, 'email', 5, 191));
     $password = requireString($data, 'password', 6, 255);
-    $exists = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
+    $exists = $pdo->prepare('SELECT id FROM users WHERE ' . emailLookupCondition() . ' LIMIT 1');
     $exists->execute(['email' => $email]);
     if ($exists->fetch()) {
         fail('email_taken', 'Email đã được sử dụng.');
@@ -1360,7 +1365,7 @@ function handleAuthLogin(PDO $pdo, array $data): void
     $login = requireString($data, 'email', 1, 191);
     $password = requireString($data, 'password', 1, 255);
     if (str_contains($login, '@')) {
-        $stmt = $pdo->prepare('SELECT * FROM users WHERE email = :email LIMIT 1');
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE ' . emailLookupCondition() . ' LIMIT 1');
         $stmt->execute(['email' => normalizeEmail($login)]);
     } elseif (ctype_digit(trim($login))) {
         $stmt = $pdo->prepare('SELECT * FROM users WHERE id_profile = :id_profile LIMIT 1');
@@ -1387,7 +1392,8 @@ function handleAuthLogin(PDO $pdo, array $data): void
 function handleAuthResetPassword(PDO $pdo, array $data): void
 {
     $email = normalizeEmail(requireString($data, 'email', 5, 191));
-    $stmt = $pdo->prepare('SELECT id, name, email FROM users WHERE email = :email LIMIT 1');
+    ensurePasswordResetTable($pdo);
+    $stmt = $pdo->prepare('SELECT id, name, email FROM users WHERE ' . emailLookupCondition() . ' LIMIT 1');
     $stmt->execute(['email' => $email]);
     $user = $stmt->fetch();
     if (!$user) {
@@ -1441,6 +1447,24 @@ function sendPasswordResetMail(string $email, string $name, string $resetUrl): b
         'X-Mailer: PHP/' . PHP_VERSION,
     ];
     return mail($email, $subject, $body, implode("\r\n", $headers));
+}
+
+function ensurePasswordResetTable(PDO $pdo): void
+{
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS password_resets (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id BIGINT UNSIGNED NOT NULL,
+            token_hash CHAR(64) NOT NULL UNIQUE,
+            email VARCHAR(191) NOT NULL,
+            created_at DATETIME NOT NULL,
+            expires_at DATETIME NOT NULL,
+            used_at DATETIME NULL,
+            INDEX idx_password_resets_user_id (user_id),
+            INDEX idx_password_resets_email (email),
+            CONSTRAINT fk_password_resets_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
 }
 
 function handleAuthLogout(PDO $pdo): void

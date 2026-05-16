@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
 import 'motion_widgets.dart';
 import 'schedule_card.dart';
 
@@ -127,8 +130,7 @@ class SliverMorphingScheduleList extends StatelessWidget {
         log: logForSchedule?.call(schedule),
         compact: compact,
         index: index,
-        showDragHandle: draggable,
-        dragIndex: draggable ? index : null,
+        showDragHandle: false,
         onDelete: onDelete == null ? null : () => onDelete!(schedule),
         onStart: onStart == null ? null : () => onStart!(schedule),
         onComplete: onComplete == null ? null : () => onComplete!(schedule),
@@ -137,7 +139,17 @@ class SliverMorphingScheduleList extends StatelessWidget {
     if (!draggable) return card;
     return KeyedSubtree(
       key: ValueKey('reorder-schedule-${schedule.id}'),
-      child: card,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          card,
+          Positioned(
+            top: compact ? AppSpacing.md : AppSpacing.lg,
+            right: AppSpacing.lg,
+            child: _FloatingDragHandle(index: index),
+          ),
+        ],
+      ),
     );
   }
 
@@ -171,6 +183,48 @@ class MorphingScheduleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScheduleFadeWidget(index: index, child: child);
+  }
+}
+
+class _FloatingDragHandle extends StatelessWidget {
+  const _FloatingDragHandle({required this.index});
+
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ReorderableDragStartListener(
+      index: index,
+      child: Tooltip(
+        message: 'Keo de sap xep',
+        child: Material(
+          color: Colors.transparent,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              color: colorScheme.tileSurface.withValues(alpha: 0.92),
+              border: Border.all(color: colorScheme.glassStrokeSubtle),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.softShadow.withValues(alpha: 0.32),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              child: Icon(
+                Icons.drag_indicator_rounded,
+                color: colorScheme.textSecondary.withValues(alpha: 0.9),
+                size: 22,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

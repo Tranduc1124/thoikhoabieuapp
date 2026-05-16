@@ -28,8 +28,8 @@ class _LoadingSkeletonState extends State<LoadingSkeleton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1250),
-    )..repeat();
+      duration: const Duration(milliseconds: 720),
+    )..forward();
   }
 
   @override
