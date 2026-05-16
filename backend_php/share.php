@@ -149,7 +149,7 @@ function normalizeShareRow(array $row, string $baseUrl): array
 
 function buildPublicShareUrl(string $baseUrl, string $shareId): string
 {
-    return $baseUrl . '/share/' . rawurlencode($shareId);
+    return $baseUrl . '/share/?id=' . rawurlencode($shareId);
 }
 
 function buildAppShareUrl(string $shareId): string

@@ -45,6 +45,8 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ứng dụng cần quyền chọn ảnh để cập nhật avatar và chia sẻ lịch học.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Ứng dụng cần quyền lưu ảnh QR và poster lịch học vào Photos.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

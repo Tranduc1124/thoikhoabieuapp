@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
@@ -151,6 +152,17 @@ class ShareService {
     }
     final file = File('${outputDir.path}/$filename.png');
     await file.writeAsBytes(bytes, flush: true);
+    try {
+      if (!await Gal.hasAccess()) {
+        await Gal.requestAccess();
+      }
+      await Gal.putImage(file.path);
+    } on GalException catch (error) {
+      throw AppUserMessageException(
+        _galleryErrorMessage(error),
+        debugMessage: error.toString(),
+      );
+    }
     return file;
   }
 
@@ -182,7 +194,21 @@ class ShareService {
 
   String buildDeepLink(String shareId) => '$_shareScheme://share/$shareId';
 
-  String buildWebLink(String shareId) => 'https://$_shareHost/share/$shareId';
+  String buildWebLink(String shareId) =>
+      'https://$_shareHost/share/?id=${Uri.encodeComponent(shareId)}';
+
+  String _galleryErrorMessage(GalException error) {
+    return switch (error.type) {
+      GalExceptionType.accessDenied =>
+        'Bạn cần cấp quyền Photos/Gallery để lưu ảnh QR.',
+      GalExceptionType.notEnoughSpace =>
+        'Máy không còn đủ dung lượng để lưu ảnh QR.',
+      GalExceptionType.notSupportedFormat =>
+        'Định dạng ảnh QR chưa được thiết bị hỗ trợ.',
+      GalExceptionType.unexpected =>
+        'Không thể lưu ảnh vào Photos/Gallery lúc này.',
+    };
+  }
 
   static String? normalizeShareId(String input) {
     return DeepLinkService.extractShareId(input);

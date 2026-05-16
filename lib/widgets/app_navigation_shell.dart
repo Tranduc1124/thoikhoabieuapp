@@ -92,6 +92,11 @@ class PremiumBottomNav extends StatelessWidget {
       'Tuần',
     ),
     _NavItem(Icons.today_outlined, Icons.today_rounded, 'Hôm nay'),
+    _NavItem(
+      Icons.calendar_month_outlined,
+      Icons.calendar_month_rounded,
+      'Lịch',
+    ),
     _NavItem(Icons.insights_outlined, Icons.insights_rounded, 'Thống kê'),
     _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Cài đặt'),
   ];
@@ -142,7 +147,7 @@ class _PremiumNavButton extends StatelessWidget {
         curve: AppMotion.liquid,
         height: 58,
         margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 3),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           gradient: selected

@@ -12,6 +12,7 @@ import 'providers/pro_feature_providers.dart';
 import 'providers/schedule_provider.dart';
 import 'screens/add_edit_schedule_screen.dart';
 import 'screens/backend_diagnostics_screen.dart';
+import 'screens/calendar_screen.dart';
 import 'screens/friends_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
@@ -87,6 +88,15 @@ final _routerProvider = Provider<GoRouter>((ref) {
                 path: '/today',
                 pageBuilder: (context, state) =>
                     const NoTransitionPage<void>(child: TodayScreen()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/calendar',
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage<void>(child: CalendarScreen()),
               ),
             ],
           ),

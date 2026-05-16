@@ -223,7 +223,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
         filename: 'thoikhoabieu_poster_${widget.share.id}',
       );
       if (!mounted) return;
-      AppFeedbackService.success(context, 'Đã lưu ảnh chia sẻ.');
+      AppFeedbackService.success(context, 'Đã lưu ảnh vào Photos/Gallery.');
     });
   }
 

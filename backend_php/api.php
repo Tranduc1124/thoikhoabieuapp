@@ -1076,7 +1076,7 @@ function serializeLeaderboardEntry(array $row): array
 
 function buildPublicShareUrl(string $shareId): string
 {
-    return rtrim((string)APP_BASE_URL, '/') . '/share/' . rawurlencode($shareId);
+    return rtrim((string)APP_BASE_URL, '/') . '/share/?id=' . rawurlencode($shareId);
 }
 
 function buildAppShareUrl(string $shareId): string

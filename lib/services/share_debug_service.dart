@@ -32,7 +32,7 @@ class ShareDebugService {
       schedules: schedules,
       subjects: schedules.map((item) => item.subjectName).toSet().toList(),
       deepLink: 'thoikhoabieu://share/debug-preview',
-      qrData: 'https://minhduc.huutien.store/share/debug-preview',
+      qrData: 'https://minhduc.huutien.store/share/?id=debug-preview',
       isActive: true,
       theme: 'liquidGlass',
       viewCount: 0,

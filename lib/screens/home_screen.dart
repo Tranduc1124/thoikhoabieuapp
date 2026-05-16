@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../models/calendar_event_model.dart';
 import '../models/schedule_model.dart';
 import '../models/study_log_model.dart';
 import '../models/weather_now_model.dart';
 import '../providers/auth_provider.dart';
+import '../providers/calendar_provider.dart';
 import '../providers/pro_feature_providers.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/weather_provider.dart';
@@ -13,6 +15,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
+import '../utils/vietnamese_calendar_utils.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/loading_skeleton.dart';
 import '../widgets/motion_widgets.dart';
@@ -32,6 +35,7 @@ class HomeScreen extends ConsumerWidget {
     final logBySchedule = {for (final log in logs) log.scheduleId: log};
     final user = ref.watch(appUserProvider).valueOrNull;
     final weather = ref.watch(homeWeatherProvider).valueOrNull;
+    final pinnedCalendarEvent = ref.watch(pinnedCalendarEventProvider);
     final friendRequestCount =
         ref.watch(incomingFriendRequestsProvider).valueOrNull?.length ?? 0;
 
@@ -48,6 +52,7 @@ class HomeScreen extends ConsumerWidget {
                   schedules: schedules.valueOrNull ?? const [],
                   weather: weather,
                   friendRequestCount: friendRequestCount,
+                  pinnedCalendarEvent: pinnedCalendarEvent,
                 ),
               ),
             ),
@@ -215,12 +220,14 @@ class _Header extends StatelessWidget {
     required this.schedules,
     required this.weather,
     required this.friendRequestCount,
+    required this.pinnedCalendarEvent,
   });
 
   final String? name;
   final List<ScheduleModel> schedules;
   final WeatherNowModel? weather;
   final int friendRequestCount;
+  final CalendarEventModel? pinnedCalendarEvent;
 
   @override
   Widget build(BuildContext context) {
@@ -231,6 +238,7 @@ class _Header extends StatelessWidget {
     );
     final next = _nextSchedule(schedules);
     final nextAlert = _nextAlert(next);
+    final calendarEvent = pinnedCalendarEvent;
 
     return Container(
       padding: const EdgeInsets.all(22),
@@ -322,6 +330,18 @@ class _Header extends StatelessWidget {
                     ),
                   ),
           ),
+          AnimatedSwitcher(
+            duration: AppMotion.medium,
+            switchInCurve: AppMotion.liquid,
+            switchOutCurve: AppMotion.exit,
+            child: calendarEvent == null
+                ? const SizedBox.shrink(key: ValueKey('home-calendar-empty'))
+                : Padding(
+                    key: ValueKey('home-calendar-${calendarEvent.dateKey}'),
+                    padding: const EdgeInsets.only(top: 12),
+                    child: _HomeCalendarPin(event: calendarEvent),
+                  ),
+          ),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -394,6 +414,100 @@ class _Header extends StatelessWidget {
     if (remaining < 0 || remaining > 20) return null;
     if (remaining == 0) return '${schedule.subjectName} đang bắt đầu.';
     return '${schedule.subjectName} bắt đầu sau $remaining phút.';
+  }
+}
+
+class _HomeCalendarPin extends StatelessWidget {
+  const _HomeCalendarPin({required this.event});
+
+  final CalendarEventModel event;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final eventColor = Color(event.colorValue);
+    final date = VietnameseCalendarUtils.parseDateKey(event.dateKey);
+    final days = VietnameseCalendarUtils.countdownDays(event.dateKey);
+    final countdown = days == 0
+        ? 'Hôm nay'
+        : days > 0
+        ? 'Còn $days ngày'
+        : 'Qua ${days.abs()} ngày';
+    return AnimatedButton(
+      onTap: () => context.push('/calendar'),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          gradient: LinearGradient(
+            colors: [
+              eventColor.withValues(alpha: colorScheme.isDark ? 0.26 : 0.18),
+              colorScheme.tileSurface,
+            ],
+          ),
+          border: Border.all(color: eventColor.withValues(alpha: 0.34)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                color: eventColor.withValues(alpha: 0.18),
+              ),
+              child: Text(
+                '${date.day}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: eventColor,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    countdown,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: eventColor,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    event.title.isEmpty ? 'Ngày quan trọng' : event.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: colorScheme.textPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (event.note.trim().isNotEmpty)
+                    Text(
+                      event.note,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: eventColor),
+          ],
+        ),
+      ),
+    );
   }
 }
 
