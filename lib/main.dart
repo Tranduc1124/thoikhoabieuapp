@@ -317,8 +317,7 @@ class _ThoiKhoaBieuAppState extends ConsumerState<ThoiKhoaBieuApp> {
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       themeMode: themeMode,
-      themeAnimationDuration: const Duration(milliseconds: 260),
-      themeAnimationCurve: AppMotion.liquid,
+      themeAnimationDuration: Duration.zero,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
     );

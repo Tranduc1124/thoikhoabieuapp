@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../api/api.dart';
+import '../models/auth_session.dart';
 import '../models/schedule_model.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
@@ -34,10 +35,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final userState = ref.watch(appUserProvider);
     final auth = ref.watch(authControllerProvider).valueOrNull;
     final schedules =
-        ref.watch(schedulesProvider).valueOrNull ?? const <ScheduleModel>[];
+        ref.watch(schedulesProvider).valueOrNull ??
+        ref.watch(scheduleSnapshotProvider) ??
+        const <ScheduleModel>[];
     final stats = ref.watch(weeklyStatsProvider).valueOrNull;
     final hasToken = Api.isAuthenticated;
-    final user = userState.valueOrNull;
+    final user = userState.valueOrNull ?? _userFromAuth(auth);
 
     if (userState.isLoading && hasToken && user == null) {
       return const Scaffold(body: _ProfileLoadingView());
@@ -94,10 +97,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
-              if (userState.isLoading) ...[
-                const _ProfileRefreshBanner(),
-                const SizedBox(height: 12),
-              ],
               _ProfileHeroCard(
                 user: user!,
                 schedules: schedules,
@@ -206,6 +205,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  AppUser? _userFromAuth(AuthSession? auth) {
+    if (auth == null || auth.uid.trim().isEmpty) return null;
+    return AppUser(
+      id: auth.uid,
+      name: auth.displayName,
+      email: auth.email,
+      avatarUrl: auth.photoURL,
     );
   }
 
@@ -444,38 +453,6 @@ class _ProfileLoadingView extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ProfileRefreshBanner extends StatelessWidget {
-  const _ProfileRefreshBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: colorScheme.primary.withValues(alpha: 0.10),
-        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.sync_rounded, size: 18, color: colorScheme.primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Đang làm mới hồ sơ trong nền',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: colorScheme.textPrimary,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

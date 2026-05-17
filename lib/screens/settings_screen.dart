@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../api/api.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pro_feature_providers.dart';
 import '../services/app_feedback_service.dart';
@@ -68,23 +67,16 @@ class SettingsScreen extends ConsumerWidget {
                   secondaryUrl: auth?.photoURL,
                   radius: 29,
                 ),
-                title: userState.isLoading && Api.isAuthenticated
-                    ? const _LineSkeleton(widthFactor: 0.56)
-                    : Text(
-                        displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                subtitle: userState.isLoading && Api.isAuthenticated
-                    ? const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: _LineSkeleton(widthFactor: 0.72),
-                      )
-                    : Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                title: Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
                   color: Theme.of(context).colorScheme.textSecondary,
@@ -385,26 +377,6 @@ class _SettingTile extends StatelessWidget {
             ),
             if (trailing != null) ...[const SizedBox(width: 10), trailing!],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LineSkeleton extends StatelessWidget {
-  const _LineSkeleton({required this.widthFactor});
-
-  final double widthFactor;
-
-  @override
-  Widget build(BuildContext context) {
-    return FractionallySizedBox(
-      widthFactor: widthFactor,
-      child: Container(
-        height: 12,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(999),
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
       ),
     );

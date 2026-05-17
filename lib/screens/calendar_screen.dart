@@ -685,6 +685,12 @@ class _CalendarMonthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final monthStartColor = colorScheme.isDark
+        ? const Color(0xFF111A2B)
+        : colorScheme.surfaceContainerHigh.withValues(alpha: 0.94);
+    final monthEndColor = colorScheme.isDark
+        ? const Color(0xFF0D1424)
+        : colorScheme.tileSurface.withValues(alpha: 0.86);
     final monthEvents = events.values.where((event) {
       final date = VietnameseCalendarUtils.parseDateKey(event.dateKey);
       return date.year == month.year &&
@@ -712,14 +718,7 @@ class _CalendarMonthCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            colorScheme.surfaceContainerHigh.withValues(
-              alpha: colorScheme.isDark ? 0.82 : 0.94,
-            ),
-            colorScheme.tileSurface.withValues(
-              alpha: colorScheme.isDark ? 0.62 : 0.86,
-            ),
-          ],
+          colors: [monthStartColor, monthEndColor],
         ),
         border: Border.all(color: colorScheme.glassStrokeSubtle),
         boxShadow: [
@@ -1164,6 +1163,12 @@ class _SelectedDayPanel extends StatelessWidget {
     final eventColor = Color(event?.colorValue ?? 0xFF6A8DFF);
     final holiday = VietnameseCalendarUtils.holidayLabel(date);
     final lunar = VietnameseCalendarUtils.lunarDate(date);
+    final panelSurface = colorScheme.isDark
+        ? const Color(0xFF101827)
+        : colorScheme.surfaceContainerHigh.withValues(alpha: 0.90);
+    final eventListSurface = colorScheme.isDark
+        ? const Color(0xFF111A2B)
+        : colorScheme.surfaceContainerHigh.withValues(alpha: 0.84);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1183,9 +1188,7 @@ class _SelectedDayPanel extends StatelessWidget {
                         ? (colorScheme.isDark ? 0.13 : 0.09)
                         : (colorScheme.isDark ? 0.27 : 0.18),
                   ),
-                  colorScheme.surfaceContainerHigh.withValues(
-                    alpha: colorScheme.isDark ? 0.82 : 0.90,
-                  ),
+                  panelSurface,
                 ],
               ),
               border: Border.all(
@@ -1279,9 +1282,7 @@ class _SelectedDayPanel extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.lg),
-            color: colorScheme.surfaceContainerHigh.withValues(
-              alpha: colorScheme.isDark ? 0.66 : 0.84,
-            ),
+            color: eventListSurface,
             border: Border.all(color: colorScheme.glassStrokeSubtle),
           ),
           child: Column(
