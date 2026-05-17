@@ -19,10 +19,10 @@ class SettingsScreen extends ConsumerWidget {
     final userState = ref.watch(appUserProvider);
     final auth = ref.watch(authControllerProvider).valueOrNull;
     final user = userState.valueOrNull;
+    final settingsState = ref.watch(appSettingsProvider);
     final appSettings =
-        ref.watch(appSettingsSnapshotProvider) ??
-        ref.watch(appSettingsProvider).valueOrNull;
-    final themeMode = appSettings?.themeMode ?? 'auto';
+        ref.watch(appSettingsSnapshotProvider) ?? settingsState.valueOrNull;
+    final themeMode = ref.watch(activeThemeModeProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final notificationSettings = ref
         .watch(notificationSettingsProvider)

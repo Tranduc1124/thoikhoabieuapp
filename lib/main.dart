@@ -53,6 +53,8 @@ Future<void> main() async {
       overrides: [
         if (bootSettings != null)
           appSettingsSnapshotProvider.overrideWith((ref) => bootSettings),
+        if (bootThemeMode != null)
+          activeThemeModeProvider.overrideWith((ref) => bootThemeMode),
       ],
       child: const ThoiKhoaBieuApp(),
     ),
@@ -319,12 +321,9 @@ class _ThoiKhoaBieuAppState extends ConsumerState<ThoiKhoaBieuApp> {
       });
     });
 
-    final settingsState = ref.watch(appSettingsProvider);
-    final settings =
-        ref.watch(appSettingsSnapshotProvider) ??
-        settingsState.valueOrNull ??
-        const AppSettingsModel();
-    final themeMode = _themeModeFromString(settings.themeMode);
+    ref.watch(appSettingsProvider);
+    final activeThemeMode = ref.watch(activeThemeModeProvider);
+    final themeMode = _themeModeFromString(activeThemeMode);
 
     return MaterialApp.router(
       title: 'Thời Khóa Biểu',

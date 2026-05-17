@@ -235,166 +235,209 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       builder: (context) {
         final colorScheme = Theme.of(context).colorScheme;
         final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+        final safeBottom = MediaQuery.paddingOf(context).bottom;
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
+            return AnimatedPadding(
+              duration: AppMotion.fast,
+              curve: AppMotion.liquid,
               padding: EdgeInsets.only(bottom: bottomInset),
-              child: Container(
-                margin: const EdgeInsets.all(AppSpacing.md),
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                  AppSpacing.xl,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
-                  color: colorScheme.surfaceColor,
-                  border: Border.all(color: colorScheme.glassStrokeSubtle),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.softShadow,
-                      blurRadius: 28,
-                      offset: const Offset(0, 16),
+              child: DraggableScrollableSheet(
+                expand: false,
+                initialChildSize: 0.78,
+                minChildSize: 0.48,
+                maxChildSize: 0.94,
+                builder: (context, scrollController) {
+                  return Container(
+                    margin: EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      safeBottom + AppSpacing.md,
                     ),
-                  ],
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _dateTitle(date),
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(
-                                        color: colorScheme.textPrimary,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                ),
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  'Âm lịch ${VietnameseCalendarUtils.lunarDate(date).shortLabel}',
-                                  style: Theme.of(context).textTheme.labelMedium
-                                      ?.copyWith(
-                                        color: colorScheme.textSecondary,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton.filledTonal(
-                            tooltip: 'Đóng',
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.close_rounded),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      TextField(
-                        controller: titleController,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Tiêu đề',
-                          hintText: 'Lịch thi, khảo sát, sinh nhật...',
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.xl,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
+                      color: colorScheme.surfaceColor,
+                      border: Border.all(color: colorScheme.glassStrokeSubtle),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colorScheme.softShadow,
+                          blurRadius: 28,
+                          offset: const Offset(0, 16),
                         ),
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      padding: EdgeInsets.only(
+                        bottom: safeBottom + AppSpacing.xl,
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextField(
-                        controller: noteController,
-                        minLines: 3,
-                        maxLines: 6,
-                        textInputAction: TextInputAction.newline,
-                        decoration: const InputDecoration(
-                          labelText: 'Note / comment',
-                          hintText: 'Ghi nội dung cần nhớ cho ngày này',
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Text(
-                        'Màu ngày',
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          for (final colorValue in _CalendarPalette.values)
-                            _ColorSwatch(
-                              color: Color(colorValue),
-                              selected: selectedColor == colorValue,
-                              onTap: () => setModalState(
-                                () => selectedColor = colorValue,
+                          Center(
+                            child: Container(
+                              width: 42,
+                              height: 5,
+                              margin: const EdgeInsets.only(
+                                bottom: AppSpacing.md,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.pill,
+                                ),
+                                color: colorScheme.textHint.withValues(
+                                  alpha: 0.38,
+                                ),
                               ),
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      SwitchListTile.adaptive(
-                        contentPadding: EdgeInsets.zero,
-                        value: pinned,
-                        onChanged: (value) =>
-                            setModalState(() => pinned = value),
-                        title: const Text('Ghim lên Home'),
-                        subtitle: const Text(
-                          'Hiển thị countdown to rõ ở màn Home.',
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Row(
-                        children: [
-                          if (event != null)
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () async {
-                                  await ref
-                                      .read(calendarActionsProvider)
-                                      .delete(key);
-                                  if (context.mounted) {
-                                    Navigator.of(context).pop();
-                                  }
-                                },
-                                icon: const Icon(Icons.delete_outline_rounded),
-                                label: const Text('Xóa'),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _dateTitle(date),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            color: colorScheme.textPrimary,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    Text(
+                                      'Âm lịch ${VietnameseCalendarUtils.lunarDate(date).shortLabel}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelMedium
+                                          ?.copyWith(
+                                            color: colorScheme.textSecondary,
+                                          ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                              IconButton.filledTonal(
+                                tooltip: 'Đóng',
+                                onPressed: () => Navigator.of(context).pop(),
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          TextField(
+                            controller: titleController,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Tiêu đề',
+                              hintText: 'Lịch thi, khảo sát, sinh nhật...',
                             ),
-                          if (event != null)
-                            const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            flex: 2,
-                            child: FilledButton.icon(
-                              onPressed: () async {
-                                final next = CalendarEventModel(
-                                  dateKey: key,
-                                  title: titleController.text.trim(),
-                                  note: noteController.text.trim(),
-                                  colorValue: selectedColor,
-                                  pinned: pinned,
-                                  updatedAt: DateTime.now(),
-                                );
-                                await ref
-                                    .read(calendarActionsProvider)
-                                    .save(next);
-                                if (context.mounted) {
-                                  Navigator.of(context).pop();
-                                }
-                              },
-                              icon: const Icon(Icons.check_rounded),
-                              label: const Text('Lưu ngày'),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          TextField(
+                            controller: noteController,
+                            minLines: 3,
+                            maxLines: 6,
+                            textInputAction: TextInputAction.newline,
+                            decoration: const InputDecoration(
+                              labelText: 'Note / comment',
+                              hintText: 'Ghi nội dung cần nhớ cho ngày này',
                             ),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          Text(
+                            'Màu ngày',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: [
+                              for (final colorValue in _CalendarPalette.values)
+                                _ColorSwatch(
+                                  color: Color(colorValue),
+                                  selected: selectedColor == colorValue,
+                                  onTap: () => setModalState(
+                                    () => selectedColor = colorValue,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            value: pinned,
+                            onChanged: (value) =>
+                                setModalState(() => pinned = value),
+                            title: const Text('Ghim lên Home'),
+                            subtitle: const Text(
+                              'Hiển thị countdown to rõ ở màn Home.',
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          Row(
+                            children: [
+                              if (event != null)
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () async {
+                                      await ref
+                                          .read(calendarActionsProvider)
+                                          .delete(key);
+                                      if (context.mounted) {
+                                        Navigator.of(context).pop();
+                                      }
+                                    },
+                                    icon: const Icon(
+                                      Icons.delete_outline_rounded,
+                                    ),
+                                    label: const Text('Xóa'),
+                                  ),
+                                ),
+                              if (event != null)
+                                const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                flex: 2,
+                                child: FilledButton.icon(
+                                  onPressed: () async {
+                                    final next = CalendarEventModel(
+                                      dateKey: key,
+                                      title: titleController.text.trim(),
+                                      note: noteController.text.trim(),
+                                      colorValue: selectedColor,
+                                      pinned: pinned,
+                                      updatedAt: DateTime.now(),
+                                    );
+                                    await ref
+                                        .read(calendarActionsProvider)
+                                        .save(next);
+                                    if (context.mounted) {
+                                      Navigator.of(context).pop();
+                                    }
+                                  },
+                                  icon: const Icon(Icons.check_rounded),
+                                  label: const Text('Lưu ngày'),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             );
           },

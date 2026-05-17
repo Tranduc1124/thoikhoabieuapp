@@ -41,6 +41,10 @@ final appSettingsSnapshotProvider = StateProvider<AppSettingsModel?>(
   (ref) => null,
 );
 
+final activeThemeModeProvider = StateProvider<String>(
+  (ref) => ref.watch(appSettingsSnapshotProvider)?.themeMode ?? 'auto',
+);
+
 class AppSettingsController extends AsyncNotifier<AppSettingsModel> {
   int _revision = 0;
 
@@ -74,6 +78,7 @@ class AppSettingsController extends AsyncNotifier<AppSettingsModel> {
     final next = current.copyWith(themeMode: themeMode);
     _revision++;
     _debug('settings theme selected: $themeMode');
+    ref.read(activeThemeModeProvider.notifier).state = themeMode;
     ref.read(appSettingsSnapshotProvider.notifier).state = next;
     state = AsyncData(next);
     if (service == null) return;
