@@ -9,9 +9,9 @@ import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/loading_skeleton.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
+import '../widgets/syncing_state_card.dart';
 import '../widgets/time_pill.dart';
 
 class WidgetPreviewScreen extends ConsumerWidget {
@@ -36,7 +36,10 @@ class WidgetPreviewScreen extends ConsumerWidget {
               todayState.when(
                 skipLoadingOnRefresh: true,
                 skipLoadingOnReload: true,
-                loading: () => const LoadingSkeleton(itemCount: 3),
+                loading: () => const SyncingStateCard(
+                  title: 'Đang dựng widget',
+                  message: 'Preview sẽ dùng lịch hôm nay ngay khi sẵn sàng.',
+                ),
                 error: (error, _) => GlassCard(
                   borderColor: Theme.of(
                     context,

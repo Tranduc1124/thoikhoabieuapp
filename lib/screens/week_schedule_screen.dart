@@ -10,10 +10,10 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/loading_skeleton.dart';
 import '../widgets/morphing_schedule_list.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
+import '../widgets/syncing_state_card.dart';
 
 class WeekScheduleScreen extends ConsumerWidget {
   const WeekScheduleScreen({super.key});
@@ -81,7 +81,10 @@ class WeekScheduleScreen extends ConsumerWidget {
                 loading: () => const Padding(
                   key: ValueKey('week-loading'),
                   padding: EdgeInsets.all(AppSpacing.xl),
-                  child: LoadingSkeleton(itemCount: 4),
+                  child: SyncingStateCard(
+                    title: 'Đang đồng bộ lịch tuần',
+                    message: 'Dữ liệu tuần sẽ được hiển thị từ cache trước.',
+                  ),
                 ),
                 error: (error, _) => EmptyState(
                   key: const ValueKey('week-error'),

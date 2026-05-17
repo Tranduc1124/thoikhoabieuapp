@@ -14,9 +14,9 @@ import '../theme/app_colors.dart';
 import '../widgets/app_avatar.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/loading_skeleton.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
+import '../widgets/syncing_state_card.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -37,12 +37,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ref.watch(schedulesProvider).valueOrNull ?? const <ScheduleModel>[];
     final stats = ref.watch(weeklyStatsProvider).valueOrNull;
     final hasToken = Api.isAuthenticated;
+    final user = userState.valueOrNull;
 
-    if (userState.isLoading && hasToken) {
+    if (userState.isLoading && hasToken && user == null) {
       return const Scaffold(body: _ProfileLoadingView());
     }
 
-    if (userState.hasError) {
+    if (userState.hasError && user == null) {
       return Scaffold(
         body: SoftGradientBackground(
           child: SafeArea(
@@ -60,7 +61,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
     }
 
-    final user = userState.valueOrNull;
     if (!hasToken && user == null) {
       return const Scaffold(
         body: SoftGradientBackground(
@@ -94,6 +94,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
+              if (userState.isLoading) ...[
+                const _ProfileRefreshBanner(),
+                const SizedBox(height: 12),
+              ],
               _ProfileHeroCard(
                 user: user!,
                 schedules: schedules,
@@ -434,9 +438,44 @@ class _ProfileLoadingView extends StatelessWidget {
                   'Thông tin cá nhân và dữ liệu học tập đang được chuẩn bị.',
             ),
             SizedBox(height: 16),
-            LoadingSkeleton(variant: LoadingSkeletonVariant.profile),
+            SyncingStateCard(
+              title: 'Đang mở hồ sơ',
+              message: 'Thông tin cá nhân và thống kê sẽ hiện sau cache.',
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ProfileRefreshBanner extends StatelessWidget {
+  const _ProfileRefreshBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: colorScheme.primary.withValues(alpha: 0.10),
+        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.sync_rounded, size: 18, color: colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Đang làm mới hồ sơ trong nền',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: colorScheme.textPrimary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

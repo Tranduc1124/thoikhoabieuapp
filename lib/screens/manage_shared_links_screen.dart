@@ -9,9 +9,9 @@ import '../services/share_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/loading_skeleton.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
+import '../widgets/syncing_state_card.dart';
 
 class ManageSharedLinksScreen extends ConsumerStatefulWidget {
   const ManageSharedLinksScreen({super.key});
@@ -35,9 +35,14 @@ class _ManageSharedLinksScreenState
       body: SoftGradientBackground(
         child: SafeArea(
           child: shares.when(
+            skipLoadingOnRefresh: true,
+            skipLoadingOnReload: true,
             loading: () => const Padding(
               padding: EdgeInsets.all(20),
-              child: LoadingSkeleton(itemCount: 4),
+              child: SyncingStateCard(
+                title: 'Đang tải liên kết',
+                message: 'Các lịch đã chia sẻ sẽ được giữ ổn định khi làm mới.',
+              ),
             ),
             error: (error, _) => Padding(
               padding: const EdgeInsets.all(20),

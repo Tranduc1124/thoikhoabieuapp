@@ -123,6 +123,7 @@ class AnimatedButton extends StatefulWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.onLongPress,
     this.borderRadius = const BorderRadius.all(Radius.circular(20)),
     this.scale = 0.965,
     this.pressedOpacity = 0.88,
@@ -131,6 +132,7 @@ class AnimatedButton extends StatefulWidget {
 
   final Widget child;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final BorderRadius borderRadius;
   final double scale;
   final double pressedOpacity;
@@ -146,7 +148,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
 
   @override
   Widget build(BuildContext context) {
-    final enabled = widget.onTap != null;
+    final enabled = widget.onTap != null || widget.onLongPress != null;
     final colorScheme = Theme.of(context).colorScheme;
     return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
@@ -184,6 +186,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
                 onTapCancel: enabled ? () => _setPressed(false) : null,
                 onTapUp: enabled ? (_) => _setPressed(false) : null,
                 onTap: enabled ? widget.onTap : null,
+                onLongPress: enabled ? widget.onLongPress : null,
                 child: widget.child,
               ),
             ),

@@ -7,9 +7,9 @@ import '../services/app_feedback_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/loading_skeleton.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
+import '../widgets/syncing_state_card.dart';
 
 class StatisticsScreen extends ConsumerWidget {
   const StatisticsScreen({super.key});
@@ -22,9 +22,14 @@ class StatisticsScreen extends ConsumerWidget {
     return SoftGradientBackground(
       child: SafeArea(
         child: stats.when(
+          skipLoadingOnRefresh: true,
+          skipLoadingOnReload: true,
           loading: () => const Padding(
             padding: EdgeInsets.all(20),
-            child: LoadingSkeleton(itemCount: 3),
+            child: SyncingStateCard(
+              title: 'Đang tính thống kê',
+              message: 'Dữ liệu lịch đã lưu sẽ giúp giảm nháy khi làm mới.',
+            ),
           ),
           error: (error, _) => EmptyState(
             title: 'Không tải được thống kê',

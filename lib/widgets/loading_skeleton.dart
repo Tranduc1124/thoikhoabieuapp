@@ -5,7 +5,7 @@ import 'glass_card.dart';
 
 enum LoadingSkeletonVariant { cards, profile, stats }
 
-class LoadingSkeleton extends StatefulWidget {
+class LoadingSkeleton extends StatelessWidget {
   const LoadingSkeleton({
     super.key,
     this.itemCount = 3,
@@ -16,68 +16,34 @@ class LoadingSkeleton extends StatefulWidget {
   final LoadingSkeletonVariant variant;
 
   @override
-  State<LoadingSkeleton> createState() => _LoadingSkeletonState();
-}
-
-class _LoadingSkeletonState extends State<LoadingSkeleton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 720),
-    )..forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return switch (widget.variant) {
-          LoadingSkeletonVariant.profile => _ProfileSkeleton(
-            value: _controller.value,
-          ),
-          LoadingSkeletonVariant.stats => _StatsSkeleton(
-            value: _controller.value,
-          ),
-          LoadingSkeletonVariant.cards => Column(
-            children: [
-              for (var i = 0; i < widget.itemCount; i++)
-                GlassCard(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _Bar(widthFactor: 0.55, value: _controller.value),
-                      const SizedBox(height: 14),
-                      _Bar(widthFactor: 0.86, value: _controller.value),
-                      const SizedBox(height: 10),
-                      _Bar(widthFactor: 0.38, value: _controller.value),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        };
-      },
-    );
+    return switch (variant) {
+      LoadingSkeletonVariant.profile => const _ProfileSkeleton(),
+      LoadingSkeletonVariant.stats => const _StatsSkeleton(),
+      LoadingSkeletonVariant.cards => Column(
+        children: [
+          for (var i = 0; i < itemCount; i++)
+            const GlassCard(
+              margin: EdgeInsets.only(bottom: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Bar(widthFactor: 0.55),
+                  SizedBox(height: 14),
+                  _Bar(widthFactor: 0.86),
+                  SizedBox(height: 10),
+                  _Bar(widthFactor: 0.38),
+                ],
+              ),
+            ),
+        ],
+      ),
+    };
   }
 }
 
 class _ProfileSkeleton extends StatelessWidget {
-  const _ProfileSkeleton({required this.value});
-
-  final double value;
+  const _ProfileSkeleton();
 
   @override
   Widget build(BuildContext context) {
@@ -90,17 +56,17 @@ class _ProfileSkeleton extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  _Circle(value: value, size: 76),
+                  _Circle(size: 76),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Bar(widthFactor: 0.58, value: value),
+                        _Bar(widthFactor: 0.58),
                         const SizedBox(height: 12),
-                        _Bar(widthFactor: 0.42, value: value),
+                        _Bar(widthFactor: 0.42),
                         const SizedBox(height: 12),
-                        _Bar(widthFactor: 0.88, value: value),
+                        _Bar(widthFactor: 0.88),
                       ],
                     ),
                   ),
@@ -109,11 +75,11 @@ class _ProfileSkeleton extends StatelessWidget {
               const SizedBox(height: 18),
               Row(
                 children: [
-                  Expanded(child: _MetricBlock(value: value)),
+                  Expanded(child: _MetricBlock()),
                   const SizedBox(width: 10),
-                  Expanded(child: _MetricBlock(value: value)),
+                  Expanded(child: _MetricBlock()),
                   const SizedBox(width: 10),
-                  Expanded(child: _MetricBlock(value: value)),
+                  Expanded(child: _MetricBlock()),
                 ],
               ),
             ],
@@ -125,11 +91,11 @@ class _ProfileSkeleton extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Bar(widthFactor: 0.32, value: value),
+                _Bar(widthFactor: 0.32),
                 const SizedBox(height: 14),
-                _Bar(widthFactor: 0.92, value: value),
+                _Bar(widthFactor: 0.92),
                 const SizedBox(height: 10),
-                _Bar(widthFactor: 0.74, value: value),
+                _Bar(widthFactor: 0.74),
               ],
             ),
           ),
@@ -139,9 +105,7 @@ class _ProfileSkeleton extends StatelessWidget {
 }
 
 class _StatsSkeleton extends StatelessWidget {
-  const _StatsSkeleton({required this.value});
-
-  final double value;
+  const _StatsSkeleton();
 
   @override
   Widget build(BuildContext context) {
@@ -149,9 +113,9 @@ class _StatsSkeleton extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: _MetricBlock(value: value, tall: true)),
+            Expanded(child: _MetricBlock(tall: true)),
             const SizedBox(width: 12),
-            Expanded(child: _MetricBlock(value: value, tall: true)),
+            Expanded(child: _MetricBlock(tall: true)),
           ],
         ),
         const SizedBox(height: 14),
@@ -159,9 +123,9 @@ class _StatsSkeleton extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Bar(widthFactor: 0.66, value: value),
+              _Bar(widthFactor: 0.66),
               const SizedBox(height: 12),
-              _Bar(widthFactor: 0.48, value: value),
+              _Bar(widthFactor: 0.48),
               const SizedBox(height: 20),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -170,7 +134,7 @@ class _StatsSkeleton extends StatelessWidget {
                     Expanded(
                       child: Align(
                         alignment: Alignment.bottomCenter,
-                        child: _ChartBar(height: height, value: value),
+                        child: _ChartBar(height: height),
                       ),
                     ),
                     if (height != 92.0) const SizedBox(width: 10),
@@ -186,18 +150,17 @@ class _StatsSkeleton extends StatelessWidget {
 }
 
 class _Bar extends StatelessWidget {
-  const _Bar({required this.widthFactor, required this.value});
+  const _Bar({required this.widthFactor});
 
   final double widthFactor;
-  final double value;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final base = colorScheme.tileSurface;
     final highlight = colorScheme.isDark
-        ? Colors.white.withValues(alpha: 0.12)
-        : Colors.white.withValues(alpha: 0.95);
+        ? Colors.white.withValues(alpha: 0.10)
+        : Colors.white.withValues(alpha: 0.76);
     return FractionallySizedBox(
       widthFactor: widthFactor,
       child: Container(
@@ -205,12 +168,12 @@ class _Bar extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
           gradient: LinearGradient(
-            begin: Alignment(-1 + value * 2, 0),
-            end: Alignment(value * 2, 0),
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
             colors: [
-              base.withValues(alpha: 0.55),
-              highlight.withValues(alpha: 0.92),
-              base.withValues(alpha: 0.55),
+              base.withValues(alpha: 0.72),
+              highlight,
+              base.withValues(alpha: 0.62),
             ],
           ),
         ),
@@ -220,9 +183,8 @@ class _Bar extends StatelessWidget {
 }
 
 class _Circle extends StatelessWidget {
-  const _Circle({required this.value, required this.size});
+  const _Circle({required this.size});
 
-  final double value;
   final double size;
 
   @override
@@ -238,12 +200,12 @@ class _Circle extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
-          begin: Alignment(-1 + value * 2, 0),
-          end: Alignment(value * 2, 0),
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            base.withValues(alpha: 0.55),
-            highlight.withValues(alpha: 0.92),
-            base.withValues(alpha: 0.55),
+            base.withValues(alpha: 0.72),
+            highlight,
+            base.withValues(alpha: 0.62),
           ],
         ),
       ),
@@ -252,9 +214,8 @@ class _Circle extends StatelessWidget {
 }
 
 class _MetricBlock extends StatelessWidget {
-  const _MetricBlock({required this.value, this.tall = false});
+  const _MetricBlock({this.tall = false});
 
-  final double value;
   final bool tall;
 
   @override
@@ -271,9 +232,9 @@ class _MetricBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Bar(widthFactor: 0.54, value: value),
+          const _Bar(widthFactor: 0.54),
           SizedBox(height: tall ? 14 : 10),
-          _Bar(widthFactor: 0.72, value: value),
+          const _Bar(widthFactor: 0.72),
         ],
       ),
     );
@@ -281,10 +242,9 @@ class _MetricBlock extends StatelessWidget {
 }
 
 class _ChartBar extends StatelessWidget {
-  const _ChartBar({required this.height, required this.value});
+  const _ChartBar({required this.height});
 
   final double height;
-  final double value;
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +266,7 @@ class _ChartBar extends StatelessWidget {
             highlight.withValues(alpha: 0.9),
             base.withValues(alpha: 0.45),
           ],
-          stops: [0, value.clamp(0.2, 0.72), 1],
+          stops: const [0, 0.54, 1],
         ),
       ),
     );

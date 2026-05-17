@@ -17,11 +17,11 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../utils/vietnamese_calendar_utils.dart';
 import '../widgets/empty_state.dart';
-import '../widgets/loading_skeleton.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/morphing_schedule_list.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
+import '../widgets/syncing_state_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -90,7 +90,11 @@ class HomeScreen extends ConsumerWidget {
                 skipLoadingOnRefresh: true,
                 skipLoadingOnReload: true,
                 loading: () => const SliverToBoxAdapter(
-                  child: LoadingSkeleton(itemCount: 3),
+                  child: SyncingStateCard(
+                    title: 'Đang đồng bộ lịch',
+                    message:
+                        'App dùng dữ liệu đã lưu để hạn chế nháy màn hình.',
+                  ),
                 ),
                 error: (error, _) => SliverFillRemaining(
                   child: EmptyState(

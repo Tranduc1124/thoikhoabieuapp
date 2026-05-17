@@ -9,12 +9,11 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../utils/vietnamese_calendar_utils.dart';
 import '../widgets/empty_state.dart';
-import '../widgets/loading_skeleton.dart';
 import '../widgets/motion_widgets.dart';
-import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
+import '../widgets/syncing_state_card.dart';
 
-class CalendarScreen extends ConsumerWidget {
+class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
 
   static const _weekdayLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
@@ -33,8 +32,19 @@ class CalendarScreen extends ConsumerWidget {
     'Tháng 12',
   ];
 
+  static String monthTitle(DateTime month) {
+    return '${_monthNames[month.month - 1]} ${month.year}';
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
+}
+
+class _CalendarScreenState extends ConsumerState<CalendarScreen> {
+  DateTime _selectedDate = DateTime.now();
+
+  @override
+  Widget build(BuildContext context) {
     final month = ref.watch(selectedCalendarMonthProvider);
     final events = ref.watch(calendarEventsProvider);
     final pinned = ref.watch(pinnedCalendarEventProvider);
@@ -95,41 +105,32 @@ class CalendarScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            const SliverPadding(
-              padding: EdgeInsets.fromLTRB(
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
                 AppSpacing.xl,
                 AppSpacing.xs,
                 AppSpacing.xl,
-                AppSpacing.sm,
+                AppSpacing.xs,
               ),
               sliver: SliverToBoxAdapter(
-                child: SectionHeader(
-                  title: 'Lịch',
-                  subtitle: 'Ghi chú ngày thi, khảo sát, deadline và ngày lễ',
-                ),
+                child: _WeekdayRow(labels: CalendarScreen._weekdayLabels),
               ),
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl,
+                AppSpacing.lg,
+                AppSpacing.xs,
+                AppSpacing.lg,
                 AppSpacing.md,
-                AppSpacing.xl,
-                AppSpacing.xs,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: _WeekdayRow(labels: _weekdayLabels),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.xs,
-                AppSpacing.lg,
-                116,
               ),
               sliver: events.when(
+                skipLoadingOnRefresh: true,
+                skipLoadingOnReload: true,
                 loading: () => const SliverToBoxAdapter(
-                  child: LoadingSkeleton(itemCount: 3),
+                  child: SyncingStateCard(
+                    title: 'Đang mở lịch',
+                    message: 'Ghi chú và ngày đã ghim sẽ được nạp ngay.',
+                  ),
                 ),
                 error: (error, _) => SliverFillRemaining(
                   hasScrollBody: false,
@@ -146,11 +147,54 @@ class CalendarScreen extends ConsumerWidget {
                 data: (items) => SliverToBoxAdapter(
                   child: _CalendarGrid(
                     month: month,
+                    selectedDate: _selectedDate,
                     events: items,
-                    onDayTap: (date, event) =>
+                    onDayTap: (date, event) {
+                      setState(() => _selectedDate = date);
+                    },
+                    onDayLongPress: (date, event) =>
                         _openEditor(context, ref, date, event),
                   ),
                 ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.xs,
+                AppSpacing.xl,
+                116,
+              ),
+              sliver: events.when(
+                skipLoadingOnRefresh: true,
+                skipLoadingOnReload: true,
+                loading: () => const SliverToBoxAdapter(child: SizedBox()),
+                error: (_, _) => const SliverToBoxAdapter(child: SizedBox()),
+                data: (items) {
+                  final selectedKey = VietnameseCalendarUtils.dateKey(
+                    _selectedDate,
+                  );
+                  return SliverToBoxAdapter(
+                    child: _SelectedDayPanel(
+                      date: _selectedDate,
+                      event: items[selectedKey],
+                      monthEvents: _eventsForMonth(items, month),
+                      onEdit: () => _openEditor(
+                        context,
+                        ref,
+                        _selectedDate,
+                        items[selectedKey],
+                      ),
+                      onOpenEvent: (event) {
+                        final date = VietnameseCalendarUtils.parseDateKey(
+                          event.dateKey,
+                        );
+                        setState(() => _selectedDate = date);
+                        _openEditor(context, ref, date, event);
+                      },
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -159,15 +203,23 @@ class CalendarScreen extends ConsumerWidget {
     );
   }
 
-  static String monthTitle(DateTime month) {
-    return '${_monthNames[month.month - 1]} ${month.year}';
+  void _setMonth(WidgetRef ref, DateTime date) {
+    final next = DateTime(date.year, date.month);
+    ref.read(selectedCalendarMonthProvider.notifier).state = next;
+    setState(() => _selectedDate = DateTime(next.year, next.month, 1));
   }
 
-  void _setMonth(WidgetRef ref, DateTime date) {
-    ref.read(selectedCalendarMonthProvider.notifier).state = DateTime(
-      date.year,
-      date.month,
-    );
+  List<CalendarEventModel> _eventsForMonth(
+    Map<String, CalendarEventModel> items,
+    DateTime month,
+  ) {
+    final events = items.values.where((event) {
+      final date = VietnameseCalendarUtils.parseDateKey(event.dateKey);
+      return date.year == month.year &&
+          date.month == month.month &&
+          event.hasContent;
+    }).toList()..sort((a, b) => a.dateKey.compareTo(b.dateKey));
+    return events;
   }
 
   Future<void> _openEditor(
@@ -630,36 +682,21 @@ class _WeekdayRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final targetWidth = constraints.maxWidth < 540
-            ? 540.0
-            : constraints.maxWidth;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: SizedBox(
-            width: targetWidth,
-            child: Row(
-              children: [
-                for (final label in labels)
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        label,
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
-                              color: colorScheme.textSecondary,
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
-                    ),
-                  ),
-              ],
+    return Row(
+      children: [
+        for (final label in labels)
+          Expanded(
+            child: Center(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: colorScheme.textSecondary,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
           ),
-        );
-      },
+      ],
     );
   }
 }
@@ -667,56 +704,51 @@ class _WeekdayRow extends StatelessWidget {
 class _CalendarGrid extends StatelessWidget {
   const _CalendarGrid({
     required this.month,
+    required this.selectedDate,
     required this.events,
     required this.onDayTap,
+    required this.onDayLongPress,
   });
 
   final DateTime month;
+  final DateTime selectedDate;
   final Map<String, CalendarEventModel> events;
   final void Function(DateTime date, CalendarEventModel? event) onDayTap;
+  final void Function(DateTime date, CalendarEventModel? event) onDayLongPress;
 
   @override
   Widget build(BuildContext context) {
     final days = VietnameseCalendarUtils.monthGridDays(month);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final availableWidth = constraints.maxWidth;
-        final targetWidth = availableWidth < 540 ? 540.0 : availableWidth;
-        final compact = targetWidth < 620;
-        return Scrollbar(
-          thumbVisibility: availableWidth < targetWidth,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: SizedBox(
-              width: targetWidth,
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: days.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 7,
-                  crossAxisSpacing: AppSpacing.sm,
-                  mainAxisSpacing: AppSpacing.sm,
-                  mainAxisExtent: compact ? 104 : 116,
-                ),
-                itemBuilder: (context, index) {
-                  final date = days[index];
-                  final key = VietnameseCalendarUtils.dateKey(date);
-                  return ScheduleFadeWidget(
-                    index: index,
-                    child: _CalendarDayCell(
-                      date: date,
-                      month: month,
-                      event: events[key],
-                      compact: compact,
-                      onTap: () => onDayTap(date, events[key]),
-                    ),
-                  );
-                },
-              ),
-            ),
+        final compact = constraints.maxWidth < 390;
+        final cellHeight = compact ? 66.0 : 76.0;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: days.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            crossAxisSpacing: compact ? 5 : AppSpacing.xs,
+            mainAxisSpacing: compact ? 5 : AppSpacing.xs,
+            mainAxisExtent: cellHeight,
           ),
+          itemBuilder: (context, index) {
+            final date = days[index];
+            final key = VietnameseCalendarUtils.dateKey(date);
+            return RepaintBoundary(
+              child: _CalendarDayCell(
+                key: ValueKey('calendar-day-$key'),
+                date: date,
+                month: month,
+                selected: VietnameseCalendarUtils.dateKey(selectedDate) == key,
+                event: events[key],
+                compact: compact,
+                onTap: () => onDayTap(date, events[key]),
+                onLongPress: () => onDayLongPress(date, events[key]),
+              ),
+            );
+          },
         );
       },
     );
@@ -725,18 +757,23 @@ class _CalendarGrid extends StatelessWidget {
 
 class _CalendarDayCell extends StatelessWidget {
   const _CalendarDayCell({
+    super.key,
     required this.date,
     required this.month,
+    required this.selected,
     required this.event,
     required this.compact,
     required this.onTap,
+    required this.onLongPress,
   });
 
   final DateTime date;
   final DateTime month;
+  final bool selected;
   final CalendarEventModel? event;
   final bool compact;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -751,6 +788,7 @@ class _CalendarDayCell extends StatelessWidget {
         ? colorScheme.primary
         : Color(event!.colorValue);
     final hasEvent = event?.hasContent == true;
+    final muted = !inMonth;
 
     return Semantics(
       button: true,
@@ -758,19 +796,19 @@ class _CalendarDayCell extends StatelessWidget {
           'Ngày ${date.day} tháng ${date.month}. ${holiday ?? ''} ${event?.title ?? ''}',
       child: AnimatedButton(
         onTap: onTap,
+        onLongPress: onLongPress,
         scale: 0.97,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(
+          compact ? AppRadius.sm : AppRadius.md,
+        ),
         child: AnimatedContainer(
-          duration: AppMotion.medium,
+          duration: AppMotion.fast,
           curve: AppMotion.liquid,
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.sm,
-            compact ? AppSpacing.sm : AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.sm,
-          ),
+          padding: EdgeInsets.all(compact ? 4 : AppSpacing.xs),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderRadius: BorderRadius.circular(
+              compact ? AppRadius.sm : AppRadius.md,
+            ),
             gradient: hasEvent
                 ? LinearGradient(
                     begin: Alignment.topLeft,
@@ -780,15 +818,21 @@ class _CalendarDayCell extends StatelessWidget {
                         alpha: colorScheme.isDark ? 0.30 : 0.20,
                       ),
                       colorScheme.surfaceContainerHigh.withValues(
-                        alpha: colorScheme.isDark ? 0.78 : 0.88,
+                        alpha: colorScheme.isDark ? 0.56 : 0.76,
                       ),
                     ],
                   )
                 : null,
-            color: hasEvent ? null : colorScheme.tileSurface,
+            color: hasEvent
+                ? null
+                : selected
+                ? colorScheme.primary.withValues(alpha: 0.13)
+                : colorScheme.tileSurface.withValues(alpha: muted ? 0.45 : 1),
             border: Border.all(
-              width: today ? 1.6 : 1,
-              color: today
+              width: selected || today ? 1.5 : 1,
+              color: selected
+                  ? eventColor
+                  : today
                   ? colorScheme.primary
                   : hasEvent
                   ? eventColor.withValues(alpha: 0.38)
@@ -804,76 +848,371 @@ class _CalendarDayCell extends StatelessWidget {
                   ]
                 : null,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
+              Positioned.fill(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
                       '${date.day}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: inMonth
-                            ? colorScheme.textPrimary
-                            : colorScheme.textHint,
-                        fontSize: compact ? 16 : 17,
+                        color: muted
+                            ? colorScheme.textHint.withValues(alpha: 0.78)
+                            : selected
+                            ? eventColor
+                            : colorScheme.textPrimary,
+                        fontSize: compact ? 15 : 16,
+                        height: 1.0,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
+                    const SizedBox(height: 3),
+                    Text(
+                      lunar.shortLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: muted
+                            ? colorScheme.textHint.withValues(alpha: 0.62)
+                            : colorScheme.textSecondary,
+                        fontSize: compact ? 8.5 : 9.5,
+                        height: 1.0,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (holiday != null)
+                Positioned(
+                  left: 5,
+                  top: 5,
+                  child: Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.warning,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.warning.withValues(alpha: 0.28),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
                   ),
-                  if (event?.pinned == true)
-                    Icon(Icons.push_pin_rounded, size: 13, color: eventColor),
+                ),
+              if (event?.pinned == true)
+                Positioned(
+                  right: 4,
+                  top: 3,
+                  child: Icon(
+                    Icons.push_pin_rounded,
+                    size: 11,
+                    color: eventColor,
+                  ),
+                ),
+              if (hasEvent)
+                Positioned(
+                  left: 9,
+                  right: 9,
+                  bottom: 6,
+                  child: Container(
+                    height: selected ? 4 : 3,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      color: eventColor,
+                    ),
+                  ),
+                ),
+              if (!hasEvent && !muted)
+                Positioned(
+                  right: 5,
+                  bottom: 5,
+                  child: Icon(
+                    Icons.add_rounded,
+                    size: 11,
+                    color: colorScheme.textHint.withValues(alpha: 0.58),
+                  ),
+                ),
+              if (holiday != null && selected)
+                Positioned(
+                  left: 4,
+                  right: 4,
+                  bottom: 11,
+                  child: Text(
+                    holiday,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: eventColor,
+                      fontSize: 8,
+                      height: 1.0,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedDayPanel extends StatelessWidget {
+  const _SelectedDayPanel({
+    required this.date,
+    required this.event,
+    required this.monthEvents,
+    required this.onEdit,
+    required this.onOpenEvent,
+  });
+
+  final DateTime date;
+  final CalendarEventModel? event;
+  final List<CalendarEventModel> monthEvents;
+  final VoidCallback onEdit;
+  final ValueChanged<CalendarEventModel> onOpenEvent;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final eventColor = Color(event?.colorValue ?? 0xFF6A8DFF);
+    final holiday = VietnameseCalendarUtils.holidayLabel(date);
+    final lunar = VietnameseCalendarUtils.lunarDate(date);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AnimatedButton(
+          onTap: onEdit,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  eventColor.withValues(
+                    alpha: event == null
+                        ? (colorScheme.isDark ? 0.13 : 0.09)
+                        : (colorScheme.isDark ? 0.27 : 0.18),
+                  ),
+                  colorScheme.surfaceContainerHigh.withValues(
+                    alpha: colorScheme.isDark ? 0.82 : 0.90,
+                  ),
                 ],
               ),
-              const SizedBox(height: 2),
-              Text(
-                'ÂL ${lunar.shortLabel}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: inMonth
-                      ? colorScheme.textSecondary
-                      : colorScheme.textHint.withValues(alpha: 0.76),
-                  fontSize: compact ? 9.5 : 10,
-                  fontWeight: FontWeight.w800,
+              border: Border.all(
+                color: eventColor.withValues(
+                  alpha: event == null ? 0.16 : 0.34,
                 ),
               ),
-              if (holiday != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  holiday,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: eventColor,
-                    fontSize: compact ? 9.5 : 10.5,
-                    fontWeight: FontWeight.w900,
-                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: eventColor.withValues(alpha: 0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, 14),
                 ),
               ],
-              const Spacer(),
-              if (hasEvent)
-                Text(
-                  event!.title.isEmpty ? event!.note : event!.title,
-                  maxLines: compact ? 1 : 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colorScheme.textPrimary,
-                    fontSize: compact ? 10.5 : 11.5,
-                    fontWeight: FontWeight.w900,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 58,
+                  height: 68,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    color: eventColor.withValues(alpha: 0.16),
+                    border: Border.all(
+                      color: eventColor.withValues(alpha: 0.22),
+                    ),
                   ),
-                )
-              else
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Icon(
-                    Icons.add_circle_outline_rounded,
-                    size: 14,
-                    color: colorScheme.textHint.withValues(alpha: 0.72),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${date.day}',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: eventColor,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        'ÂL ${lunar.shortLabel}',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colorScheme.textSecondary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        event?.title.trim().isNotEmpty == true
+                            ? event!.title
+                            : holiday ?? 'Chưa có ghi chú',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: colorScheme.textPrimary,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        event?.note.trim().isNotEmpty == true
+                            ? event!.note
+                            : 'Nhấn để thêm màu, note, comment hoặc ghim countdown.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.textSecondary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Icon(Icons.edit_calendar_rounded, color: eventColor),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Sự kiện tháng này',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: colorScheme.textPrimary,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Text(
+              '${monthEvents.length}',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (monthEvents.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              color: colorScheme.tileSurface,
+              border: Border.all(color: colorScheme.glassStrokeSubtle),
+            ),
+            child: Text(
+              'Tháng này chưa có ngày được ghi chú.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          )
+        else
+          for (final item in monthEvents.take(6))
+            _MonthEventTile(
+              key: ValueKey('month-event-${item.dateKey}'),
+              event: item,
+              onTap: () => onOpenEvent(item),
+            ),
+      ],
+    );
+  }
+}
+
+class _MonthEventTile extends StatelessWidget {
+  const _MonthEventTile({super.key, required this.event, required this.onTap});
+
+  final CalendarEventModel event;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final date = VietnameseCalendarUtils.parseDateKey(event.dateKey);
+    final color = Color(event.colorValue);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AnimatedButton(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            color: colorScheme.tileSurface,
+            border: Border.all(color: color.withValues(alpha: 0.22)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  color: color.withValues(alpha: 0.16),
+                ),
+                child: Text(
+                  '${date.day}',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.title.isEmpty ? 'Ngày đã ghi chú' : event.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: colorScheme.textPrimary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (event.note.trim().isNotEmpty)
+                      Text(
+                        event.note,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (event.pinned)
+                Icon(Icons.push_pin_rounded, color: color, size: 18),
             ],
           ),
         ),

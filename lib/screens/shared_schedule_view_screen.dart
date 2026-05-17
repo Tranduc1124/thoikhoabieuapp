@@ -9,11 +9,11 @@ import '../services/share_debug_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/loading_skeleton.dart';
 import '../widgets/qr_share_box.dart';
 import '../widgets/section_header.dart';
 import '../widgets/share_schedule_card.dart';
 import '../widgets/soft_gradient_background.dart';
+import '../widgets/syncing_state_card.dart';
 
 class SharedScheduleViewScreen extends ConsumerStatefulWidget {
   const SharedScheduleViewScreen({super.key, this.shareId});
@@ -105,7 +105,12 @@ class _SharedScheduleViewScreenState
                 )
               else
                 share.when(
-                  loading: () => const LoadingSkeleton(itemCount: 3),
+                  skipLoadingOnRefresh: true,
+                  skipLoadingOnReload: true,
+                  loading: () => const SyncingStateCard(
+                    title: 'Đang mở lịch chia sẻ',
+                    message: 'Preview sẽ hiện ngay khi link được xác thực.',
+                  ),
                   error: (error, _) => EmptyState(
                     title: 'Không mở được lịch chia sẻ',
                     message: AppFeedbackService.messageFor(error),

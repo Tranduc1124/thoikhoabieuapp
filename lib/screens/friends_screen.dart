@@ -15,9 +15,9 @@ import '../theme/app_spacing.dart';
 import '../widgets/app_avatar.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/loading_skeleton.dart';
 import '../widgets/motion_widgets.dart';
 import '../widgets/soft_gradient_background.dart';
+import '../widgets/syncing_state_card.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
   const FriendsScreen({super.key});
@@ -111,7 +111,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               requests.when(
                 skipLoadingOnRefresh: true,
                 skipLoadingOnReload: true,
-                loading: () => const LoadingSkeleton(itemCount: 1),
+                loading: () => const SyncingStateCard(
+                  title: 'Đang tải lời mời',
+                  message: 'Danh sách lời mời sẽ cập nhật trong nền.',
+                ),
                 error: (error, _) => EmptyState(
                   title: 'Không tải được lời mời',
                   message: AppFeedbackService.messageFor(error),
@@ -145,7 +148,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               searchResults.when(
                 skipLoadingOnRefresh: true,
                 skipLoadingOnReload: true,
-                loading: () => const LoadingSkeleton(itemCount: 2),
+                loading: () => const SyncingStateCard(
+                  title: 'Đang tìm bạn',
+                  message: 'Kết quả sẽ hiện ngay khi có dữ liệu phù hợp.',
+                ),
                 error: (error, _) => EmptyState(
                   title: 'Không tìm thấy người dùng',
                   message: AppFeedbackService.messageFor(error),
@@ -182,7 +188,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               friends.when(
                 skipLoadingOnRefresh: true,
                 skipLoadingOnReload: true,
-                loading: () => const LoadingSkeleton(itemCount: 2),
+                loading: () => const SyncingStateCard(
+                  title: 'Đang đồng bộ bạn bè',
+                  message: 'App giữ nguyên giao diện trong lúc làm mới.',
+                ),
                 error: (error, _) => EmptyState(
                   title: 'Không tải được danh sách bạn bè',
                   message: AppFeedbackService.messageFor(error),

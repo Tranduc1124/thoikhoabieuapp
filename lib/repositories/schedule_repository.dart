@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/api.dart';
 import '../models/classroom_location_model.dart';
@@ -18,18 +22,37 @@ class ScheduleRepository {
   final String userId;
 
   Future<List<ScheduleModel>> loadSchedules() async {
+    final cached = await _loadCachedSchedules();
+    if (cached != null) {
+      unawaited(_refreshSchedulesCache());
+      return cached;
+    }
+    return _fetchRemoteSchedules();
+  }
+
+  Future<List<ScheduleModel>> _fetchRemoteSchedules() async {
     try {
       final data = await Api.call('schedule.list');
       final items = (data['schedules'] as List? ?? const []);
-      return items
+      final schedules = items
           .whereType<Map>()
           .map((item) => ScheduleModel.fromMap(Map<String, dynamic>.from(item)))
           .toList(growable: false);
+      await _cacheSchedules(schedules);
+      return schedules;
     } catch (error) {
       throw AppUserMessageException(
         AppFeedbackService.messageFor(error),
         debugMessage: 'loadSchedules failed: $error',
       );
+    }
+  }
+
+  Future<void> _refreshSchedulesCache() async {
+    try {
+      await _fetchRemoteSchedules();
+    } catch (error) {
+      debugPrint('Schedule background refresh failed for $userId: $error');
     }
   }
 
@@ -221,7 +244,7 @@ class ScheduleRepository {
 
   Future<void> _afterScheduleChanged() async {
     try {
-      final schedules = await loadSchedules();
+      final schedules = await _fetchRemoteSchedules();
       final settings = await NotificationSettingsService(userId: userId).load();
       await _runBestEffort(
         () => NotificationService.rescheduleAllClassNotifications(
@@ -263,6 +286,37 @@ class ScheduleRepository {
       debugPrint('Schedule refresh failed for $userId: $error');
     }
   }
+
+  Future<List<ScheduleModel>?> _loadCachedSchedules() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cacheKey);
+      if (raw == null) return null;
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return null;
+      return decoded
+          .whereType<Map>()
+          .map((item) => ScheduleModel.fromMap(Map<String, dynamic>.from(item)))
+          .toList(growable: false);
+    } catch (error) {
+      debugPrint('Schedule cache read failed for $userId: $error');
+      return null;
+    }
+  }
+
+  Future<void> _cacheSchedules(List<ScheduleModel> schedules) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = jsonEncode(
+        schedules.map((item) => item.toCreateMap()).toList(growable: false),
+      );
+      await prefs.setString(_cacheKey, encoded);
+    } catch (error) {
+      debugPrint('Schedule cache write failed for $userId: $error');
+    }
+  }
+
+  String get _cacheKey => 'schedule.cache.$userId';
 
   Future<void> _syncLocation(ScheduleModel schedule) async {
     final locationId = _locationDocId(schedule.id);

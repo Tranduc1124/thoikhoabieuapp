@@ -214,11 +214,16 @@ class WeeklyStats {
 final weeklyStatsProvider = Provider<AsyncValue<WeeklyStats>>((ref) {
   final schedules = ref.watch(schedulesProvider);
   final logs = ref.watch(weekStudyLogsProvider);
-  if (schedules.isLoading || logs.isLoading) return const AsyncLoading();
-  if (schedules.hasError) {
+  if ((schedules.isLoading && schedules.valueOrNull == null) ||
+      (logs.isLoading && logs.valueOrNull == null)) {
+    return const AsyncLoading();
+  }
+  if (schedules.hasError && schedules.valueOrNull == null) {
     return AsyncError(schedules.error!, schedules.stackTrace!);
   }
-  if (logs.hasError) return AsyncError(logs.error!, logs.stackTrace!);
+  if (logs.hasError && logs.valueOrNull == null) {
+    return AsyncError(logs.error!, logs.stackTrace!);
+  }
 
   final items = schedules.valueOrNull ?? const <ScheduleModel>[];
   final studyLogs = logs.valueOrNull ?? const <StudyLogModel>[];

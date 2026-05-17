@@ -6,9 +6,9 @@ import '../providers/pro_feature_providers.dart';
 import '../services/app_feedback_service.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/loading_skeleton.dart';
 import '../widgets/section_header.dart';
 import '../widgets/soft_gradient_background.dart';
+import '../widgets/syncing_state_card.dart';
 
 class NotificationSettingsScreen extends ConsumerStatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -37,9 +37,14 @@ class _NotificationSettingsScreenState
       body: SoftGradientBackground(
         child: SafeArea(
           child: settings.when(
+            skipLoadingOnRefresh: true,
+            skipLoadingOnReload: true,
             loading: () => const Padding(
               padding: EdgeInsets.all(20),
-              child: LoadingSkeleton(itemCount: 3),
+              child: SyncingStateCard(
+                title: 'Đang mở cài đặt thông báo',
+                message: 'Nhắc lịch và quyền thông báo đang được kiểm tra.',
+              ),
             ),
             error: (error, _) => EmptyState(
               title: 'Không tải được cài đặt',
