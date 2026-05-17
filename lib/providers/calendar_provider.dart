@@ -16,14 +16,21 @@ final calendarEventServiceProvider = Provider<CalendarEventService>((ref) {
   return CalendarEventService(userId: userId);
 });
 
+final calendarEventsSnapshotProvider =
+    StateProvider<Map<String, CalendarEventModel>?>((ref) => null);
+
 final calendarEventsProvider = FutureProvider<Map<String, CalendarEventModel>>((
   ref,
-) {
-  return ref.watch(calendarEventServiceProvider).loadEvents();
+) async {
+  final events = await ref.watch(calendarEventServiceProvider).loadEvents();
+  ref.read(calendarEventsSnapshotProvider.notifier).state = events;
+  return events;
 });
 
 final pinnedCalendarEventProvider = Provider<CalendarEventModel?>((ref) {
-  final events = ref.watch(calendarEventsProvider).valueOrNull;
+  final eventState = ref.watch(calendarEventsProvider);
+  final events =
+      eventState.valueOrNull ?? ref.watch(calendarEventsSnapshotProvider);
   if (events == null || events.isEmpty) return null;
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);

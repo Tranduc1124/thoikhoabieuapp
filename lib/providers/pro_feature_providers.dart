@@ -37,30 +37,46 @@ final appSettingsProvider =
       AppSettingsController.new,
     );
 
+final appSettingsSnapshotProvider = StateProvider<AppSettingsModel?>(
+  (ref) => null,
+);
+
 class AppSettingsController extends AsyncNotifier<AppSettingsModel> {
+  int _revision = 0;
+
   @override
   Future<AppSettingsModel> build() async {
     final service = ref.watch(appSettingsServiceProvider);
-    if (service == null) return const AppSettingsModel();
+    final snapshot = ref.read(appSettingsSnapshotProvider);
+    if (service == null) return snapshot ?? const AppSettingsModel();
     final cached = await service.loadCached();
-    unawaited(_refreshRemote(service));
+    ref.read(appSettingsSnapshotProvider.notifier).state = cached;
+    unawaited(_refreshRemote(service, _revision));
     return cached;
   }
 
-  Future<void> _refreshRemote(AppSettingsService service) async {
+  Future<void> _refreshRemote(AppSettingsService service, int revision) async {
     try {
       final remote = await service.loadRemote();
+      if (revision != _revision) return;
+      ref.read(appSettingsSnapshotProvider.notifier).state = remote;
       state = AsyncData(remote);
     } catch (_) {}
   }
 
   Future<void> setThemeMode(String themeMode) async {
     final service = ref.read(appSettingsServiceProvider);
-    if (service == null) return;
-    final current = state.valueOrNull ?? await service.loadCached();
+    final current =
+        state.valueOrNull ??
+        ref.read(appSettingsSnapshotProvider) ??
+        await service?.loadCached() ??
+        const AppSettingsModel();
     final next = current.copyWith(themeMode: themeMode);
+    _revision++;
     _debug('settings theme selected: $themeMode');
+    ref.read(appSettingsSnapshotProvider.notifier).state = next;
     state = AsyncData(next);
+    if (service == null) return;
     await service.cache(next);
     try {
       await service.sync(next);
@@ -75,14 +91,20 @@ class AppSettingsController extends AsyncNotifier<AppSettingsModel> {
 
   Future<void> setDynamicIslandEnabled(bool enabled) async {
     final service = ref.read(appSettingsServiceProvider);
-    if (service == null) return;
-    final current = state.valueOrNull ?? await service.loadCached();
+    final current =
+        state.valueOrNull ??
+        ref.read(appSettingsSnapshotProvider) ??
+        await service?.loadCached() ??
+        const AppSettingsModel();
     final next = current.copyWith(
       dynamicIslandEnabled: enabled,
       liveActivitiesEnabled: enabled,
     );
+    _revision++;
     _debug('dynamic island selected value: $enabled');
+    ref.read(appSettingsSnapshotProvider.notifier).state = next;
     state = AsyncData(next);
+    if (service == null) return;
     await service.cache(next);
     try {
       await service.sync(next);

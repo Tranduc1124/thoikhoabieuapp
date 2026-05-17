@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api.dart';
@@ -23,10 +25,23 @@ class AppUserController extends AsyncNotifier<AppUser?> {
     if (session == null && !hasToken) {
       return null;
     }
+    final cachedUser = _userFromSession(Api.currentSession);
+    if (cachedUser != null) {
+      unawaited(_refreshFromRemote());
+      return cachedUser;
+    }
     return _loadUser();
   }
 
   Future<AppUser?> refresh() => _loadUser(updateState: true);
+
+  Future<void> _refreshFromRemote() async {
+    try {
+      await _loadUser(updateState: true);
+    } catch (error) {
+      _debug('background profile refresh failed: $error');
+    }
+  }
 
   Future<AppUser?> _loadUser({bool updateState = false}) async {
     if (!Api.isAuthenticated) {
@@ -72,6 +87,16 @@ class AppUserController extends AsyncNotifier<AppUser?> {
     if (kDebugMode) {
       debugPrint('[AppUserController] $message');
     }
+  }
+
+  AppUser? _userFromSession(AuthSession? session) {
+    if (session == null || session.uid.trim().isEmpty) return null;
+    return AppUser(
+      id: session.uid,
+      name: session.displayName,
+      email: session.email,
+      avatarUrl: session.photoURL,
+    );
   }
 }
 

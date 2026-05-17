@@ -111,76 +111,157 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: SoftGradientBackground(
-        child: Center(
-          child: FadeTransition(
-            opacity: CurvedAnimation(
-              parent: _controller,
-              curve: Curves.easeOut,
-            ),
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.88, end: 1).animate(
-                CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+        child: SafeArea(
+          child: Center(
+            child: FadeTransition(
+              opacity: CurvedAnimation(
+                parent: _controller,
+                curve: Curves.easeOut,
               ),
-              child: GlassCard(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 32,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.88, end: 1).animate(
+                  CurvedAnimation(
+                    parent: _controller,
+                    curve: Curves.easeOutBack,
+                  ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _OrbitingLoader(
-                      controller: _controller,
-                      progress: _progress,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    Text(
-                      'Thời Khóa Biểu',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    AnimatedSwitcher(
-                      duration: AppMotion.fast,
-                      switchInCurve: AppMotion.liquid,
-                      switchOutCurve: AppMotion.exit,
-                      child: Text(
-                        _status,
-                        key: ValueKey(_status),
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.textSecondary,
-                          fontWeight: FontWeight.w700,
+                child: GlassCard(
+                  margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: 30,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _OrbitingLoader(
+                        controller: _controller,
+                        progress: _progress,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: const [
+                          _StartupPill(
+                            icon: Icons.auto_stories_rounded,
+                            label: 'Lịch học',
+                          ),
+                          _StartupPill(
+                            icon: Icons.calendar_month_rounded,
+                            label: 'Ghi chú',
+                          ),
+                          _StartupPill(
+                            icon: Icons.notifications_active_rounded,
+                            label: 'Nhắc lịch',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'Thời Khóa Biểu',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: colorScheme.textPrimary,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      AnimatedSwitcher(
+                        duration: AppMotion.fast,
+                        switchInCurve: AppMotion.liquid,
+                        switchOutCurve: AppMotion.exit,
+                        child: Text(
+                          _status,
+                          key: ValueKey(_status),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: colorScheme.textSecondary,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    SizedBox(
-                      width: 220,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween<double>(end: _progress),
-                          duration: AppMotion.medium,
-                          curve: AppMotion.liquid,
-                          builder: (context, value, child) {
-                            return LinearProgressIndicator(
-                              value: value,
-                              minHeight: 9,
-                              backgroundColor: colorScheme.tileSurface,
-                            );
-                          },
+                      const SizedBox(height: AppSpacing.lg),
+                      SizedBox(
+                        width: 240,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween<double>(end: _progress),
+                            duration: AppMotion.medium,
+                            curve: AppMotion.liquid,
+                            builder: (context, value, child) {
+                              return LinearProgressIndicator(
+                                value: value,
+                                minHeight: 9,
+                                backgroundColor: colorScheme.tileSurface,
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    const _LoadingDots(),
-                  ],
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const _LoadingDots(),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            '${(_progress * 100).round()}%',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  color: colorScheme.textSecondary,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _StartupPill extends StatelessWidget {
+  const _StartupPill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        color: colorScheme.tileSurface.withValues(alpha: 0.86),
+        border: Border.all(color: colorScheme.glassStrokeSubtle),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: colorScheme.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: colorScheme.textPrimary,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }

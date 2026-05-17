@@ -36,7 +36,10 @@ class AppSettingsService {
   Future<AppSettingsModel> loadCached() async {
     final prefs = await SharedPreferences.getInstance();
     return AppSettingsModel(
-      themeMode: prefs.getString(_key('themeMode')) ?? 'system',
+      themeMode:
+          prefs.getString(_key('themeMode')) ??
+          prefs.getString('appSettings.last.themeMode') ??
+          'auto',
       accentColor: prefs.getInt(_key('accentColor')) ?? 0xFF6A8DFF,
       liquidGlassEnabled: prefs.getBool(_key('liquidGlassEnabled')) ?? true,
       animationsEnabled: prefs.getBool(_key('animationsEnabled')) ?? true,
@@ -49,6 +52,7 @@ class AppSettingsService {
   Future<void> cache(AppSettingsModel settings) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key('themeMode'), settings.themeMode);
+    await prefs.setString('appSettings.last.themeMode', settings.themeMode);
     await prefs.setInt(_key('accentColor'), settings.accentColor);
     await prefs.setBool(
       _key('liquidGlassEnabled'),

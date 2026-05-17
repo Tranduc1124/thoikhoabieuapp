@@ -46,7 +46,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final month = ref.watch(selectedCalendarMonthProvider);
-    final events = ref.watch(calendarEventsProvider);
+    final eventsState = ref.watch(calendarEventsProvider);
+    final eventItems =
+        eventsState.valueOrNull ?? ref.watch(calendarEventsSnapshotProvider);
     final pinned = ref.watch(pinnedCalendarEventProvider);
 
     return SoftGradientBackground(
@@ -110,53 +112,46 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 AppSpacing.xl,
                 AppSpacing.xs,
                 AppSpacing.xl,
-                AppSpacing.xs,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: _WeekdayRow(labels: CalendarScreen._weekdayLabels),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
-                AppSpacing.xs,
-                AppSpacing.lg,
-                AppSpacing.md,
               ),
-              sliver: events.when(
-                skipLoadingOnRefresh: true,
-                skipLoadingOnReload: true,
-                loading: () => const SliverToBoxAdapter(
-                  child: SyncingStateCard(
-                    title: 'Đang mở lịch',
-                    message: 'Ghi chú và ngày đã ghim sẽ được nạp ngay.',
-                  ),
-                ),
-                error: (error, _) => SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: EmptyState(
-                    title: 'Không tải được lịch',
-                    message: 'Dữ liệu lịch local chưa sẵn sàng, thử lại sau.',
-                    action: FilledButton.tonalIcon(
-                      onPressed: () => ref.invalidate(calendarEventsProvider),
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Tải lại'),
+              sliver: eventItems != null
+                  ? SliverToBoxAdapter(
+                      child: _CalendarMonthCard(
+                        month: month,
+                        selectedDate: _selectedDate,
+                        events: eventItems,
+                        onDayTap: (date, event) {
+                          setState(() => _selectedDate = date);
+                        },
+                        onDayLongPress: (date, event) =>
+                            _openEditor(context, ref, date, event),
+                      ),
+                    )
+                  : eventsState.when(
+                      skipLoadingOnRefresh: true,
+                      skipLoadingOnReload: true,
+                      loading: () => const SliverToBoxAdapter(
+                        child: SyncingStateCard(
+                          title: 'Đang mở lịch',
+                          message: 'Ghi chú và ngày đã ghim sẽ được nạp ngay.',
+                        ),
+                      ),
+                      error: (error, _) => SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: EmptyState(
+                          title: 'Không tải được lịch',
+                          message:
+                              'Dữ liệu lịch local chưa sẵn sàng, thử lại sau.',
+                          action: FilledButton.tonalIcon(
+                            onPressed: () =>
+                                ref.invalidate(calendarEventsProvider),
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: const Text('Tải lại'),
+                          ),
+                        ),
+                      ),
+                      data: (_) => const SliverToBoxAdapter(child: SizedBox()),
                     ),
-                  ),
-                ),
-                data: (items) => SliverToBoxAdapter(
-                  child: _CalendarGrid(
-                    month: month,
-                    selectedDate: _selectedDate,
-                    events: items,
-                    onDayTap: (date, event) {
-                      setState(() => _selectedDate = date);
-                    },
-                    onDayLongPress: (date, event) =>
-                        _openEditor(context, ref, date, event),
-                  ),
-                ),
-              ),
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
@@ -165,37 +160,35 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 AppSpacing.xl,
                 116,
               ),
-              sliver: events.when(
-                skipLoadingOnRefresh: true,
-                skipLoadingOnReload: true,
-                loading: () => const SliverToBoxAdapter(child: SizedBox()),
-                error: (_, _) => const SliverToBoxAdapter(child: SizedBox()),
-                data: (items) {
-                  final selectedKey = VietnameseCalendarUtils.dateKey(
-                    _selectedDate,
-                  );
-                  return SliverToBoxAdapter(
-                    child: _SelectedDayPanel(
-                      date: _selectedDate,
-                      event: items[selectedKey],
-                      monthEvents: _eventsForMonth(items, month),
-                      onEdit: () => _openEditor(
-                        context,
-                        ref,
-                        _selectedDate,
-                        items[selectedKey],
+              sliver: eventItems == null
+                  ? const SliverToBoxAdapter(child: SizedBox())
+                  : SliverToBoxAdapter(
+                      child: Builder(
+                        builder: (context) {
+                          final selectedKey = VietnameseCalendarUtils.dateKey(
+                            _selectedDate,
+                          );
+                          return _SelectedDayPanel(
+                            date: _selectedDate,
+                            event: eventItems[selectedKey],
+                            monthEvents: _eventsForMonth(eventItems, month),
+                            onEdit: () => _openEditor(
+                              context,
+                              ref,
+                              _selectedDate,
+                              eventItems[selectedKey],
+                            ),
+                            onOpenEvent: (event) {
+                              final date = VietnameseCalendarUtils.parseDateKey(
+                                event.dateKey,
+                              );
+                              setState(() => _selectedDate = date);
+                              _openEditor(context, ref, date, event);
+                            },
+                          );
+                        },
                       ),
-                      onOpenEvent: (event) {
-                        final date = VietnameseCalendarUtils.parseDateKey(
-                          event.dateKey,
-                        );
-                        setState(() => _selectedDate = date);
-                        _openEditor(context, ref, date, event);
-                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),
@@ -674,6 +667,194 @@ class _PinnedCalendarCard extends StatelessWidget {
   }
 }
 
+class _CalendarMonthCard extends StatelessWidget {
+  const _CalendarMonthCard({
+    required this.month,
+    required this.selectedDate,
+    required this.events,
+    required this.onDayTap,
+    required this.onDayLongPress,
+  });
+
+  final DateTime month;
+  final DateTime selectedDate;
+  final Map<String, CalendarEventModel> events;
+  final void Function(DateTime date, CalendarEventModel? event) onDayTap;
+  final void Function(DateTime date, CalendarEventModel? event) onDayLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final monthEvents = events.values.where((event) {
+      final date = VietnameseCalendarUtils.parseDateKey(event.dateKey);
+      return date.year == month.year &&
+          date.month == month.month &&
+          event.hasContent;
+    }).length;
+    final pinnedCount = events.values.where((event) {
+      final date = VietnameseCalendarUtils.parseDateKey(event.dateKey);
+      return date.year == month.year &&
+          date.month == month.month &&
+          event.pinned;
+    }).length;
+    final holidayCount = VietnameseCalendarUtils.monthGridDays(month)
+        .where(
+          (date) =>
+              date.month == month.month &&
+              VietnameseCalendarUtils.holidayLabel(date) != null,
+        )
+        .length;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colorScheme.surfaceContainerHigh.withValues(
+              alpha: colorScheme.isDark ? 0.82 : 0.94,
+            ),
+            colorScheme.tileSurface.withValues(
+              alpha: colorScheme.isDark ? 0.62 : 0.86,
+            ),
+          ],
+        ),
+        border: Border.all(color: colorScheme.glassStrokeSubtle),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.softShadow.withValues(alpha: 0.52),
+            blurRadius: 30,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _MonthStatsRow(
+            eventCount: monthEvents,
+            pinnedCount: pinnedCount,
+            holidayCount: holidayCount,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _WeekdayRow(labels: CalendarScreen._weekdayLabels),
+          const SizedBox(height: AppSpacing.sm),
+          _CalendarGrid(
+            month: month,
+            selectedDate: selectedDate,
+            events: events,
+            onDayTap: onDayTap,
+            onDayLongPress: onDayLongPress,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MonthStatsRow extends StatelessWidget {
+  const _MonthStatsRow({
+    required this.eventCount,
+    required this.pinnedCount,
+    required this.holidayCount,
+  });
+
+  final int eventCount;
+  final int pinnedCount;
+  final int holidayCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 360;
+        return Row(
+          children: [
+            Expanded(
+              child: _MonthStatPill(
+                icon: Icons.event_note_rounded,
+                label: compact ? 'Note' : 'Ghi chú',
+                value: '$eventCount',
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: _MonthStatPill(
+                icon: Icons.push_pin_rounded,
+                label: compact ? 'Ghim' : 'Đã ghim',
+                value: '$pinnedCount',
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: _MonthStatPill(
+                icon: Icons.flag_rounded,
+                label: compact ? 'Lễ' : 'Ngày lễ',
+                value: '$holidayCount',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MonthStatPill extends StatelessWidget {
+  const _MonthStatPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      constraints: const BoxConstraints(minHeight: 50),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        color: colorScheme.tileSurface.withValues(alpha: 0.82),
+        border: Border.all(color: colorScheme.glassStrokeSubtle),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 17, color: colorScheme.primary),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colorScheme.textSecondary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 2),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: colorScheme.textPrimary,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _WeekdayRow extends StatelessWidget {
   const _WeekdayRow({required this.labels});
 
@@ -1093,51 +1274,76 @@ class _SelectedDayPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Sự kiện tháng này',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: colorScheme.textPrimary,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            color: colorScheme.surfaceContainerHigh.withValues(
+              alpha: colorScheme.isDark ? 0.66 : 0.84,
             ),
-            Text(
-              '${monthEvents.length}',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w900,
+            border: Border.all(color: colorScheme.glassStrokeSubtle),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Sự kiện tháng này',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: colorScheme.textPrimary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      color: colorScheme.primary.withValues(alpha: 0.12),
+                    ),
+                    child: Text(
+                      '${monthEvents.length}',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.sm),
+              if (monthEvents.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    color: colorScheme.tileSurface,
+                    border: Border.all(color: colorScheme.glassStrokeSubtle),
+                  ),
+                  child: Text(
+                    'Tháng này chưa có ngày được ghi chú.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                )
+              else
+                for (final item in monthEvents.take(6))
+                  _MonthEventTile(
+                    key: ValueKey('month-event-${item.dateKey}'),
+                    event: item,
+                    onTap: () => onOpenEvent(item),
+                  ),
+            ],
+          ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        if (monthEvents.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              color: colorScheme.tileSurface,
-              border: Border.all(color: colorScheme.glassStrokeSubtle),
-            ),
-            child: Text(
-              'Tháng này chưa có ngày được ghi chú.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.textSecondary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          )
-        else
-          for (final item in monthEvents.take(6))
-            _MonthEventTile(
-              key: ValueKey('month-event-${item.dateKey}'),
-              event: item,
-              onTap: () => onOpenEvent(item),
-            ),
       ],
     );
   }

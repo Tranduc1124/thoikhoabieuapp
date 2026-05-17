@@ -10,6 +10,12 @@ final selectedDayProvider = StateProvider<int>((ref) => DateTime.now().weekday);
 final scheduleOrderProvider = StateProvider<Map<int, List<String>>>(
   (ref) => const {},
 );
+final scheduleSnapshotProvider = StateProvider<List<ScheduleModel>?>(
+  (ref) => null,
+);
+final weekStudyLogsSnapshotProvider = StateProvider<List<StudyLogModel>?>(
+  (ref) => null,
+);
 
 final scheduleRepositoryProvider = Provider<ScheduleRepository?>((ref) {
   final user = ref.watch(authControllerProvider).valueOrNull;
@@ -19,20 +25,28 @@ final scheduleRepositoryProvider = Provider<ScheduleRepository?>((ref) {
 
 final schedulesProvider = FutureProvider<List<ScheduleModel>>((ref) async {
   final repository = ref.watch(scheduleRepositoryProvider);
-  if (repository == null) return const [];
-  return repository.loadSchedules();
+  if (repository == null) {
+    ref.read(scheduleSnapshotProvider.notifier).state = null;
+    return const [];
+  }
+  final schedules = await repository.loadSchedules();
+  ref.read(scheduleSnapshotProvider.notifier).state = schedules;
+  return schedules;
 });
 
 final todaySchedulesProvider = Provider<AsyncValue<List<ScheduleModel>>>((ref) {
   final query = ref.watch(searchQueryProvider).trim().toLowerCase();
   final today = DateTime.now().weekday;
-  return ref.watch(schedulesProvider).whenData((items) {
-    final filtered = items
-        .where((item) => item.dayOfWeek == today)
-        .where((item) => query.isEmpty || _matchesScheduleQuery(item, query))
-        .toList();
-    return _orderedSchedules(filtered, ref.watch(scheduleOrderProvider)[today]);
-  });
+  final schedules = ref.watch(schedulesProvider);
+  final snapshot = ref.watch(scheduleSnapshotProvider);
+  final items = schedules.valueOrNull ?? snapshot;
+  if (items != null) {
+    return AsyncData(_filterSchedules(ref, items, today, query));
+  }
+  if (schedules.hasError) {
+    return AsyncError(schedules.error!, schedules.stackTrace!);
+  }
+  return const AsyncLoading();
 });
 
 final selectedDaySchedulesProvider = Provider<AsyncValue<List<ScheduleModel>>>((
@@ -40,14 +54,30 @@ final selectedDaySchedulesProvider = Provider<AsyncValue<List<ScheduleModel>>>((
 ) {
   final day = ref.watch(selectedDayProvider);
   final query = ref.watch(searchQueryProvider).trim().toLowerCase();
-  return ref.watch(schedulesProvider).whenData((items) {
-    final filtered = items
-        .where((item) => item.dayOfWeek == day)
-        .where((item) => query.isEmpty || _matchesScheduleQuery(item, query))
-        .toList();
-    return _orderedSchedules(filtered, ref.watch(scheduleOrderProvider)[day]);
-  });
+  final schedules = ref.watch(schedulesProvider);
+  final snapshot = ref.watch(scheduleSnapshotProvider);
+  final items = schedules.valueOrNull ?? snapshot;
+  if (items != null) {
+    return AsyncData(_filterSchedules(ref, items, day, query));
+  }
+  if (schedules.hasError) {
+    return AsyncError(schedules.error!, schedules.stackTrace!);
+  }
+  return const AsyncLoading();
 });
+
+List<ScheduleModel> _filterSchedules(
+  Ref ref,
+  List<ScheduleModel> items,
+  int day,
+  String query,
+) {
+  final filtered = items
+      .where((item) => item.dayOfWeek == day)
+      .where((item) => query.isEmpty || _matchesScheduleQuery(item, query))
+      .toList();
+  return _orderedSchedules(filtered, ref.watch(scheduleOrderProvider)[day]);
+}
 
 List<ScheduleModel> _orderedSchedules(
   List<ScheduleModel> items,
@@ -88,8 +118,13 @@ final todayStudyLogsProvider = FutureProvider<List<StudyLogModel>>((ref) async {
 
 final weekStudyLogsProvider = FutureProvider<List<StudyLogModel>>((ref) async {
   final repository = ref.watch(scheduleRepositoryProvider);
-  if (repository == null) return const [];
-  return repository.loadStudyLogsForWeek(DateTime.now());
+  if (repository == null) {
+    ref.read(weekStudyLogsSnapshotProvider.notifier).state = null;
+    return const [];
+  }
+  final logs = await repository.loadStudyLogsForWeek(DateTime.now());
+  ref.read(weekStudyLogsSnapshotProvider.notifier).state = logs;
+  return logs;
 });
 
 final scheduleActionsProvider = Provider<ScheduleActions>(
@@ -214,19 +249,22 @@ class WeeklyStats {
 final weeklyStatsProvider = Provider<AsyncValue<WeeklyStats>>((ref) {
   final schedules = ref.watch(schedulesProvider);
   final logs = ref.watch(weekStudyLogsProvider);
-  if ((schedules.isLoading && schedules.valueOrNull == null) ||
-      (logs.isLoading && logs.valueOrNull == null)) {
+  final scheduleItems =
+      schedules.valueOrNull ?? ref.watch(scheduleSnapshotProvider);
+  final logItems = logs.valueOrNull ?? ref.watch(weekStudyLogsSnapshotProvider);
+  if ((schedules.isLoading && scheduleItems == null) ||
+      (logs.isLoading && logItems == null)) {
     return const AsyncLoading();
   }
-  if (schedules.hasError && schedules.valueOrNull == null) {
+  if (schedules.hasError && scheduleItems == null) {
     return AsyncError(schedules.error!, schedules.stackTrace!);
   }
-  if (logs.hasError && logs.valueOrNull == null) {
+  if (logs.hasError && logItems == null) {
     return AsyncError(logs.error!, logs.stackTrace!);
   }
 
-  final items = schedules.valueOrNull ?? const <ScheduleModel>[];
-  final studyLogs = logs.valueOrNull ?? const <StudyLogModel>[];
+  final items = scheduleItems ?? const <ScheduleModel>[];
+  final studyLogs = logItems ?? const <StudyLogModel>[];
   final completedIds = studyLogs
       .where((log) => log.status == StudyStatus.completed)
       .map((log) => log.scheduleId)

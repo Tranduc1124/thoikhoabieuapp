@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'api/api.dart';
+import 'models/app_settings_model.dart';
 import 'models/profile_card_model.dart';
 import 'models/schedule_model.dart';
 import 'models/share_schedule_model.dart';
@@ -304,18 +305,20 @@ class _ThoiKhoaBieuAppState extends ConsumerState<ThoiKhoaBieuApp> {
       });
     });
 
-    final themeMode = ref
-        .watch(appSettingsProvider)
-        .maybeWhen(
-          data: (settings) => _themeModeFromString(settings.themeMode),
-          orElse: () => ThemeMode.system,
-        );
+    final settingsState = ref.watch(appSettingsProvider);
+    final settings =
+        settingsState.valueOrNull ??
+        ref.watch(appSettingsSnapshotProvider) ??
+        const AppSettingsModel();
+    final themeMode = _themeModeFromString(settings.themeMode);
 
     return MaterialApp.router(
       title: 'Thời Khóa Biểu',
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       themeMode: themeMode,
+      themeAnimationDuration: const Duration(milliseconds: 260),
+      themeAnimationCurve: AppMotion.liquid,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
     );
