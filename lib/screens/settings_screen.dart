@@ -20,9 +20,10 @@ class SettingsScreen extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider).valueOrNull;
     final user = userState.valueOrNull;
     final appSettings =
-        ref.watch(appSettingsProvider).valueOrNull ??
-        ref.watch(appSettingsSnapshotProvider);
+        ref.watch(appSettingsSnapshotProvider) ??
+        ref.watch(appSettingsProvider).valueOrNull;
     final themeMode = appSettings?.themeMode ?? 'auto';
+    final colorScheme = Theme.of(context).colorScheme;
     final notificationSettings = ref
         .watch(notificationSettingsProvider)
         .valueOrNull;
@@ -88,6 +89,31 @@ class SettingsScreen extends ConsumerWidget {
               title: 'Giao diện',
               child: SegmentedButton<String>(
                 showSelectedIcon: false,
+                style: ButtonStyle(
+                  animationDuration: Duration.zero,
+                  overlayColor: const WidgetStatePropertyAll(
+                    Colors.transparent,
+                  ),
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return colorScheme.primary.withValues(
+                        alpha: colorScheme.isDark ? 0.26 : 0.14,
+                      );
+                    }
+                    return colorScheme.tileSurface;
+                  }),
+                  foregroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return colorScheme.isDark
+                          ? Colors.white
+                          : colorScheme.primary;
+                    }
+                    return colorScheme.textSecondary;
+                  }),
+                  side: WidgetStatePropertyAll(
+                    BorderSide(color: colorScheme.glassStrokeSubtle),
+                  ),
+                ),
                 segments: const [
                   ButtonSegment(
                     value: 'auto',

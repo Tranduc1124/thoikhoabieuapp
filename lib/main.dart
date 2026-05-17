@@ -321,8 +321,8 @@ class _ThoiKhoaBieuAppState extends ConsumerState<ThoiKhoaBieuApp> {
 
     final settingsState = ref.watch(appSettingsProvider);
     final settings =
-        settingsState.valueOrNull ??
         ref.watch(appSettingsSnapshotProvider) ??
+        settingsState.valueOrNull ??
         const AppSettingsModel();
     final themeMode = _themeModeFromString(settings.themeMode);
 
