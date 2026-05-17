@@ -150,9 +150,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     'Làm mới dữ liệu, chia sẻ hồ sơ và lưu lại thông tin quan trọng khi cần.',
               ),
               const SizedBox(height: 12),
-              Row(
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
-                  Expanded(
+                  _ProfileActionButton(
                     child: FilledButton.icon(
                       onPressed: _refreshing ? null : _refreshNow,
                       icon: _refreshing
@@ -164,8 +166,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       label: const Text('Cập nhật dữ liệu'),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
+                  _ProfileActionButton(
                     child: OutlinedButton.icon(
                       onPressed: _createProfileCard,
                       icon: const Icon(Icons.badge_rounded),
@@ -175,17 +176,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              Row(
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
-                  Expanded(
+                  _ProfileActionButton(
                     child: OutlinedButton.icon(
                       onPressed: _exportBackup,
                       icon: const Icon(Icons.backup_rounded),
                       label: const Text('Tạo bản sao lưu'),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
+                  _ProfileActionButton(
                     child: OutlinedButton.icon(
                       onPressed: () => context.push('/friends'),
                       icon: const Icon(Icons.people_alt_rounded),
@@ -455,6 +457,22 @@ class _ProfileLoadingView extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _ProfileActionButton extends StatelessWidget {
+  const _ProfileActionButton({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final contentWidth = width - 40;
+    final itemWidth = contentWidth >= 390
+        ? (contentWidth - 10) / 2
+        : contentWidth;
+    return SizedBox(width: itemWidth, child: child);
   }
 }
 

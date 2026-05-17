@@ -97,9 +97,11 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                 child: _SharePoster(share: widget.share),
               ),
               const SizedBox(height: 18),
-              Row(
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
-                  Expanded(
+                  _ShareActionButton(
                     child: FilledButton.icon(
                       onPressed: _busy || service == null ? null : _shareLink,
                       icon: AnimatedSwitcher(
@@ -120,8 +122,7 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                       label: const Text('Chia sẻ ngay'),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
+                  _ShareActionButton(
                     child: OutlinedButton.icon(
                       onPressed: _busy || service == null ? null : _copyLink,
                       icon: const Icon(Icons.copy_rounded),
@@ -131,17 +132,18 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              Row(
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
-                  Expanded(
+                  _ShareActionButton(
                     child: OutlinedButton.icon(
                       onPressed: _busy || service == null ? null : _shareImage,
                       icon: const Icon(Icons.image_outlined),
                       label: const Text('Chia sẻ ảnh'),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
+                  _ShareActionButton(
                     child: OutlinedButton.icon(
                       onPressed: _busy || service == null ? null : _saveImage,
                       icon: const Icon(Icons.download_rounded),
@@ -151,17 +153,18 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              Row(
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
-                  Expanded(
+                  _ShareActionButton(
                     child: OutlinedButton.icon(
                       onPressed: _busy || service == null ? null : _openWebLink,
                       icon: const Icon(Icons.public_rounded),
                       label: const Text('Mở liên kết'),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
+                  _ShareActionButton(
                     child: OutlinedButton.icon(
                       onPressed: () => context.push('/shared-links'),
                       icon: const Icon(Icons.folder_open_rounded),
@@ -252,6 +255,22 @@ class _SharePreviewScreenState extends ConsumerState<SharePreviewScreen> {
         setState(() => _busy = false);
       }
     }
+  }
+}
+
+class _ShareActionButton extends StatelessWidget {
+  const _ShareActionButton({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final contentWidth = width - 40;
+    final itemWidth = contentWidth >= 390
+        ? (contentWidth - 10) / 2
+        : contentWidth;
+    return SizedBox(width: itemWidth, child: child);
   }
 }
 

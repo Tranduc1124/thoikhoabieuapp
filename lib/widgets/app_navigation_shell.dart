@@ -6,7 +6,6 @@ import '../theme/app_motion.dart';
 import 'animated_pressable.dart';
 import 'glass_card.dart';
 import 'glass_floating_button.dart';
-import 'motion_widgets.dart';
 
 class AppNavigationShell extends StatelessWidget {
   const AppNavigationShell({super.key, required this.navigationShell});
@@ -17,33 +16,7 @@ class AppNavigationShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: RepaintBoundary(
-        child: AnimatedSwitcher(
-          duration: AppMotion.medium,
-          reverseDuration: AppMotion.fast,
-          switchInCurve: AppMotion.liquid,
-          switchOutCurve: AppMotion.exit,
-          layoutBuilder: (currentChild, previousChildren) {
-            return Stack(
-              fit: StackFit.expand,
-              children: [...previousChildren, ?currentChild],
-            );
-          },
-          transitionBuilder: (child, animation) {
-            return MorphTransitionWidget(
-              animation: animation,
-              beginOffset: const Offset(0, 0.018),
-              beginScale: 0.985,
-              beginOpacity: 0.72,
-              child: child,
-            );
-          },
-          child: KeyedSubtree(
-            key: ValueKey('tab-body-${navigationShell.currentIndex}'),
-            child: navigationShell,
-          ),
-        ),
-      ),
+      body: RepaintBoundary(child: navigationShell),
       floatingActionButton: _buildFloatingActionButton(context),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(14, 0, 14, 12),

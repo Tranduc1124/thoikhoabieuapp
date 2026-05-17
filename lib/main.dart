@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api/api.dart';
 import 'models/app_settings_model.dart';
@@ -42,7 +43,20 @@ import 'widgets/app_navigation_shell.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Api.initialize();
-  runApp(const ProviderScope(child: ThoiKhoaBieuApp()));
+  final prefs = await SharedPreferences.getInstance();
+  final bootThemeMode = prefs.getString('appSettings.last.themeMode');
+  final bootSettings = bootThemeMode == null
+      ? null
+      : AppSettingsModel(themeMode: bootThemeMode);
+  runApp(
+    ProviderScope(
+      overrides: [
+        if (bootSettings != null)
+          appSettingsSnapshotProvider.overrideWith((ref) => bootSettings),
+      ],
+      child: const ThoiKhoaBieuApp(),
+    ),
+  );
   unawaited(BackendDiagnosticsService.checkBackendStatus());
   unawaited(NotificationService.initialize());
   unawaited(WidgetSyncService.initialize());

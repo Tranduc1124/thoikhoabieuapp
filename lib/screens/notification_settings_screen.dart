@@ -166,9 +166,11 @@ class _NotificationSettingsScreenState
                             ?.copyWith(fontWeight: FontWeight.w900),
                       ),
                       const SizedBox(height: 12),
-                      Row(
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
                         children: [
-                          Expanded(
+                          _NotificationActionButton(
                             child: OutlinedButton.icon(
                               onPressed: () async {
                                 await ref
@@ -184,8 +186,7 @@ class _NotificationSettingsScreenState
                               label: const Text('Thử ngay'),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
+                          _NotificationActionButton(
                             child: OutlinedButton.icon(
                               onPressed: () async {
                                 await ref
@@ -313,5 +314,21 @@ class _SwitchRow extends StatelessWidget {
         Switch(value: value, onChanged: onChanged),
       ],
     );
+  }
+}
+
+class _NotificationActionButton extends StatelessWidget {
+  const _NotificationActionButton({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final contentWidth = width - 40 - 36;
+    final itemWidth = contentWidth >= 390
+        ? (contentWidth - 10) / 2
+        : contentWidth;
+    return SizedBox(width: itemWidth, child: child);
   }
 }

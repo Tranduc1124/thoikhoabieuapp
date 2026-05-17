@@ -157,9 +157,11 @@ class _Bar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final base = colorScheme.tileSurface;
+    final base = colorScheme.isDark
+        ? const Color(0xFF172238)
+        : colorScheme.tileSurface;
     final highlight = colorScheme.isDark
-        ? Colors.white.withValues(alpha: 0.10)
+        ? const Color(0xFF26344F)
         : Colors.white.withValues(alpha: 0.76);
     return FractionallySizedBox(
       widthFactor: widthFactor,
@@ -190,9 +192,11 @@ class _Circle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final base = colorScheme.tileSurface;
+    final base = colorScheme.isDark
+        ? const Color(0xFF172238)
+        : colorScheme.tileSurface;
     final highlight = colorScheme.isDark
-        ? Colors.white.withValues(alpha: 0.12)
+        ? const Color(0xFF26344F)
         : Colors.white.withValues(alpha: 0.95);
     return Container(
       width: size,
@@ -249,9 +253,11 @@ class _ChartBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final base = colorScheme.tileSurface;
+    final base = colorScheme.isDark
+        ? const Color(0xFF172238)
+        : colorScheme.tileSurface;
     final highlight = colorScheme.isDark
-        ? Colors.white.withValues(alpha: 0.12)
+        ? const Color(0xFF26344F)
         : Colors.white.withValues(alpha: 0.95);
     return Container(
       width: 24,

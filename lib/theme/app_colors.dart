@@ -54,15 +54,15 @@ extension AppColorTokens on ColorScheme {
       isDark ? const Color(0xE6151F32) : Colors.white.withValues(alpha: 0.84);
 
   Color get glassStroke => isDark
-      ? Colors.white.withValues(alpha: 0.12)
+      ? const Color(0xFF5F6F8A).withValues(alpha: 0.28)
       : Colors.white.withValues(alpha: 0.78);
 
   Color get glassStrokeSubtle => isDark
-      ? Colors.white.withValues(alpha: 0.12)
+      ? const Color(0xFF5F6F8A).withValues(alpha: 0.20)
       : Colors.white.withValues(alpha: 0.50);
 
   Color get tileSurface => isDark
-      ? Colors.white.withValues(alpha: 0.08)
+      ? const Color(0xFF172238).withValues(alpha: 0.92)
       : Colors.white.withValues(alpha: 0.58);
 
   Color get softShadow => isDark
